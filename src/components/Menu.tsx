@@ -1,98 +1,112 @@
+import React from 'react';
 import {
   IonContent,
   IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonListHeader,
   IonMenu,
-  IonMenuToggle,
-  IonNote,
+  IonHeader,
+  IonFooter,
 } from '@ionic/react';
-
-import { useLocation } from 'react-router-dom';
-import { archiveOutline, archiveSharp, bookmarkOutline, heartOutline, heartSharp, mailOutline, mailSharp, paperPlaneOutline, paperPlaneSharp, trashOutline, trashSharp, warningOutline, warningSharp } from 'ionicons/icons';
+import { useLocation, useHistory } from 'react-router-dom';
+import {
+  gridOutline,
+  businessOutline,
+  peopleOutline,
+  barChartOutline,
+  settingsOutline,
+  logOutOutline,
+  leafOutline,
+} from 'ionicons/icons';
+import { ROUTES } from '../constants/routes.constant';
+import { useAuthStore } from '../store/auth.store';
 import './Menu.css';
 
-interface AppPage {
-  url: string;
-  iosIcon: string;
-  mdIcon: string;
+interface NavItem {
   title: string;
+  url: string;
+  icon: string;
 }
 
-const appPages: AppPage[] = [
-  {
-    title: 'Inbox',
-    url: '/folder/Inbox',
-    iosIcon: mailOutline,
-    mdIcon: mailSharp
-  },
-  {
-    title: 'Outbox',
-    url: '/folder/Outbox',
-    iosIcon: paperPlaneOutline,
-    mdIcon: paperPlaneSharp
-  },
-  {
-    title: 'Favorites',
-    url: '/folder/Favorites',
-    iosIcon: heartOutline,
-    mdIcon: heartSharp
-  },
-  {
-    title: 'Archived',
-    url: '/folder/Archived',
-    iosIcon: archiveOutline,
-    mdIcon: archiveSharp
-  },
-  {
-    title: 'Trash',
-    url: '/folder/Trash',
-    iosIcon: trashOutline,
-    mdIcon: trashSharp
-  },
-  {
-    title: 'Spam',
-    url: '/folder/Spam',
-    iosIcon: warningOutline,
-    mdIcon: warningSharp
-  }
+const superAdminNav: NavItem[] = [
+  { title: 'Dashboard', url: ROUTES.SUPER_ADMIN.DASHBOARD, icon: gridOutline },
+  { title: 'Branches', url: ROUTES.SUPER_ADMIN.BRANCHES, icon: businessOutline },
+  { title: 'Users', url: ROUTES.SUPER_ADMIN.USERS, icon: peopleOutline },
+  { title: 'Reports', url: ROUTES.SUPER_ADMIN.REPORTS, icon: barChartOutline },
+  { title: 'Settings', url: ROUTES.SUPER_ADMIN.SETTINGS, icon: settingsOutline },
 ];
-
-const labels = ['Family', 'Friends', 'Notes', 'Work', 'Travel', 'Reminders'];
 
 const Menu: React.FC = () => {
   const location = useLocation();
+  const history = useHistory();
+  const { user, logout } = useAuthStore();
+
+  const navItems = superAdminNav;
+
+  const handleNavClick = (url: string) => {
+    history.push(url);
+  };
+
+  const handleLogout = () => {
+    logout();
+    history.push(ROUTES.AUTH.LOGIN);
+  };
+
+  const userInitials = user
+    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'SA'
+    : 'SA';
+
+  const userName = user
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Super Admin'
+    : 'Super Admin';
 
   return (
-    <IonMenu contentId="main" type="overlay">
-      <IonContent>
-        <IonList id="inbox-list">
-          <IonListHeader>Inbox</IonListHeader>
-          <IonNote>hi@ionicframework.com</IonNote>
-          {appPages.map((appPage, index) => {
+    <IonMenu contentId="main" type="overlay" className="app-menu">
+      <IonHeader className="ion-no-border">
+        {/* Brand Header */}
+        <div className="app-menu__brand">
+          <div className="app-menu__brand-icon">
+            <IonIcon icon={leafOutline} />
+          </div>
+          <div className="app-menu__brand-text">
+            <span className="app-menu__brand-name">Pranic Healing</span>
+            <span className="app-menu__brand-sub">Manager</span>
+          </div>
+        </div>
+      </IonHeader>
+
+      <IonContent className="app-menu__content">
+        {/* Navigation Items */}
+        <nav className="app-menu__nav">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.url;
             return (
-              <IonMenuToggle key={index} autoHide={false}>
-                <IonItem className={location.pathname === appPage.url ? 'selected' : ''} routerLink={appPage.url} routerDirection="none" lines="none" detail={false}>
-                  <IonIcon aria-hidden="true" slot="start" ios={appPage.iosIcon} md={appPage.mdIcon} />
-                  <IonLabel>{appPage.title}</IonLabel>
-                </IonItem>
-              </IonMenuToggle>
+              <button
+                key={item.url}
+                className={`app-menu__nav-item ${isActive ? 'app-menu__nav-item--active' : ''}`}
+                onClick={() => handleNavClick(item.url)}
+              >
+                <IonIcon icon={item.icon} className="app-menu__nav-icon" />
+                <span className="app-menu__nav-label">{item.title}</span>
+              </button>
             );
           })}
-        </IonList>
-
-        <IonList id="labels-list">
-          <IonListHeader>Labels</IonListHeader>
-          {labels.map((label, index) => (
-            <IonItem lines="none" key={index}>
-              <IonIcon aria-hidden="true" slot="start" icon={bookmarkOutline} />
-              <IonLabel>{label}</IonLabel>
-            </IonItem>
-          ))}
-        </IonList>
+        </nav>
       </IonContent>
+
+      <IonFooter className="ion-no-border">
+        {/* User Profile at Bottom */}
+        <div className="app-menu__footer">
+          <div className="app-menu__user">
+            <div className="app-menu__user-avatar">{userInitials}</div>
+            <div className="app-menu__user-info">
+              <span className="app-menu__user-name">{userName}</span>
+              <span className="app-menu__user-role">Aria Seraphina</span>
+            </div>
+          </div>
+          <button className="app-menu__logout-btn" onClick={handleLogout} title="Logout">
+            <IonIcon icon={logOutOutline} />
+          </button>
+        </div>
+      </IonFooter>
     </IonMenu>
   );
 };

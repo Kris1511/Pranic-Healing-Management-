@@ -1,0 +1,40 @@
+/* AppDatePicker Styles */
+.app-date-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.app-date-picker--error {
+  color: var(--color-danger);
+}
+
+.app-date-picker__label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  display: block;
+}
+
+.app-date-picker__item {
+  --background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-normal);
+}
+
+.app-date-picker__item:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
+}
+
+.app-date-picker__error-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: 4px;
+}
+
+.app-date-picker--error .app-date-picker__item {
+  border-color: var(--color-danger);
+}

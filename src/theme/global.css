@@ -1,0 +1,73 @@
+/* Global Resets */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Utilities */
+.ion-padding-large {
+  --padding-start: var(--space-3xl);
+  --padding-end: var(--space-3xl);
+  --padding-top: var(--space-3xl);
+  --padding-bottom: var(--space-3xl);
+}
+
+.text-center { text-align: center; }
+.w-full { width: 100%; }
+.m-0 { margin: 0; }
+
+/* Fix IonSelect dropdown/popover text visibility */
+ion-select-popover ion-item {
+  --color: #333333 !important;
+}
+
+ion-select-popover ion-label {
+  color: #333333 !important;
+}
+
+.select-interface-option .item-inner {
+  color: #333333 !important;
+}
+
+/* Alert-based select options */
+.select-alert .alert-radio-label,
+.select-alert .alert-checkbox-label {
+  color: #333333 !important;
+}
+
+.select-alert .alert-wrapper {
+  --background: #ffffff !important;
+}
+
+.select-alert .alert-title,
+.select-alert .alert-sub-title {
+  color: #333333 !important;
+}
+
+.select-alert .alert-button {
+  color: var(--color-primary) !important;
+}

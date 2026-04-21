@@ -1,0 +1,47 @@
+:root {
+  /** Ionic Colors **/
+  --ion-color-primary: var(--color-primary);
+  --ion-color-primary-rgb: var(--color-primary-rgb);
+  --ion-color-primary-contrast: var(--color-primary-contrast);
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: var(--color-primary-dark);
+  --ion-color-primary-tint: #358779;
+
+  --ion-color-success: var(--color-success);
+  --ion-color-warning: var(--color-warning);
+  --ion-color-danger: var(--color-danger);
+
+  /** App Backgrounds **/
+  --ion-background-color: var(--color-bg-primary);
+  --ion-background-color-rgb: 255, 255, 255;
+
+  --ion-text-color: var(--color-text-primary);
+  --ion-text-color-rgb: 51, 51, 51;
+
+  --ion-border-color: var(--color-border);
+
+  /** Item Backgrounds **/
+  --ion-item-background: var(--color-bg-primary);
+}
+
+/* Specific Ionic Component Overrides */
+ion-toolbar {
+  --background: var(--color-primary);
+  --color: var(--color-primary-contrast);
+}
+
+ion-button {
+  --border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+ion-card {
+  --background: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+ion-input, ion-select, ion-textarea, ion-datetime {
+  --color: var(--color-text-primary);
+  --placeholder-color: var(--color-text-muted);
+}

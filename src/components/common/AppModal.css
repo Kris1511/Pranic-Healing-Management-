@@ -1,0 +1,40 @@
+/* AppModal Styles */
+.app-modal {
+  --width: 500px;
+  --max-width: 95%;
+  --box-shadow: var(--shadow-modal);
+  --border-radius: var(--radius-lg);
+}
+
+.app-modal ion-header {
+  --background: var(--color-primary);
+}
+
+.app-modal ion-title {
+  color: var(--color-primary-contrast);
+  font-weight: var(--font-weight-semibold);
+}
+
+.app-modal ion-content {
+  --background: var(--color-bg-primary);
+}
+
+.app-modal__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-2xl);
+}
+
+.app-modal__actions ion-button {
+  --padding-top: var(--space-md);
+  --padding-bottom: var(--space-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 480px) {
+  .app-modal {
+    --width: 100%;
+    --max-width: 100%;
+  }
+}

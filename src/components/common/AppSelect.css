@@ -1,0 +1,67 @@
+/* AppSelect Styles */
+.app-select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.app-select--error {
+  color: var(--color-danger);
+}
+
+.app-select__label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  display: block;
+}
+
+.app-select__required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.app-select__item {
+  --background: var(--color-bg-secondary);
+  --border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-normal);
+}
+
+.app-select__item:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-select__field {
+  --color: #333333 !important;
+  --placeholder-color: #999999 !important;
+  color: #333333 !important;
+  font-size: var(--font-size-md);
+}
+
+/* Ensure dropdown text is always visible */
+.app-select__field::part(text) {
+  color: #333333 !important;
+}
+
+.app-select__field::part(placeholder) {
+  color: #999999 !important;
+}
+
+.app-select__field::part(icon) {
+  color: #333333 !important;
+}
+
+.app-select__error-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: 4px;
+}
+
+.app-select--error .app-select__item {
+  border-color: var(--color-danger);
+}

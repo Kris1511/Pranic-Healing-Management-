@@ -1,0 +1,39 @@
+/* AppTable Styles */
+.app-table {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.app-table__loading,
+.app-table__empty {
+  padding: var(--space-3xl) var(--space-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+}
+
+.app-table__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.app-table__header {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-md);
+  text-align: left;
+  border-bottom: 2px solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.app-table__cell {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-md);
+}
+
+.app-table tbody tr:hover {
+  background: var(--color-bg-secondary);
+}

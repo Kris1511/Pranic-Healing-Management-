@@ -1,0 +1,40 @@
+/* AppPagination Styles */
+.app-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+
+.app-pagination__button {
+  padding: var(--space-sm) var(--space-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-md);
+  transition: var(--transition-normal);
+}
+
+.app-pagination__button:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+}
+
+.app-pagination__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.app-pagination__info {
+  font-size: var(--font-size-md);
+  color: var(--color-text-light);
+  min-width: 140px;
+  text-align: center;
+  font-weight: var(--font-weight-medium);
+}

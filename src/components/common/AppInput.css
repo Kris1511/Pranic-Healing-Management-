@@ -1,0 +1,60 @@
+/* AppInput Styles */
+.app-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.app-input--error {
+  color: var(--color-danger);
+}
+
+.app-input__label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  display: block;
+}
+
+.app-input__required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.app-input__item {
+  --background: var(--color-bg-secondary);
+  --border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-normal);
+}
+
+.app-input__item:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-input__field {
+  --color: var(--color-text-primary);
+  --placeholder-color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+  padding: var(--space-md);
+}
+
+.app-input__error-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: 4px;
+}
+
+.app-input__helper-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.app-input--error .app-input__item {
+  border-color: var(--color-danger);
+}

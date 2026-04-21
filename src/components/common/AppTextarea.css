@@ -1,0 +1,47 @@
+/* AppTextarea Styles */
+.app-textarea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.app-textarea--error {
+  color: var(--color-danger);
+}
+
+.app-textarea__label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  display: block;
+}
+
+.app-textarea__item {
+  --background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-normal);
+}
+
+.app-textarea__item:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-textarea__field {
+  font-size: var(--font-size-md);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.app-textarea__error-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: 4px;
+}
+
+.app-textarea--error .app-textarea__item {
+  border-color: var(--color-danger);
+}

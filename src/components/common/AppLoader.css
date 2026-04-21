@@ -1,0 +1,33 @@
+/* AppLoader Styles */
+.app-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px var(--space-xl);
+  min-height: 200px;
+}
+
+.app-loader--full-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-tertiary, rgba(255, 255, 255, 0.95));
+  z-index: 9999;
+  min-height: 100vh;
+}
+
+.app-loader__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.app-loader__message {
+  font-size: var(--font-size-md);
+  color: var(--color-text-light);
+  margin: 0;
+  text-align: center;
+}
