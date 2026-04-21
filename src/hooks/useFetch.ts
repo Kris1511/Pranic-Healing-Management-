@@ -2,10 +2,11 @@ import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import axiosInstance from '../api/axois.instance';
 
-interface UseFetchOptions<TData = any> extends Omit<UseQueryOptions<TData, AxiosError>, 'queryFn'> {
+interface UseFetchOptions<TData = any> extends Omit<UseQueryOptions<TData, AxiosError>, 'queryFn' | 'queryKey'> {
   url: string;
   enabled?: boolean;
   headers?: Record<string, string>;
+  queryKey?: readonly unknown[];
 }
 
 /**
@@ -16,10 +17,11 @@ export const useFetch = <TData = any>({
   url,
   enabled = true,
   headers,
+  queryKey,
   ...queryOptions
 }: UseFetchOptions<TData>) => {
   return useQuery<TData, AxiosError>({
-    queryKey: [url],
+    queryKey: queryKey || [url],
     queryFn: async () => {
       const response = await axiosInstance.get<TData>(url, { headers });
       return response.data;

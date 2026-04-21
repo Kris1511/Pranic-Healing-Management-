@@ -1,10 +1,11 @@
 import React from 'react';
 import { IonInput, IonLabel, IonItem } from '@ionic/react';
+import { TextFieldTypes } from '@ionic/core';
 import './AppInput.css';
 
 interface AppInputProps {
   label?: string;
-  type?: string;
+  type?: TextFieldTypes;
   placeholder?: string;
   value?: string;
   onChange?: (e: any) => void;
@@ -48,13 +49,13 @@ const AppInput: React.FC<AppInputProps> = ({
       <IonItem lines="none" className="app-input__item">
         <IonInput
           id={inputId}
-          type={type}
+          type={type as any}
           placeholder={placeholder}
           value={value}
           onIonChange={onChange}
           onIonBlur={onBlur}
           disabled={disabled}
-          autoComplete={autoComplete}
+          // autoComplete={autoComplete}
           maxlength={maxLength}
           name={name}
           className="app-input__field"

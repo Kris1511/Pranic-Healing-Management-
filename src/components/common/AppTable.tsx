@@ -1,5 +1,4 @@
 import React from 'react';
-import { IonTable, IonTr, IonTd, IonTh } from '@ionic/react';
 import './AppTable.css';
 
 interface AppTableColumn {
@@ -23,28 +22,28 @@ const AppTable: React.FC<AppTableProps> = ({ columns, data, loading = false, emp
       ) : data.length === 0 ? (
         <p className="app-table__empty">{emptyMessage}</p>
       ) : (
-        <IonTable className="app-table__table">
+        <table className="app-table__table">
           <thead>
-            <IonTr>
+            <tr>
               {columns.map((col) => (
-                <IonTh key={col.key} className="app-table__header">
+                <th key={col.key} className="app-table__header">
                   {col.label}
-                </IonTh>
+                </th>
               ))}
-            </IonTr>
+            </tr>
           </thead>
           <tbody>
             {data.map((row, idx) => (
-              <IonTr key={idx}>
+              <tr key={idx}>
                 {columns.map((col) => (
-                  <IonTd key={`${idx}-${col.key}`} className="app-table__cell">
+                  <td key={`${idx}-${col.key}`} className="app-table__cell">
                     {col.render ? col.render(row[col.key], row) : row[col.key]}
-                  </IonTd>
+                  </td>
                 ))}
-              </IonTr>
+              </tr>
             ))}
           </tbody>
-        </IonTable>
+        </table>
       )}
     </div>
   );
