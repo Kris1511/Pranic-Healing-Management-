@@ -22,12 +22,14 @@ import {
   chevronForwardOutline,
   trashOutline,
 } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
+import { ROUTES } from '../../constants/routes.constant';
 import './super-admin.css';
 
 const BranchesPage: React.FC = () => {
+  const history = useHistory();
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showBranchModal, setShowBranchModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
@@ -69,27 +71,8 @@ const BranchesPage: React.FC = () => {
     },
   ]);
 
-  const [newBranch, setNewBranch] = useState({
-    name: '',
-    region: 'North Region',
-    phone: ''
-  });
-
   const handleCreateBranch = () => {
-    if (!newBranch.name) return;
-
-    const newBranchObj = {
-      name: newBranch.name,
-      region: newBranch.region,
-      status: 'active',
-      admin: 'Unassigned',
-      phone: newBranch.phone,
-      est: new Date().toISOString().split('T')[0]
-    };
-
-    setBranches([newBranchObj, ...branches]);
-    setNewBranch({ name: '', region: 'North Region', phone: '' });
-    setShowBranchModal(false);
+    history.push(ROUTES.SUPER_ADMIN.CREATE_BRANCH);
   };
 
   const openEditModal = (branch: any, index: number) => {
@@ -163,7 +146,7 @@ const BranchesPage: React.FC = () => {
                 <h1 className="sa-page__title">Sanctuary Branches</h1>
                 <p className="sa-page__subtitle">Manage healing centers and administrative assignments</p>
               </div>
-              <button className="sa-btn sa-btn--primary" onClick={() => setShowBranchModal(true)}>
+              <button className="sa-btn sa-btn--primary" onClick={handleCreateBranch}>
                 <IonIcon icon={addOutline} /> Create New Branch
               </button>
             </div>
@@ -235,7 +218,10 @@ const BranchesPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="sa-branch-card__admin">
+                <div 
+                  className="sa-branch-card__admin" 
+                  onClick={() => history.push(ROUTES.SUPER_ADMIN.BRANCH_DETAILS.replace(':id', encodeURIComponent(branch.name)))}
+                >
                   <div>
                     <div className="sa-branch-card__admin-label">Branch Admin</div>
                     <div className="sa-branch-card__admin-name">{branch.admin}</div>
@@ -252,66 +238,20 @@ const BranchesPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="sa-branch-card__actions">
+                {/* <div className="sa-branch-card__actions">
                   <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openEditModal(branch, i)}>Edit</button>
                   <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openReportModal(branch)}>Reports</button>
                   <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ padding: '0 10px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => handleDeleteBranch(i)}>
                     <IonIcon icon={trashOutline} />
                   </button>
-                </div>
+                </div> */}
               </div>
             ))}
           </div>
         </div>
       </IonContent>
 
-      {/* 1. Create New Branch Modal */}
-      <IonModal isOpen={showBranchModal} onDidDismiss={() => setShowBranchModal(false)} className="sa-modal">
-        <div className="sa-modal__content">
-          <div className="sa-modal__header">
-            <h2>Create New Branch</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowBranchModal(false)}>×</button>
-          </div>
-          <div className="sa-modal__body">
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Branch Name</label>
-              <input 
-                className="sa-settings__input" 
-                placeholder="e.g. Uptown Sanctuary"
-                value={newBranch.name}
-                onChange={(e) => setNewBranch({...newBranch, name: e.target.value})}
-              />
-            </div>
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Region</label>
-              <select 
-                className="sa-settings__input"
-                value={newBranch.region}
-                onChange={(e) => setNewBranch({...newBranch, region: e.target.value})}
-              >
-                <option>North Region</option>
-                <option>South Region</option>
-                <option>East Region</option>
-                <option>West Region</option>
-                <option>Central Region</option>
-              </select>
-            </div>
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Contact Phone</label>
-              <input 
-                className="sa-settings__input" 
-                placeholder="+91 xxxxx xxxxx" 
-                value={newBranch.phone}
-                onChange={(e) => setNewBranch({...newBranch, phone: e.target.value})}
-              />
-            </div>
-          </div>
-          <div className="sa-modal__footer">
-            <button className="sa-btn sa-btn--outline" onClick={() => setShowBranchModal(false)}>Cancel</button>
-            <button className="sa-btn sa-btn--primary" onClick={handleCreateBranch}>Create Branch</button>
-          </div>
-        </div>
-      </IonModal>
+
 
       {/* 2. Edit Details Modal */}
       <IonModal isOpen={showEditModal} onDidDismiss={() => setShowEditModal(false)} className="sa-modal">

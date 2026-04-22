@@ -75,6 +75,17 @@ ion-split-pane {
   padding: 12px 10px;
   gap: 2px;
   flex: 1;
+  overflow-y: auto;
+}
+
+.app-menu__section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--color-text-muted);
+  padding: 18px 14px 8px;
+  opacity: 0.8;
 }
 
 .app-menu__nav-item {

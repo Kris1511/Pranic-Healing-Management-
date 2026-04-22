@@ -9,7 +9,11 @@ import { ROUTES } from './constants/routes.constant';
 
 /* Super Admin Pages */
 import SADashboardPage from './pages/super-admin/DashboardPage';
+import SABranchAdminsPage from './pages/super-admin/BranchAdminsPage';
+import SAHealersPage from './pages/super-admin/HealersPage';
 import SABranchesPage from './pages/super-admin/BranchesPage';
+import SABranchDetailsPage from './pages/super-admin/BranchDetailsPage';
+import SACreateBranchPage from './pages/super-admin/CreateBranchPage';
 import SAUsersPage from './pages/super-admin/UsersPage';
 import SAReportsPage from './pages/super-admin/ReportsPage';
 import SASettingsPage from './pages/super-admin/SettingsPage';
@@ -77,14 +81,26 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.SUPER_ADMIN.DASHBOARD} exact={true}>
           <SADashboardPage />
         </Route>
+        <Route path={ROUTES.SUPER_ADMIN.BRANCH_ADMINS} exact={true}>
+          <SABranchAdminsPage />
+        </Route>
         <Route path={ROUTES.SUPER_ADMIN.BRANCHES} exact={true}>
           <SABranchesPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.BRANCH_DETAILS} exact={true}>
+          <SABranchDetailsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.CREATE_BRANCH} exact={true}>
+          <SACreateBranchPage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.USERS} exact={true}>
           <SAUsersPage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.REPORTS} exact={true}>
           <SAReportsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.HEALERS} exact={true}>
+          <SAHealersPage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.SETTINGS} exact={true}>
           <SASettingsPage />

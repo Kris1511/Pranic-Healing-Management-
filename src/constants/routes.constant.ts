@@ -15,8 +15,16 @@ export const ROUTES = {
   SUPER_ADMIN: {
     DASHBOARD: '/super-admin/dashboard',
     USERS: '/super-admin/users',
+    BRANCH_ADMINS: '/super-admin/branch-admins',
+    HEALERS: '/super-admin/healers',
     BRANCHES: '/super-admin/branches',
+    BRANCH_DETAILS: '/super-admin/branches/details/:id',
+    CREATE_BRANCH: '/super-admin/branches/create',
     REPORTS: '/super-admin/reports',
+    REVENUE: '/super-admin/revenue',
+    VISITOR_LOG: '/super-admin/visitor-log',
+    ATTENDANCE: '/super-admin/attendance',
+    DAILY_FINANCE: '/super-admin/daily-finance',
     SETTINGS: '/super-admin/settings',
   },
 

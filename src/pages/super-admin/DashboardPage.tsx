@@ -24,10 +24,12 @@ import {
   gridOutline,
   chevronForwardOutline,
 } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
+import { ROUTES } from '../../constants/routes.constant';
 import './super-admin.css';
 
 const DashboardPage: React.FC = () => {
-  const [showBranchModal, setShowBranchModal] = React.useState(false);
+  const history = useHistory();
   const [showAdminModal, setShowAdminModal] = React.useState(false);
   const [showReportModal, setShowReportModal] = React.useState(false);
 
@@ -126,7 +128,7 @@ const DashboardPage: React.FC = () => {
             {/* Quick Actions */}
             <div className="sa-quick-actions">
               <h3 className="sa-quick-actions__title">Super Admin Portal</h3>
-              <div className="sa-quick-action" onClick={() => setShowBranchModal(true)}>
+              <div className="sa-quick-action" onClick={() => history.push(ROUTES.SUPER_ADMIN.CREATE_BRANCH)}>
                 <span className="sa-quick-action__label">Create New Branch</span>
                 <IonIcon icon={addCircleOutline} className="sa-quick-action__icon" />
               </div>
@@ -145,39 +147,7 @@ const DashboardPage: React.FC = () => {
 
       {/* MODALS */}
       
-      {/* 1. Create New Branch Modal */}
-      <IonModal isOpen={showBranchModal} onDidDismiss={() => setShowBranchModal(false)} className="sa-modal">
-        <div className="sa-modal__content">
-          <div className="sa-modal__header">
-            <h2>Create New Branch</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowBranchModal(false)}>×</button>
-          </div>
-          <div className="sa-modal__body">
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Branch Name</label>
-              <input className="sa-settings__input" placeholder="e.g. Uptown Sanctuary" />
-            </div>
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Region</label>
-              <select className="sa-settings__input">
-                <option>North Region</option>
-                <option>South Region</option>
-                <option>East Region</option>
-                <option>West Region</option>
-                <option>Central Region</option>
-              </select>
-            </div>
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Contact Phone</label>
-              <input className="sa-settings__input" placeholder="+91 xxxxx xxxxx" />
-            </div>
-          </div>
-          <div className="sa-modal__footer">
-            <button className="sa-btn sa-btn--outline" onClick={() => setShowBranchModal(false)}>Cancel</button>
-            <button className="sa-btn sa-btn--primary">Create Branch</button>
-          </div>
-        </div>
-      </IonModal>
+
 
       {/* 2. Manage Branch Admins Modal */}
       <IonModal isOpen={showAdminModal} onDidDismiss={() => setShowAdminModal(false)} className="sa-modal">
