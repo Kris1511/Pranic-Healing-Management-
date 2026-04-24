@@ -17,6 +17,7 @@ export const ROUTES = {
     USERS: '/super-admin/users',
     BRANCH_ADMINS: '/super-admin/branch-admins',
     HEALERS: '/super-admin/healers',
+    PATIENTS: '/super-admin/patients',
     BRANCHES: '/super-admin/branches',
     BRANCH_DETAILS: '/super-admin/branches/details/:id',
     CREATE_BRANCH: '/super-admin/branches/create',

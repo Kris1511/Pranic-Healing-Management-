@@ -352,8 +352,9 @@
   border-radius: 8px;
   padding: 8px 14px;
   flex: 1;
-  max-width: 400px;
+  max-width: 600px;
   transition: border-color 0.2s ease;
+  margin-bottom: 20px;
 }
 
 .sa-search:focus-within {
@@ -876,6 +877,7 @@
 }
 
 .sa-settings__form-group {
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1186,4 +1188,228 @@
   .sa-report-cards {
     grid-template-columns: 1fr;
   }
+}
+
+/* Patient Specific Styles */
+.sa-table__avatar--patient {
+  background: rgba(147, 51, 234, 0.1);
+  color: #9333ea;
+}
+
+.sa-table__user-id {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  font-family: monospace;
+}
+
+.sa-table__contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sa-table__contact-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sa-table__contact-item ion-icon {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.sa-table__date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.sa-table__date ion-icon {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.sa-badge--recovered {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.sa-badge--on-hold {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Visitor Log Specific Styles */
+.sa-table__avatar--visitor {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+}
+
+.sa-visitor-purpose {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.sa-table__branch-info,
+.sa-table__time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sa-table__branch-info ion-icon,
+.sa-table__time ion-icon {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.sa-badge--checked-in {
+  background: #fef3e2;
+  color: #c47a20;
+}
+
+.sa-badge--checked-out {
+  background: #e6f9f0;
+  color: #1a8a5a;
+}
+
+.sa-visitor-detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.sa-visitor-detail-item:last-child {
+  border-bottom: none;
+}
+
+.sa-visitor-detail-label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.sa-visitor-detail-value {
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+
+.sa-text-muted {
+  color: var(--color-text-muted);
+}
+
+/* Attendance Specific Styles */
+.sa-table__avatar--staff {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.sa-badge--present {
+  background: #e6f9f0;
+  color: #1a8a5a;
+}
+
+.sa-badge--absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.sa-badge--on-leave {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sa-badge--late {
+  background: #fef3e2;
+  color: #c47a20;
+}
+
+.sa-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: border-color 0.2s ease;
+}
+
+.sa-date-picker:focus-within {
+  border-color: var(--color-primary);
+}
+
+.sa-date-picker ion-icon {
+  color: var(--color-text-muted);
+  font-size: 18px;
+}
+
+.sa-date-picker input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* Revenue Specific Styles */
+.sa-table__method {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sa-table__method ion-icon {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+/* Daily Finance Styles */
+.sa-table__avatar--success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.sa-table__avatar--danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.sa-badge--active {
+  background: #e6f9f0;
+  color: #1a8a5a;
+}
+
+.sa-badge--absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.sa-table__date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sa-table__date ion-icon {
+  font-size: 14px;
+  color: var(--color-text-muted);
 }

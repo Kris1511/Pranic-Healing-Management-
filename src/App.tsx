@@ -17,6 +17,13 @@ import SACreateBranchPage from './pages/super-admin/CreateBranchPage';
 import SAUsersPage from './pages/super-admin/UsersPage';
 import SAReportsPage from './pages/super-admin/ReportsPage';
 import SASettingsPage from './pages/super-admin/SettingsPage';
+import SAPatientsPage from './pages/super-admin/PatientsPage';
+import SAVisitorLogPage from './pages/super-admin/VisitorLogPage';
+import SAAttendancePage from './pages/super-admin/AttendancePage';
+import BAAttendancePage from './pages/branch-admin/AttendancePage';
+import SARevenuePage from './pages/super-admin/RevenuePage';
+import SADailyFinancePage from './pages/super-admin/DailyFinancePage';
+import BAVisitorLogPage from './pages/branch-admin/VisitorLogPage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -99,14 +106,35 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.SUPER_ADMIN.REPORTS} exact={true}>
           <SAReportsPage />
         </Route>
+        <Route path={ROUTES.SUPER_ADMIN.REVENUE} exact={true}>
+          <SARevenuePage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.DAILY_FINANCE} exact={true}>
+          <SADailyFinancePage />
+        </Route>
         <Route path={ROUTES.SUPER_ADMIN.HEALERS} exact={true}>
           <SAHealersPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.PATIENTS} exact={true}>
+          <SAPatientsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.VISITOR_LOG} exact={true}>
+          <SAVisitorLogPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.ATTENDANCE} exact={true}>
+          <SAAttendancePage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.SETTINGS} exact={true}>
           <SASettingsPage />
         </Route>
 
         {/* Default Route */}
+        <Route path={ROUTES.BRANCH_ADMIN.ATTENDANCE} exact={true}>
+          <BAAttendancePage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.VISITOR_LOG} exact={true}>
+          <BAVisitorLogPage />
+        </Route>
         <Route path="/" exact={true}>
           <Redirect to={ROUTES.AUTH.LOGIN} />
         </Route>

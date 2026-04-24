@@ -196,7 +196,7 @@ const ReportsPage: React.FC = () => {
           </div>
 
           {/* Specialized Reports */}
-          <div style={{ marginTop: 8 }}>
+          {/* <div style={{ marginTop: 8 }}>
             <h2 className="sa-section__title" style={{ color: 'var(--color-primary-dark)', marginBottom: 16 }}>
               Generate Specialized Reports
             </h2>
@@ -214,7 +214,7 @@ const ReportsPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
       </IonContent>
     </IonPage>

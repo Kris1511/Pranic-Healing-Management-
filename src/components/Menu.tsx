@@ -22,6 +22,7 @@ import {
   listOutline,
   timeOutline,
   walletOutline,
+  calendarOutline,
 } from 'ionicons/icons';
 import { ROUTES } from '../constants/routes.constant';
 import { useAuthStore } from '../store/auth.store';
@@ -39,12 +40,12 @@ const superAdminNav: NavItem[] = [
   { title: 'Dashboard', url: ROUTES.SUPER_ADMIN.DASHBOARD, icon: gridOutline, section: 'Main' },
   { title: 'Branches', url: ROUTES.SUPER_ADMIN.BRANCHES, icon: businessOutline },
   // { title: 'Users', url: ROUTES.SUPER_ADMIN.USERS, icon: peopleOutline },
-  
+
   /* Roles Section */
   // { title: 'Super Admin', url: ROUTES.SUPER_ADMIN.DASHBOARD, icon: shieldCheckmarkOutline, section: 'Roles' },
   { title: 'Branch Admin', url: ROUTES.SUPER_ADMIN.BRANCH_ADMINS, icon: businessOutline, section: 'Users' },
   { title: 'Healers', url: ROUTES.SUPER_ADMIN.HEALERS, icon: medkitOutline },
-  { title: 'Patient', url: ROUTES.PATIENT.DASHBOARD, icon: personOutline },
+  { title: 'Patients', url: ROUTES.SUPER_ADMIN.PATIENTS, icon: peopleOutline },
 
   /* Daily Operations Section */
   { title: 'Daily Visitor Log', url: ROUTES.SUPER_ADMIN.VISITOR_LOG, icon: listOutline, section: 'Daily Logs' },
@@ -59,12 +60,24 @@ const superAdminNav: NavItem[] = [
   { title: 'Settings', url: ROUTES.SUPER_ADMIN.SETTINGS, icon: settingsOutline, section: 'System' },
 ];
 
+const branchAdminNav: NavItem[] = [
+  { title: 'Dashboard', url: ROUTES.BRANCH_ADMIN.DASHBOARD, icon: gridOutline, section: 'Main' },
+  { title: 'Healers', url: ROUTES.BRANCH_ADMIN.HEALERS, icon: medkitOutline },
+  { title: 'Patients', url: ROUTES.BRANCH_ADMIN.PATIENTS, icon: peopleOutline },
+  { title: 'Sessions', url: ROUTES.BRANCH_ADMIN.SESSIONS, icon: timeOutline },
+  { title: 'Attendance', url: ROUTES.BRANCH_ADMIN.ATTENDANCE, icon: timeOutline, section: 'Operations' },
+  { title: 'Visitor Log', url: ROUTES.BRANCH_ADMIN.VISITOR_LOG, icon: listOutline },
+  { title: 'Finance', url: ROUTES.BRANCH_ADMIN.FINANCE, icon: cashOutline, section: 'Finance' },
+  { title: 'Reports', url: ROUTES.BRANCH_ADMIN.REPORTS, icon: barChartOutline },
+  { title: 'Settings', url: ROUTES.BRANCH_ADMIN.SETTINGS, icon: settingsOutline, section: 'System' },
+];
+
 const Menu: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
   const { user, logout } = useAuthStore();
 
-  const navItems = superAdminNav;
+  const navItems = user?.role === 'SUPER_ADMIN' ? branchAdminNav : superAdminNav;
 
   const handleNavClick = (url: string) => {
     history.push(url);

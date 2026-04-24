@@ -13,16 +13,18 @@ import {
 import {
   searchOutline,
   timeOutline,
+  businessOutline,
   peopleOutline,
   checkmarkCircleOutline,
   closeCircleOutline,
   calendarOutline,
+  filterOutline,
+  downloadOutline,
   alertCircleOutline,
   logInOutline,
   logOutOutline,
-  filterOutline,
 } from 'ionicons/icons';
-import '../super-admin/super-admin.css';
+import './super-admin.css';
 
 const AttendancePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,43 +32,27 @@ const AttendancePage: React.FC = () => {
   const [showMarkModal, setShowMarkModal] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<any>(null);
   
-  // Mock data for the current branch (Uptown Sanctuary)
   const [attendance, setAttendance] = useState([
-    { id: 1, name: 'Dr. Aris Varma', role: 'Healer', checkIn: '08:50 AM', checkOut: '05:30 PM', status: 'present', shift: 'Full Day' },
-    { id: 2, name: 'Julian Mars', role: 'Healer', checkIn: '09:00 AM', checkOut: null, status: 'present', shift: 'Morning' },
-    { id: 3, name: 'Elena Gilbert', role: 'Staff', checkIn: '08:45 AM', checkOut: null, status: 'present', shift: 'Full Day' },
-    { id: 4, name: 'Caroline Forbes', role: 'Staff', checkIn: null, checkOut: null, status: 'on-leave', shift: 'Full Day' },
-    { id: 5, name: 'Bonnie Bennett', role: 'Admin Assistant', checkIn: '09:15 AM', checkOut: null, status: 'late', shift: 'Full Day' },
+    { id: 1, name: 'Dr. Aris Varma', role: 'Healer', branch: 'Uptown Sanctuary', checkIn: '08:50 AM', checkOut: '05:30 PM', status: 'present', shift: 'Full Day' },
+    { id: 2, name: 'Maya Rose', role: 'Healer', branch: 'Coastal Healing Center', checkIn: '09:15 AM', checkOut: null, status: 'late', shift: 'Full Day' },
+    { id: 3, name: 'Samuel Chen', role: 'Healer', branch: 'Green Valley Branch', checkIn: null, checkOut: null, status: 'on-leave', shift: 'Full Day' },
+    { id: 4, name: 'Lila Thorne', role: 'Healer', branch: 'Downtown Sanctuary', checkIn: '08:55 AM', checkOut: null, status: 'present', shift: 'Full Day' },
+    { id: 5, name: 'Julian Mars', role: 'Healer', branch: 'Uptown Sanctuary', checkIn: '09:00 AM', checkOut: null, status: 'present', shift: 'Morning' },
+    { id: 6, name: 'Sarah Connor', role: 'Branch Admin', branch: 'Coastal Healing Center', checkIn: '08:30 AM', checkOut: '04:30 PM', status: 'present', shift: 'Full Day' },
+    { id: 7, name: 'Michael Scott', role: 'Staff', branch: 'Downtown Sanctuary', checkIn: null, checkOut: null, status: 'absent', shift: 'Full Day' },
   ]);
 
   const filteredAttendance = attendance.filter(record => 
     record.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    record.branch.toLowerCase().includes(searchQuery.toLowerCase()) ||
     record.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleUpdateStatus = (id: number, newStatus: string) => {
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setAttendance(attendance.map(a => {
-      if (a.id === id) {
-        let update = { ...a, status: newStatus };
-        if (newStatus === 'present' && !a.checkIn) {
-          update.checkIn = now;
-        } else if (newStatus === 'absent' || newStatus === 'on-leave') {
-          update.checkIn = null;
-          update.checkOut = null;
-        }
-        return update;
-      }
-      return a;
-    }));
+    setAttendance(attendance.map(a => 
+      a.id === id ? { ...a, status: newStatus } : a
+    ));
     setShowMarkModal(false);
-  };
-
-  const handleCheckOut = (id: number) => {
-    // const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    // setAttendance(attendance.map(a => 
-    //   a.id === id ? { ...a, checkOut: now } : a
-    // ));
   };
 
   return (
@@ -76,9 +62,9 @@ const AttendancePage: React.FC = () => {
           <IonButtons slot="start">
             <IonMenuButton />
           </IonButtons>
-          <IonTitle className="sa-page__toolbar-title">Branch Attendance</IonTitle>
+          <IonTitle className="sa-page__toolbar-title">Worker Attendance</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">BA</button>
+            <button className="sa-page__toolbar-avatar">SA</button>
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -88,8 +74,8 @@ const AttendancePage: React.FC = () => {
           <div className="sa-page__header">
             <div className="sa-page__header-row">
               <div>
-                <h1 className="sa-page__title">Staff Attendance</h1>
-                <p className="sa-page__subtitle">Mark and monitor daily attendance for Uptown Sanctuary</p>
+                <h1 className="sa-page__title">Daily Attendance Log</h1>
+                <p className="sa-page__subtitle">Manage and monitor staff attendance across all branches</p>
               </div>
               <div className="sa-page__header-actions">
                 <div className="sa-date-picker">
@@ -100,6 +86,9 @@ const AttendancePage: React.FC = () => {
                     onChange={(e) => setSelectedDate(e.target.value)} 
                   />
                 </div>
+                <button className="sa-btn sa-btn--primary">
+                  <IonIcon icon={downloadOutline} /> Export Report
+                </button>
               </div>
             </div>
           </div>
@@ -128,7 +117,7 @@ const AttendancePage: React.FC = () => {
                 <IonIcon icon={alertCircleOutline} />
               </div>
               <div>
-                <div className="sa-stat-card__label">Late/Leave</div>
+                <div className="sa-stat-card__label">Late/On Leave</div>
                 <div className="sa-stat-card__value">{attendance.filter(a => a.status === 'late' || a.status === 'on-leave').length}</div>
               </div>
             </div>
@@ -147,7 +136,7 @@ const AttendancePage: React.FC = () => {
             <div className="sa-search">
               <IonIcon icon={searchOutline} />
               <input 
-                placeholder="Search staff by name or role..." 
+                placeholder="Search by name, role or branch..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -161,13 +150,13 @@ const AttendancePage: React.FC = () => {
             <table className="sa-table">
               <thead>
                 <tr>
-                  <th>Staff Name</th>
+                  <th>Worker Name</th>
                   <th>Role</th>
+                  <th>Branch</th>
                   <th>Check In</th>
                   <th>Check Out</th>
                   <th>Status</th>
                   <th>Date</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,6 +174,11 @@ const AttendancePage: React.FC = () => {
                       </div>
                     </td>
                     <td>{record.role}</td>
+                    <td>
+                      <div className="sa-table__branch-info">
+                        <IonIcon icon={businessOutline} /> {record.branch}
+                      </div>
+                    </td>
                     <td>
                       <div className="sa-table__time">
                         <IonIcon icon={logInOutline} /> {record.checkIn || '--:--'}
@@ -206,24 +200,6 @@ const AttendancePage: React.FC = () => {
                         {selectedDate}
                       </div>
                     </td>
-                    <td>
-                      <div className="sa-table__actions">
-                        <button 
-                          className="sa-btn sa-btn--sm sa-btn--primary"
-                          onClick={() => { setSelectedWorker(record); setShowMarkModal(true); }}
-                        >
-                          Mark Status
-                        </button>
-                        {record.status === 'present' && !record.checkOut && (
-                          <button 
-                            className="sa-btn sa-btn--sm sa-btn--outline"
-                            onClick={() => handleCheckOut(record.id)}
-                          >
-                            Check Out
-                          </button>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -231,53 +207,6 @@ const AttendancePage: React.FC = () => {
           </div>
         </div>
       </IonContent>
-
-      {/* Mark Attendance Modal */}
-      <IonModal isOpen={showMarkModal} onDidDismiss={() => setShowMarkModal(false)} className="sa-modal sa-modal--sm">
-        <div className="sa-modal__content">
-          <div className="sa-modal__header">
-            <h2>Update Attendance</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowMarkModal(false)}>×</button>
-          </div>
-          <div className="sa-modal__body">
-            {selectedWorker && (
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 4px 0' }}>{selectedWorker.name}</h3>
-                <p className="sa-text-muted">{selectedWorker.role}</p>
-              </div>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <button 
-                className={`sa-btn ${selectedWorker?.status === 'present' ? 'sa-btn--primary' : 'sa-btn--outline'}`}
-                onClick={() => handleUpdateStatus(selectedWorker.id, 'present')}
-              >
-                Mark Present
-              </button>
-              <button 
-                className={`sa-btn ${selectedWorker?.status === 'late' ? 'sa-btn--primary' : 'sa-btn--outline'}`}
-                onClick={() => handleUpdateStatus(selectedWorker.id, 'late')}
-              >
-                Mark Late
-              </button>
-              <button 
-                className={`sa-btn ${selectedWorker?.status === 'absent' ? 'sa-btn--primary' : 'sa-btn--outline'}`}
-                onClick={() => handleUpdateStatus(selectedWorker.id, 'absent')}
-              >
-                Mark Absent
-              </button>
-              <button 
-                className={`sa-btn ${selectedWorker?.status === 'on-leave' ? 'sa-btn--primary' : 'sa-btn--outline'}`}
-                onClick={() => handleUpdateStatus(selectedWorker.id, 'on-leave')}
-              >
-                On Leave
-              </button>
-            </div>
-          </div>
-          <div className="sa-modal__footer">
-            <button className="sa-btn sa-btn--outline" onClick={() => setShowMarkModal(false)}>Cancel</button>
-          </div>
-        </div>
-      </IonModal>
     </IonPage>
   );
 };

@@ -186,7 +186,7 @@ const HealersPage: React.FC = () => {
                   <th>Specialty</th>
                   <th>Branch</th>
                   <th>Exp. (Yrs)</th>
-                  <th>Current Load</th>
+                  <th>Current Patient</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
