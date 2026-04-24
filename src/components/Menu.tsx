@@ -66,7 +66,7 @@ const branchAdminNav: NavItem[] = [
   { title: 'Patients', url: ROUTES.BRANCH_ADMIN.PATIENTS, icon: peopleOutline },
   { title: 'Sessions', url: ROUTES.BRANCH_ADMIN.SESSIONS, icon: timeOutline },
   { title: 'Attendance', url: ROUTES.BRANCH_ADMIN.ATTENDANCE, icon: timeOutline, section: 'Operations' },
-  // { title: 'Visitor Log', url: ROUTES.BRANCH_ADMIN.VISITOR_LOG, icon: listOutline },
+  { title: 'Visitor Log', url: ROUTES.BRANCH_ADMIN.VISITOR_LOG, icon: listOutline },
   { title: 'Finance', url: ROUTES.BRANCH_ADMIN.FINANCE, icon: cashOutline, section: 'Finance' },
   { title: 'Reports', url: ROUTES.BRANCH_ADMIN.REPORTS, icon: barChartOutline },
   { title: 'Settings', url: ROUTES.BRANCH_ADMIN.SETTINGS, icon: settingsOutline, section: 'System' },

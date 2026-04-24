@@ -36,6 +36,7 @@ export const ROUTES = {
     PATIENTS: '/branch-admin/patients',
     SESSIONS: '/branch-admin/sessions',
     ATTENDANCE: '/branch-admin/attendance',
+    VISITOR_LOG: '/branch-admin/visitor-log',
     FINANCE: '/branch-admin/finance',
     REPORTS: '/branch-admin/reports',
     SETTINGS: '/branch-admin/settings',
