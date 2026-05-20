@@ -219,28 +219,22 @@ const LoginPage: React.FC = () => {
                       name="password"
                       control={control}
                       render={({ field }: { field: FieldValues }) => (
-                        <div className="login-page__password-field">
-                          <AppInput
-                            label="Password"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Enter your password"
-                            value={field.value}
-                            onChange={(e) => field.onChange(e.detail.value)}
-                            onBlur={field.onBlur}
-                            error={errors.password?.message}
-                            required
-                            autoComplete="current-password"
-                            inputId="password"
-                            name={field.name}
-                          />
-                          <button
-                            type="button"
-                            className="login-page__password-toggle"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            <IonIcon icon={showPassword ? eyeOff : eye} />
-                          </button>
-                        </div>
+                        <AppInput
+                          label="Password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Enter your password"
+                          value={field.value}
+                          onChange={(e) => field.onChange(e.detail.value)}
+                          onBlur={field.onBlur}
+                          error={errors.password?.message}
+                          required
+                          autoComplete="current-password"
+                          inputId="password"
+                          name={field.name}
+                          showPasswordToggle={true}
+                          isPasswordVisible={showPassword}
+                          onTogglePassword={() => setShowPassword(!showPassword)}
+                        />
                       )}
                     />
                   </div>

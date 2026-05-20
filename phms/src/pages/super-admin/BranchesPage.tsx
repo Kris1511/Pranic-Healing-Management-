@@ -143,7 +143,7 @@ const BranchesPage: React.FC = () => {
           <div className="sa-page__header">
             <div className="sa-page__header-row">
               <div>
-                <h1 className="sa-page__title">Sanctuary Branches</h1>
+                <h1 className="sa-page__title">Branches</h1>
                 <p className="sa-page__subtitle">Manage healing centers and administrative assignments</p>
               </div>
               <button className="sa-btn sa-btn--primary" onClick={handleCreateBranch}>

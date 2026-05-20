@@ -175,25 +175,19 @@ const SignupPage: React.FC = () => {
 
                   {/* Password Field */}
                   <div className="signup-page__form-group">
-                    <div className="signup-page__password-field">
-                      <AppInput
-                        label="Create Password"
-                        name="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Choose a strong password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        error={formErrors.password}
-                        icon={lockClosedOutline}
-                      />
-                      <button 
-                        type="button"
-                        className="signup-page__password-toggle"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} />
-                      </button>
-                    </div>
+                    <AppInput
+                      label="Create Password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Choose a strong password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      error={formErrors.password}
+                      icon={lockClosedOutline}
+                      showPasswordToggle={true}
+                      isPasswordVisible={showPassword}
+                      onTogglePassword={() => setShowPassword(!showPassword)}
+                    />
                   </div>
 
                   {/* Role Selector */}

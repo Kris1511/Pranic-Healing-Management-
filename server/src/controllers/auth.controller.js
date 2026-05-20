@@ -21,6 +21,15 @@ class AuthController {
   };
 
   /**
+   * @desc    Forgot/Reset password directly
+   */
+  forgotPassword = async (req, res) => {
+    const { email, password } = req.body;
+    const result = await authService.resetPasswordDirectly(email, password);
+    return sendResponse(res, 200, 'Password reset successful', result);
+  };
+
+  /**
    * @desc    Get current user profile
    */
   getMe = async (req, res) => {

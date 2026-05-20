@@ -14,50 +14,107 @@ import { useHistory } from 'react-router-dom';
 import { 
   mailOutline, 
   informationCircleOutline,
-  arrowForwardOutline
+  arrowForwardOutline,
+  eye,
+  eyeOff
 } from 'ionicons/icons';
 import AppInput from '../../components/common/AppInput';
 import AppButton from '../../components/common/AppButton';
 import AppCard from '../../components/common/AppCard';
 import AppLoader from '../../components/common/AppLoader';
+import { useAuth } from '../../hooks/useAuth';
 import './ForgotPasswordPage.css';
 
 const ForgotPasswordPage: React.FC = () => {
   const history = useHistory();
   const [present] = useIonToast();
+  const { forgotPassword } = useAuth();
+  
+  // Form State
   const [email, setEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // UI/Visibility State
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  
+  // Validation Error States
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    let hasError = false;
+
+    // Validate Email
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
-      setError('Please enter a valid email address');
-      return;
+      setEmailError('Please enter a valid email address');
+      hasError = true;
+    } else {
+      setEmailError('');
     }
+
+    // Validate New Password
+    if (!newPassword) {
+      setPasswordError('New password is required');
+      hasError = true;
+    } else if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      hasError = true;
+    } else {
+      setPasswordError('');
+    }
+
+    // Validate Confirm Password
+    if (!confirmPassword) {
+      setConfirmPasswordError('Please confirm your new password');
+      hasError = true;
+    } else if (confirmPassword !== newPassword) {
+      setConfirmPasswordError('Passwords do not match');
+      hasError = true;
+    } else {
+      setConfirmPasswordError('');
+    }
+
+    if (hasError) return;
     
-    setError('');
     setIsLoading(true);
 
-    // Simulate an API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Call the real backend API through the hook
+      await forgotPassword({ email, password: newPassword });
+      
       present({
-        message: 'Password reset link sent to your email!',
+        message: 'Password reset successfully! Please login with your new credentials.',
         duration: 3000,
         position: 'top',
         color: 'success',
       });
       history.push('/auth/signin');
-    }, 1500);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to reset password';
+      present({
+        message: errorMessage,
+        duration: 4000,
+        position: 'top',
+        color: 'danger',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <IonPage className="forgot-password-page">
       <IonContent fullscreen className="forgot-password-page__content ion-padding">
-        <div className="forgot-password-page__bg-overlay"></div>
-        {isLoading && <AppLoader isLoading={true} message="Sending reset link..." fullScreen={false} />}
+        {/* <div className="forgot-password-page__bg-overlay"></div>
+        {isLoading && <AppLoader isLoading={true} message="Resetting password..." fullScreen={false} />} */}
+        
+
         
         <IonGrid className="forgot-password-page__grid ion-no-padding">
           <IonRow className="ion-justify-content-center ion-align-items-center">
@@ -72,18 +129,18 @@ const ForgotPasswordPage: React.FC = () => {
                   />
                 </div>
                 <h1 className="forgot-password-page__heading">Reset Password</h1>
-                <p className="forgot-password-page__subheading">SECURE ACCOUNT RECOVERY</p>
+                {/* <p className="forgot-passw?ord-page__subheading">SECURE ACCOUNT RECOVERY</p> */}
               </div>
 
               {/* Form Card */}
               <AppCard className="forgot-password-page__form-card" shadow padding="large">
                 <form className="forgot-password-page__form" onSubmit={handleResetPassword} style={{ gap: '16px' }}>                  
 
-                  <div className="ion-text-center ion-margin-bottom">
+                  {/* <div className="ion-text-center ion-margin-bottom">
                     <IonText color="medium">
-                      <p>Enter your email address to receive a secure link to reset your password.</p>
+                      <p>Enter your registered email address and a new password to directly reset your account password.</p>
                     </IonText>
-                  </div>
+                  </div> */}
 
                   {/* Email Field */}
                   <div className="forgot-password-page__form-group">
@@ -95,10 +152,48 @@ const ForgotPasswordPage: React.FC = () => {
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
-                        if (error) setError('');
+                        if (emailError) setEmailError('');
                       }}
-                      error={error}
+                      error={emailError}
                       icon={mailOutline}
+                    />
+                  </div>
+
+                  {/* New Password Field */}
+                  <div className="forgot-password-page__form-group">
+                    <AppInput
+                      label="New Password"
+                      name="newPassword"
+                      type={showNewPassword ? 'text' : 'password'}
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (passwordError) setPasswordError('');
+                      }}
+                      error={passwordError}
+                      showPasswordToggle={true}
+                      isPasswordVisible={showNewPassword}
+                      onTogglePassword={() => setShowNewPassword(!showNewPassword)}
+                    />
+                  </div>
+
+                  {/* Confirm Password Field */}
+                  <div className="forgot-password-page__form-group">
+                    <AppInput
+                      label="Confirm Password"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Confirm new password"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (confirmPasswordError) setConfirmPasswordError('');
+                      }}
+                      error={confirmPasswordError}
+                      showPasswordToggle={true}
+                      isPasswordVisible={showConfirmPassword}
+                      onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
                     />
                   </div>
 
@@ -110,7 +205,7 @@ const ForgotPasswordPage: React.FC = () => {
                     loading={isLoading}
                     fullWidth
                   >
-                    Send Reset Link
+                    Reset Password
                     <IonIcon slot="end" icon={arrowForwardOutline} />
                   </AppButton>
 

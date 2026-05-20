@@ -23,6 +23,7 @@
 }
 
 .app-input__item {
+  position: relative;
   --background: var(--color-bg-secondary);
   --border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
@@ -41,6 +42,32 @@
   --placeholder-color: var(--color-text-muted);
   font-size: var(--font-size-md);
   padding: var(--space-md);
+}
+
+.app-input__field--has-toggle {
+  --padding-end: 44px;
+}
+
+.app-input__password-toggle {
+  position: absolute;
+  right: var(--space-sm, 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-light, #666);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm, 8px);
+  z-index: 10;
+  height: 100%;
+}
+
+.app-input__password-toggle:hover {
+  color: var(--color-primary);
 }
 
 .app-input__error-text {

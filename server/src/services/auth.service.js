@@ -65,6 +65,32 @@ class AuthService {
   }
 
   /**
+   * @desc    Reset password directly for a user by email
+   */
+  async resetPasswordDirectly(email, newPassword) {
+    // 1. Find user in MySQL database
+    const user = await userRepository.findByEmail(email);
+    if (!user) {
+      throw new ApiError(404, 'No account found with this email address.');
+    }
+
+    // 2. Update password in Firebase
+    try {
+      if (admin && admin.apps && admin.apps.length > 0) {
+        await admin.auth().updateUser(user.firebaseUid, {
+          password: newPassword,
+        });
+      } else {
+        console.warn('Firebase Admin is not initialized. Skipping Firebase password update (simulated for dev).');
+      }
+    } catch (error) {
+      throw new ApiError(500, `Authentication service error: ${error.message}`);
+    }
+
+    return { message: 'Password updated successfully' };
+  }
+
+  /**
    * @desc    Get Current User Profile
    */
   async getProfile(userId) {

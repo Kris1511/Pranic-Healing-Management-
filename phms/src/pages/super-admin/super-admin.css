@@ -888,11 +888,16 @@
 }
 
 .sa-settings__label {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: var(--color-text-muted);
+  color: var(--color-text-primary);
+}
+
+.sa-label--required::after {
+  content: " *";
+  color: var(--color-danger, #ef4444);
 }
 
 .sa-settings__input {
@@ -900,6 +905,7 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   color: var(--color-text-primary);
   background: #f8f9fb;
   outline: none;

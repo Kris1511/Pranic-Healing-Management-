@@ -57,10 +57,10 @@ export const authAPI = {
   },
 
   /**
-   * Request password reset
+   * Request password reset (Directly resets password if password parameter is provided)
    */
-  requestPasswordReset: async (email: string): Promise<{ message: string }> => {
-    const response = await axiosInstance.post('/auth/forgot-password', { email });
+  requestPasswordReset: async (data: { email: string; password?: string }): Promise<{ message: string }> => {
+    const response = await axiosInstance.post('/auth/forgot-password', data);
     return response.data;
   },
 
