@@ -1,10 +1,8 @@
 const { admin } = require('../config/firebase.config');
 const ApiError = require('../helpers/error.helper');
 const logger = require('../config/logger.config');
+const userRepository = require('../repositories/user.repository');
 
-/**
- * @desc    Verify Firebase ID Token
- */
 const protect = async (req, res, next) => {
   let token;
 
@@ -16,20 +14,31 @@ const protect = async (req, res, next) => {
   }
 
   if (!token) {
-    return next(new ApiError(401, 'Not authorized to access this route'));
+    return next(new ApiError(401, 'Not authorized'));
   }
 
   try {
-    // Verify token with Firebase
     const decodedToken = await admin.auth().verifyIdToken(token);
-    
-    // Add user data to request
-    req.user = decodedToken;
-    
+
+    // Fetch user from DB
+    const dbUser = await userRepository.findByFirebaseUid(
+      decodedToken.uid
+    );
+
+    if (!dbUser) {
+      return next(new ApiError(401, 'User not found'));
+    }
+
+    // Store DB user
+    req.user = dbUser;
+
     next();
   } catch (error) {
     logger.error('Firebase token verification failed:', error);
-    return next(new ApiError(401, 'Not authorized to access this route'));
+
+    return next(
+      new ApiError(401, 'Not authorized to access this route')
+    );
   }
 };
 

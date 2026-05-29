@@ -17,7 +17,7 @@ class CredentialService {
           name: user.name,
           email: user.email,
           password: password,
-          loginUrl: 'https://phms-app.com/login', // Update with actual URL
+          loginUrl: 'http://localhost:5173/auth/signin', // Update with actual URL
         },
       };
 
@@ -26,6 +26,29 @@ class CredentialService {
       return true;
     } catch (error) {
       logger.error(`Failed to send credentials to ${user.email}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * @desc    Send login credentials to user via SMS
+   */
+  async sendSMS(user, password) {
+    try {
+      if (!user.phoneNumber && !user.phone) {
+        logger.warn(`No phone number provided for ${user.email}. Skipping SMS.`);
+        return false;
+      }
+      
+      const phone = user.phoneNumber || user.phone;
+      const message = `Hello ${user.name},\nWelcome to PHMS! Your account has been created.\nEmail: ${user.email}\nPassword: ${password}\nLogin at: http://localhost:5173/auth/signin`;
+      
+      // TODO: Integrate actual SMS gateway like Twilio, MSG91, or AWS SNS here
+      logger.info(`[MOCK SMS] Sent to ${phone}: ${message}`);
+      
+      return true;
+    } catch (error) {
+      logger.error(`Failed to send SMS to ${user.name}:`, error);
       return false;
     }
   }

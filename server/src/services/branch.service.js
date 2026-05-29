@@ -54,7 +54,14 @@ class BranchService {
       address: address || data.address || null,
       phone: data.phone,
       email: data.email,
-      status: 'active'
+      status: 'active',
+      addressLine1: data.addressLine1 || null,
+      addressLine2: data.addressLine2 || null,
+      city: data.city || null,
+      district: data.district || null,
+      state: data.state || null,
+      pincode: data.pincode || null,
+      details: data.details || null
     });
 
     // 5. Create the local User (Branch Admin)

@@ -4,6 +4,7 @@ const router = express.Router();
 // Import routes
 const authRoutes = require('./auth.routes');
 const branchRoutes = require('./branch.routes');
+const userRoutes = require('./user.routes');
 const patientRoutes = require('./patient.routes');
 const healerRoutes = require('./healer.routes');
 const sessionRoutes = require('./session.routes');
@@ -16,6 +17,7 @@ const reportRoutes = require('./report.routes');
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/branches', branchRoutes);
+router.use('/users', userRoutes);
 router.use('/patients', patientRoutes);
 router.use('/healers', healerRoutes);
 router.use('/sessions', sessionRoutes);
