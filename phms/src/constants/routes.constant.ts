@@ -16,6 +16,7 @@ export const ROUTES = {
     DASHBOARD: '/super-admin/dashboard',
     USERS: '/super-admin/users',
     BRANCH_ADMINS: '/super-admin/branch-admins',
+    CREATE_BRANCH_ADMIN: '/super-admin/branch-admins/create',
     HEALERS: '/super-admin/healers',
     PATIENTS: '/super-admin/patients',
     BRANCHES: '/super-admin/branches',
@@ -40,6 +41,10 @@ export const ROUTES = {
     FINANCE: '/branch-admin/finance',
     REPORTS: '/branch-admin/reports',
     SETTINGS: '/branch-admin/settings',
+    REGISTER_PATIENT: '/branch-admin/patients/register',
+    CREATE_HEALER: '/branch-admin/healers/create',
+    EDIT_PATIENT: '/branch-admin/patients/edit/:id',
+    VISITOR_CHECKIN: '/branch-admin/visitor-log/checkin',
   },
 
   // Healer Routes

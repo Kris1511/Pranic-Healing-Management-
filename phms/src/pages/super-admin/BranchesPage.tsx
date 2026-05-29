@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   IonPage,
   IonContent,
@@ -10,7 +10,8 @@ import {
   IonIcon,
   IonMenuButton,
   IonModal,
-} from '@ionic/react';
+  useIonViewWillEnter,
+} from "@ionic/react";
 import {
   notificationsOutline,
   searchOutline,
@@ -21,62 +22,50 @@ import {
   calendarOutline,
   chevronForwardOutline,
   trashOutline,
-} from 'ionicons/icons';
-import { useHistory } from 'react-router-dom';
-import { ROUTES } from '../../constants/routes.constant';
-import './super-admin.css';
+  alertCircleOutline,
+} from "ionicons/icons";
+import { useHistory } from "react-router-dom";
+import { ROUTES } from "../../constants/routes.constant";
+import { getBranches, updateBranch, deleteBranch } from "../../api/branch.api";
+import "./super-admin.css";
 
 const BranchesPage: React.FC = () => {
   const history = useHistory();
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const filters = ['All', 'Active', 'Maintenance', 'Closed'];
+  const filters = ["All", "Active", "Maintenance", "Closed"];
 
-  const [branches, setBranches] = useState([
-    {
-      name: 'Uptown Sanctuary',
-      region: 'Northern Region',
-      status: 'active',
-      admin: 'John Admin',
-      phone: '0876543210',
-      est: '2023-01-16',
-    },
-    {
-      name: 'Coastal Healing Center',
-      region: 'Western Region',
-      status: 'active',
-      admin: 'Sarah Admin',
-      phone: '0876543211',
-      est: '2023-02-20',
-    },
-    {
-      name: 'Green Valley Branch',
-      region: 'Southern Region',
-      status: 'maintenance',
-      admin: 'Mike Admin',
-      phone: '0876543212',
-      est: '2022-02-10',
-    },
-    {
-      name: 'Downtown Sanctuary',
-      region: 'Central Region',
-      status: 'active',
-      admin: 'Elena Thorne',
-      phone: '0876543212',
-      est: '2023-04-05',
-    },
-  ]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useIonViewWillEnter(() => {
+    fetchBranches();
+  });
+
+  const fetchBranches = async () => {
+    setLoading(true);
+    try {
+      const response = await getBranches();
+      setBranches(response.data || []);
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateBranch = () => {
     history.push(ROUTES.SUPER_ADMIN.CREATE_BRANCH);
   };
 
   const openEditModal = (branch: any, index: number) => {
-    setEditingIndex(index);
+    // Find the original index in the main branches array
+    const actualIndex = branches.findIndex((b) => b.id === branch.id);
+    setEditingIndex(actualIndex);
     setSelectedBranch({ ...branch });
     setShowEditModal(true);
   };
@@ -86,36 +75,58 @@ const BranchesPage: React.FC = () => {
     setShowReportModal(true);
   };
 
-  const handleSaveEdit = () => {
-    if (editingIndex !== null && selectedBranch) {
-      const newBranches = [...branches];
-      // Find the actual index if filtered
-      const actualIndex = branches.findIndex(b => b.name === newBranches[editingIndex].name);
-      if (actualIndex > -1) {
-          newBranches[editingIndex] = selectedBranch;
+  const handleSaveEdit = async () => {
+    if (editingIndex !== null && selectedBranch && selectedBranch.id) {
+      try {
+        const response = await updateBranch(selectedBranch.id, selectedBranch);
+        const newBranches = [...branches];
+        newBranches[editingIndex] = response.data || selectedBranch;
+        setBranches(newBranches);
+        setShowEditModal(false);
+      } catch (error) {
+        console.error("Error updating branch:", error);
+        alert("Failed to update branch");
       }
-      setBranches(newBranches);
     }
-    setShowEditModal(false);
   };
 
-  const handleDeleteBranch = (index: number) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this branch?');
-    if (confirmDelete) {
-      const branchToDelete = filteredBranches[index];
-      setBranches(branches.filter(b => b.name !== branchToDelete.name));
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<any>(null);
+
+  const handleDeleteBranch = (branch: any) => {
+    setBranchToDelete(branch);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteBranch = async () => {
+    if (branchToDelete) {
+      try {
+        await deleteBranch(branchToDelete.id);
+        setBranches(branches.filter((b) => b.id !== branchToDelete.id));
+        setShowDeleteModal(false);
+        setBranchToDelete(null);
+      } catch (error) {
+        console.error("Error deleting branch:", error);
+        alert("Failed to delete branch");
+      }
     }
   };
 
   const totalBranches = branches.length;
-  const activeBranches = branches.filter(b => b.status === 'active').length;
-  const maintenanceBranches = branches.filter(b => b.status === 'maintenance').length;
+  const activeBranches = branches.filter((b) => b.status === "active").length;
+  const maintenanceBranches = branches.filter(
+    (b) => b.status === "maintenance",
+  ).length;
 
   const filteredBranches = branches
-    .filter(b => activeFilter === 'All' || b.status === activeFilter.toLowerCase())
-    .filter(b => 
-      b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      b.region.toLowerCase().includes(searchQuery.toLowerCase())
+    .filter(
+      (b) => activeFilter === "All" || b.status === activeFilter.toLowerCase(),
+    )
+    .filter(
+      (b) =>
+        b.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (b.address &&
+          b.address.toLowerCase().includes(searchQuery.toLowerCase())),
     );
 
   return (
@@ -144,9 +155,14 @@ const BranchesPage: React.FC = () => {
             <div className="sa-page__header-row">
               <div>
                 <h1 className="sa-page__title">Branches</h1>
-                <p className="sa-page__subtitle">Manage healing centers and administrative assignments</p>
+                <p className="sa-page__subtitle">
+                  Manage healing centers and administrative assignments
+                </p>
               </div>
-              <button className="sa-btn sa-btn--primary" onClick={handleCreateBranch}>
+              <button
+                className="sa-btn sa-btn--primary"
+                onClick={handleCreateBranch}
+              >
                 <IonIcon icon={addOutline} /> Create New Branch
               </button>
             </div>
@@ -175,20 +191,28 @@ const BranchesPage: React.FC = () => {
           </div>
 
           {/* Search & Filters */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 24,
+              flexWrap: "wrap",
+            }}
+          >
             <div className="sa-search">
               <IonIcon icon={searchOutline} />
-              <input 
-                placeholder="Search by name or region..." 
+              <input
+                placeholder="Search by name or region..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="sa-filters" style={{ marginBottom: 0 }}>
-              {filters.map(f => (
+              {filters.map((f) => (
                 <button
                   key={f}
-                  className={`sa-filter-tab ${activeFilter === f ? 'sa-filter-tab--active' : ''}`}
+                  className={`sa-filter-tab ${activeFilter === f ? "sa-filter-tab--active" : ""}`}
                   onClick={() => setActiveFilter(f)}
                 >
                   {f}
@@ -209,7 +233,8 @@ const BranchesPage: React.FC = () => {
                     <div>
                       <h3 className="sa-branch-card__name">{branch.name}</h3>
                       <p className="sa-branch-card__region">
-                        <IonIcon icon={locationOutline} /> {branch.region}
+                        <IonIcon icon={locationOutline} />{" "}
+                        {branch.address || "No Address"}
                       </p>
                     </div>
                   </div>
@@ -218,64 +243,109 @@ const BranchesPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div 
-                  className="sa-branch-card__admin" 
-                  onClick={() => history.push(ROUTES.SUPER_ADMIN.BRANCH_DETAILS.replace(':id', encodeURIComponent(branch.name)))}
+                <div
+                  className="sa-branch-card__admin"
+                  onClick={() =>
+                    history.push(
+                      ROUTES.SUPER_ADMIN.BRANCH_DETAILS.replace(
+                        ":id",
+                        encodeURIComponent(branch.name),
+                      ),
+                    )
+                  }
                 >
                   <div>
-                    <div className="sa-branch-card__admin-label">Branch Admin</div>
-                    <div className="sa-branch-card__admin-name">{branch.admin}</div>
+                    <div className="sa-branch-card__admin-label">
+                      Branch Admin
+                    </div>
+                    <div className="sa-branch-card__admin-name">
+                      {branch.admin}
+                    </div>
                   </div>
-                  <IonIcon icon={chevronForwardOutline} style={{ color: '#999' }} />
+                  <IonIcon
+                    icon={chevronForwardOutline}
+                    style={{ color: "#999" }}
+                  />
                 </div>
 
                 <div className="sa-branch-card__meta">
                   <div className="sa-branch-card__meta-item">
-                    <IonIcon icon={callOutline} /> {branch.phone}
+                    <IonIcon icon={callOutline} /> {branch.phone || "N/A"}
                   </div>
                   <div className="sa-branch-card__meta-item">
-                    <IonIcon icon={calendarOutline} /> Est. {branch.est}
+                    <IonIcon icon={calendarOutline} /> Est.{" "}
+                    {branch.createdAt
+                      ? new Date(branch.createdAt).toLocaleDateString()
+                      : "N/A"}
                   </div>
                 </div>
 
-                {/* <div className="sa-branch-card__actions">
-                  <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openEditModal(branch, i)}>Edit</button>
-                  <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openReportModal(branch)}>Reports</button>
-                  <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ padding: '0 10px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => handleDeleteBranch(i)}>
+                <div className="sa-branch-card__actions">
+                  {/* <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openEditModal(branch, i)}>Edit</button>
+                  <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openReportModal(branch)}>Reports</button> */}
+                  <button
+                    className="sa-btn sa-btn--outline sa-btn--sm"
+                    style={{
+                      width: "100%",
+                      color: "var(--color-danger)",
+                      borderColor: "var(--color-danger)",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                    onClick={() => handleDeleteBranch(branch)}
+                  >
                     <IonIcon icon={trashOutline} />
                   </button>
-                </div> */}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </IonContent>
 
-
-
       {/* 2. Edit Details Modal */}
-      <IonModal isOpen={showEditModal} onDidDismiss={() => setShowEditModal(false)} className="sa-modal">
+      <IonModal
+        isOpen={showEditModal}
+        onDidDismiss={() => setShowEditModal(false)}
+        className="sa-modal"
+      >
         <div className="sa-modal__content">
           <div className="sa-modal__header">
             <h2>Edit Branch Details</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowEditModal(false)}>×</button>
+            <button
+              className="sa-modal__close-btn"
+              onClick={() => setShowEditModal(false)}
+            >
+              ×
+            </button>
           </div>
           {selectedBranch && (
             <div className="sa-modal__body">
               <div className="sa-settings__form-group">
                 <label className="sa-settings__label">Branch Name</label>
-                <input 
-                  className="sa-settings__input" 
+                <input
+                  className="sa-settings__input"
                   value={selectedBranch.name}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, name: e.target.value})}
+                  onChange={(e) =>
+                    setSelectedBranch({
+                      ...selectedBranch,
+                      name: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="sa-settings__form-group">
                 <label className="sa-settings__label">Region</label>
-                <select 
+                <select
                   className="sa-settings__input"
                   value={selectedBranch.region}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, region: e.target.value})}
+                  onChange={(e) =>
+                    setSelectedBranch({
+                      ...selectedBranch,
+                      region: e.target.value,
+                    })
+                  }
                 >
                   <option>Northern Region</option>
                   <option>Southern Region</option>
@@ -286,10 +356,15 @@ const BranchesPage: React.FC = () => {
               </div>
               <div className="sa-settings__form-group">
                 <label className="sa-settings__label">Assigned Admin</label>
-                <select 
+                <select
                   className="sa-settings__input"
                   value={selectedBranch.admin}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, admin: e.target.value})}
+                  onChange={(e) =>
+                    setSelectedBranch({
+                      ...selectedBranch,
+                      admin: e.target.value,
+                    })
+                  }
                 >
                   <option>John Admin</option>
                   <option>Sarah Admin</option>
@@ -300,10 +375,15 @@ const BranchesPage: React.FC = () => {
               </div>
               <div className="sa-settings__form-group">
                 <label className="sa-settings__label">Status</label>
-                <select 
+                <select
                   className="sa-settings__input"
                   value={selectedBranch.status}
-                  onChange={(e) => setSelectedBranch({...selectedBranch, status: e.target.value})}
+                  onChange={(e) =>
+                    setSelectedBranch({
+                      ...selectedBranch,
+                      status: e.target.value,
+                    })
+                  }
                 >
                   <option value="active">Active</option>
                   <option value="maintenance">Maintenance</option>
@@ -313,45 +393,152 @@ const BranchesPage: React.FC = () => {
             </div>
           )}
           <div className="sa-modal__footer">
-            <button className="sa-btn sa-btn--outline" onClick={() => setShowEditModal(false)}>Cancel</button>
-            <button className="sa-btn sa-btn--primary" onClick={handleSaveEdit}>Save Changes</button>
+            <button
+              className="sa-btn sa-btn--outline"
+              onClick={() => setShowEditModal(false)}
+            >
+              Cancel
+            </button>
+            <button className="sa-btn sa-btn--primary" onClick={handleSaveEdit}>
+              Save Changes
+            </button>
           </div>
         </div>
       </IonModal>
 
       {/* 3. Branch Reports Modal */}
-      <IonModal isOpen={showReportModal} onDidDismiss={() => setShowReportModal(false)} className="sa-modal sa-modal--sm">
+      <IonModal
+        isOpen={showReportModal}
+        onDidDismiss={() => setShowReportModal(false)}
+        className="sa-modal sa-modal--sm"
+      >
         <div className="sa-modal__content">
           <div className="sa-modal__header">
             <h2>Branch Overview</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowReportModal(false)}>×</button>
+            <button
+              className="sa-modal__close-btn"
+              onClick={() => setShowReportModal(false)}
+            >
+              ×
+            </button>
           </div>
           {selectedBranch && (
             <div className="sa-modal__body">
               <p className="sa-modal__desc">
-                Generating snapshot reports for <strong>{selectedBranch.name}</strong> as of {new Date().toLocaleDateString()}.
+                Generating snapshot reports for{" "}
+                <strong>{selectedBranch.name}</strong> as of{" "}
+                {new Date().toLocaleDateString()}.
               </p>
-              
+
               <div className="sa-finance-grid" style={{ marginBottom: 0 }}>
-                <div className="sa-finance-card" style={{ padding: '12px' }}>
+                <div className="sa-finance-card" style={{ padding: "12px" }}>
                   <div className="sa-finance-card__label">Total Sessions</div>
-                  <div className="sa-finance-card__value" style={{ fontSize: '18px' }}>142</div>
+                  <div
+                    className="sa-finance-card__value"
+                    style={{ fontSize: "18px" }}
+                  >
+                    142
+                  </div>
                 </div>
-                <div className="sa-finance-card" style={{ padding: '12px' }}>
+                <div className="sa-finance-card" style={{ padding: "12px" }}>
                   <div className="sa-finance-card__label">Est. Revenue</div>
-                  <div className="sa-finance-card__value" style={{ fontSize: '18px' }}>₹12k</div>
+                  <div
+                    className="sa-finance-card__value"
+                    style={{ fontSize: "18px" }}
+                  >
+                    ₹12k
+                  </div>
                 </div>
               </div>
-              
             </div>
           )}
-          <div className="sa-modal__footer" style={{ justifyContent: 'center' }}>
-            <button className="sa-btn sa-btn--outline" style={{ flex: 1 }} onClick={() => setShowReportModal(false)}>Close</button>
-            <button className="sa-btn sa-btn--primary" style={{ flex: 1 }}>Download PDF</button>
+          <div
+            className="sa-modal__footer"
+            style={{ justifyContent: "center" }}
+          >
+            <button
+              className="sa-btn sa-btn--outline"
+              style={{ flex: 1 }}
+              onClick={() => setShowReportModal(false)}
+            >
+              Close
+            </button>
+            <button className="sa-btn sa-btn--primary" style={{ flex: 1 }}>
+              Download PDF
+            </button>
           </div>
         </div>
       </IonModal>
-      
+
+      {/* 4. Delete Confirmation Modal */}
+      <IonModal
+        isOpen={showDeleteModal}
+        onDidDismiss={() => { setShowDeleteModal(false); setBranchToDelete(null); }}
+        className="sa-modal sa-modal--sm"
+      >
+        <div className="sa-modal__content" style={{ borderTop: '4px solid var(--color-danger)' }}>
+          <div className="sa-modal__header">
+            <h2 style={{ color: 'var(--color-danger)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <IonIcon icon={trashOutline} /> Delete Branch
+            </h2>
+            <button
+              className="sa-modal__close-btn"
+              onClick={() => { setShowDeleteModal(false); setBranchToDelete(null); }}
+            >
+              ×
+            </button>
+          </div>
+          {branchToDelete && (
+            <div className="sa-modal__body">
+              <p style={{ margin: '0 0 16px 0', fontSize: '15px', lineHeight: '1.5', color: 'var(--ion-color-dark)' }}>
+                Are you sure you want to delete the branch <strong>{branchToDelete.name}</strong>?
+              </p>
+              
+              <div style={{
+                background: 'rgba(var(--ion-color-danger-rgb, 235, 68, 90), 0.08)',
+                borderLeft: '4px solid var(--color-danger)',
+                padding: '12px 16px',
+                borderRadius: '4px',
+                marginBottom: '16px'
+              }}>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-danger)', fontWeight: 500, lineHeight: '1.4' }}>
+                  <IonIcon icon={alertCircleOutline} style={{ verticalAlign: 'middle', marginRight: '6px', fontSize: '16px' }} />
+                  Warning: This action is permanent and cannot be undone. All active sessions, schedules, and assignments linked to this branch will be affected.
+                </p>
+              </div>
+
+              <div style={{
+                fontSize: '13px',
+                color: 'var(--ion-color-medium)',
+                background: '#f8f9fa',
+                padding: '10px 14px',
+                borderRadius: '6px',
+                border: '1px solid #e9ecef'
+              }}>
+                <strong>Branch Details:</strong>
+                <div style={{ marginTop: '4px' }}>Location: {branchToDelete.address || 'N/A'}</div>
+                <div>Status: <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>{branchToDelete.status}</span></div>
+              </div>
+            </div>
+          )}
+          <div className="sa-modal__footer" style={{ display: 'flex', gap: '12px' }}>
+            <button
+              className="sa-btn sa-btn--outline"
+              style={{ flex: 1 }}
+              onClick={() => { setShowDeleteModal(false); setBranchToDelete(null); }}
+            >
+              Cancel
+            </button>
+            <button 
+              className="sa-btn" 
+              style={{ flex: 1, backgroundColor: 'var(--color-danger)', color: 'white' }} 
+              onClick={confirmDeleteBranch}
+            >
+              Delete Branch
+            </button>
+          </div>
+        </div>
+      </IonModal>
     </IonPage>
   );
 };

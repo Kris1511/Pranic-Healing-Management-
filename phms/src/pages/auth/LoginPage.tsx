@@ -99,36 +99,71 @@ const LoginPage: React.FC = () => {
 
   const selectedRole = watch('role');
 
-  const onSubmit = async (data: LoginFormInputs) => {
-    clearError();
+  // const onSubmit = async (data: LoginFormInputs) => {
+  //   clearError();
     
-    try {
-      // Call real login from hook
-      await login(data as LoginRequest);
+  //   try {
+  //     // Call real login from hook
+  //     await login(data as LoginRequest);
       
-      const roleRedirectMap: Record<string, string> = {
-        SUPER_ADMIN: ROUTES.SUPER_ADMIN.DASHBOARD,
-        // BRANCH_ADMIN: ROUTES.BRANCH_ADMIN.DASHBOARD,
-        // HEALER: ROUTES.HEALER.DASHBOARD,
-        // PATIENT: ROUTES.PATIENT.DASHBOARD,
-      };
+  //     const roleRedirectMap: Record<string, string> = {
+  //       SUPER_ADMIN: ROUTES.SUPER_ADMIN.DASHBOARD,
+  //       BRANCH_ADMIN: ROUTES.BRANCH_ADMIN.DASHBOARD,
+  //       HEALER: ROUTES.HEALER.DASHBOARD,
+  //       PATIENT: ROUTES.PATIENT.DASHBOARD,
+  //     };
 
-      const selectedRole = data.role || 'SUPER_ADMIN';
-      const redirectPath = roleRedirectMap[selectedRole] || ROUTES.SUPER_ADMIN.DASHBOARD;
+  //     const selectedRole = data.role || 'SUPER_ADMIN';
+  //     const redirectPath = roleRedirectMap[selectedRole] || ROUTES.SUPER_ADMIN.DASHBOARD;
 
-      present({
-        message: 'Login successful!',
-        duration: 2000,
-        position: 'top',
-        color: 'success',
-      });
+  //     present({
+  //       message: 'Login successful!',
+  //       duration: 2000,
+  //       position: 'top',
+  //       color: 'success',
+  //     });
 
-      history.push(redirectPath);
-    } catch (err: any) {
-      console.error('Login error:', err);
-      // Error is handled by useAuth hook and displayed via useEffect toast
-    }
-  };
+  //     history.push(redirectPath);
+  //   } catch (err: any) {
+  //     console.error('Login error:', err);
+  //     // Error is handled by useAuth hook and displayed via useEffect toast
+  //   }
+  // };
+
+  const onSubmit = async (data: LoginFormInputs) => {
+  clearError();
+
+  try {
+    await login(data as LoginRequest);
+
+    const roleRedirectMap: Record<string, string> = {
+      SUPER_ADMIN: ROUTES.SUPER_ADMIN.DASHBOARD,
+      BRANCH_ADMIN: ROUTES.BRANCH_ADMIN.DASHBOARD,
+      HEALER: ROUTES.HEALER.DASHBOARD,
+      PATIENT: ROUTES.PATIENT.DASHBOARD,
+    };
+
+    // Get actual logged-in user
+    const loggedInUser = useAuthStore.getState().user;
+
+    const actualRole = loggedInUser?.role;
+
+    const redirectPath =
+      roleRedirectMap[actualRole as string] ||
+      ROUTES.SUPER_ADMIN.DASHBOARD;
+
+    present({
+      message: 'Login successful!',
+      duration: 2000,
+      position: 'top',
+      color: 'success',
+    });
+
+    history.push(redirectPath);
+  } catch (err: any) {
+    console.error('Login error:', err);
+  }
+};
 
   return (
     <IonPage className="login-page">

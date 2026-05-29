@@ -78,7 +78,7 @@ const Menu: React.FC = () => {
   const history = useHistory();
   const { user, logout } = useAuthStore();
 
-  const navItems = user?.role === 'SUPER_ADMIN' ? branchAdminNav : superAdminNav;
+  const navItems = user?.role === 'SUPER_ADMIN' ? superAdminNav : branchAdminNav;
 
   const handleNavClick = (url: string) => {
     history.push(url);

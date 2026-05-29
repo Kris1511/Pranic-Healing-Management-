@@ -24,9 +24,12 @@ import {
   mailOutline,
   calendarOutline,
 } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
+import '../branch-admin/branch-admin.css';
 import './super-admin.css';
 
 const PatientsPage: React.FC = () => {
+  const history = useHistory();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -106,7 +109,7 @@ const PatientsPage: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const handleSearchChange = (e: any) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
     setCurrentPage(1);
   };
@@ -180,7 +183,7 @@ const PatientsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sa-section" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="sa-section pa-table-container">
             <table className="sa-table">
               <thead>
                 <tr>

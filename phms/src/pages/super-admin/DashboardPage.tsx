@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -26,15 +26,33 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
+import { getBranches } from '../../api/branch.api';
 import './super-admin.css';
 
 const DashboardPage: React.FC = () => {
   const history = useHistory();
-  const [showAdminModal, setShowAdminModal] = React.useState(false);
-  const [showReportModal, setShowReportModal] = React.useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [branchesCount, setBranchesCount] = useState(0);
+
+  useEffect(() => {
+    const fetchBranchesCount = async () => {
+      try {
+        const response = await getBranches();
+        if (response && response.data) {
+          setBranchesCount(response.data.length || 0);
+        } else if (Array.isArray(response)) {
+          setBranchesCount(response.length);
+        }
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
+    fetchBranchesCount();
+  }, []);
 
   const stats = [
-    { label: 'Total Branches', value: '4', detail: 'Across all regions', icon: businessOutline },
+    { label: 'Total Branches', value: branchesCount.toString(), detail: 'Across all regions', icon: businessOutline },
     // { label: 'Total Patients', value: '2,840', detail: 'Organization-wide', icon: peopleOutline },
     // { label: 'Active Sessions', value: '142', detail: 'Live now', icon: flashOutline },
     // { label: 'Healer Count', value: '1', detail: 'Certified practitioners', icon: medkitOutline },
@@ -70,7 +88,7 @@ const DashboardPage: React.FC = () => {
         <div className="sa-page__body">
           {/* Subtitle */}
           <p className="sa-page__subtitle" style={{ marginBottom: 20 }}>
-            Monitoring 4 sanctuaries across the organization.
+            Monitoring {branchesCount} sanctuaries across the organization.
           </p>
 
           {/* Stat Cards */}
@@ -132,8 +150,8 @@ const DashboardPage: React.FC = () => {
                 <span className="sa-quick-action__label">Create New Branch</span>
                 <IonIcon icon={addCircleOutline} className="sa-quick-action__icon" />
               </div>
-              <div className="sa-quick-action" onClick={() => setShowAdminModal(true)}>
-                <span className="sa-quick-action__label">Manage Branch Admins</span>
+              <div className="sa-quick-action" onClick={() => history.push(ROUTES.SUPER_ADMIN.CREATE_BRANCH_ADMIN)}>
+                <span className="sa-quick-action__label">Create Branch Admins</span>
                 <IonIcon icon={peopleCircleOutline} className="sa-quick-action__icon" />
               </div>
               <div className="sa-quick-action" onClick={() => setShowReportModal(true)}>

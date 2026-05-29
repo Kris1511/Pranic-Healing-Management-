@@ -10,6 +10,7 @@ import { ROUTES } from './constants/routes.constant';
 /* Super Admin Pages */
 import SADashboardPage from './pages/super-admin/DashboardPage';
 import SABranchAdminsPage from './pages/super-admin/BranchAdminsPage';
+import SACreateBranchAdminPage from './pages/super-admin/CreateBranchAdminPage';
 import SAHealersPage from './pages/super-admin/HealersPage';
 import SABranchesPage from './pages/super-admin/BranchesPage';
 import SABranchDetailsPage from './pages/super-admin/BranchDetailsPage';
@@ -24,6 +25,11 @@ import BAAttendancePage from './pages/branch-admin/AttendancePage';
 import SARevenuePage from './pages/super-admin/RevenuePage';
 import SADailyFinancePage from './pages/super-admin/DailyFinancePage';
 import BAVisitorLogPage from './pages/branch-admin/VisitorLogPage';
+import BADashboardPage from './pages/branch-admin/DashboardPage';
+import BACreateHealerPage from './pages/branch-admin/CreateHealerPage';
+import BARegisterPatientPage from './pages/branch-admin/RegisterPatientPage';
+import BAPatientsPage from './pages/branch-admin/PatientsPage';
+import BAHealersPage from './pages/branch-admin/HealersPage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -91,6 +97,9 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.SUPER_ADMIN.BRANCH_ADMINS} exact={true}>
           <SABranchAdminsPage />
         </Route>
+        <Route path={ROUTES.SUPER_ADMIN.CREATE_BRANCH_ADMIN} exact={true}>
+          <SACreateBranchAdminPage />
+        </Route>
         <Route path={ROUTES.SUPER_ADMIN.BRANCHES} exact={true}>
           <SABranchesPage />
         </Route>
@@ -129,11 +138,29 @@ const AppContent: React.FC = () => {
         </Route>
 
         {/* Default Route */}
+        <Route path={ROUTES.BRANCH_ADMIN.DASHBOARD} exact={true}>
+          <BADashboardPage />
+        </Route>
         <Route path={ROUTES.BRANCH_ADMIN.ATTENDANCE} exact={true}>
           <BAAttendancePage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.VISITOR_LOG} exact={true}>
           <BAVisitorLogPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.PATIENTS} exact={true}>
+          <BAPatientsPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.HEALERS} exact={true}>
+          <BAHealersPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.CREATE_HEALER} exact={true}>
+          <BACreateHealerPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.REGISTER_PATIENT} exact={true}>
+          <BARegisterPatientPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.EDIT_PATIENT} exact={true}>
+          <BAPatientsPage />
         </Route>
         <Route path="/" exact={true}>
           <Redirect to={ROUTES.AUTH.LOGIN} />

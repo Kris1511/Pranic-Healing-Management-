@@ -20,9 +20,14 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
 } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
+import { ROUTES } from '../../constants/routes.constant';
+import { getUsers, updateUser, deleteUser } from '../../api/user.api';
+import { getBranches } from '../../api/branch.api';
 import './super-admin.css';
 
 const BranchAdminsPage: React.FC = () => {
+  const history = useHistory();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -30,35 +35,45 @@ const BranchAdminsPage: React.FC = () => {
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
   const [adminToDelete, setAdminToDelete] = useState<any>(null);
   
-  const [admins, setAdmins] = useState([
-    { id: 1, name: 'John Admin', email: 'john.a@phms.com', phone: '0876543210', branch: 'Uptown Sanctuary', status: 'active', joined: '2023-01-16' },
-    { id: 2, name: 'Sarah Admin', email: 'sarah.m@phms.com', phone: '0876543211', branch: 'Coastal Healing Center', status: 'active', joined: '2023-02-20' },
-    { id: 3, name: 'Mike Admin', email: 'mike.t@phms.com', phone: '0876543212', branch: 'Green Valley Branch', status: 'inactive', joined: '2022-02-10' },
-    { id: 4, name: 'Elena Thorne', email: 'elena.t@phms.com', phone: '0876543212', branch: 'Downtown Sanctuary', status: 'active', joined: '2023-04-05' },
-  ]);
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [availableBranches, setAvailableBranches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    fetchAdmins();
+    fetchBranches();
+  }, []);
+
+  const fetchAdmins = async () => {
+    setLoading(true);
+    try {
+      const response = await getUsers({ role: 'BRANCH_ADMIN' });
+      setAdmins(response.data || []);
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const response = await getBranches();
+      setAvailableBranches(response.data || []);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    }
+  };
 
   const [newAdmin, setNewAdmin] = useState({
     name: '',
     email: '',
-    branch: 'Uptown Sanctuary',
+    branch: '',
   });
 
   const handleAssignAdmin = () => {
-    if (!newAdmin.name || !newAdmin.email) return;
-    
-    const adminObj = {
-      id: admins.length + 1,
-      name: newAdmin.name,
-      email: newAdmin.email,
-      phone: 'Not Set',
-      branch: newAdmin.branch,
-      status: 'active',
-      joined: new Date().toISOString().split('T')[0]
-    };
-
-    setAdmins([...admins, adminObj]);
-    setNewAdmin({ name: '', email: '', branch: 'Uptown Sanctuary' });
-    setShowAssignModal(false);
+    // Legacy assign logic
+    history.push(ROUTES.SUPER_ADMIN.CREATE_BRANCH_ADMIN);
   };
 
   const handleDeleteClick = (admin: any) => {
@@ -66,11 +81,17 @@ const BranchAdminsPage: React.FC = () => {
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (adminToDelete) {
-      setAdmins(admins.filter(a => a.id !== adminToDelete.id));
-      setShowDeleteModal(false);
-      setAdminToDelete(null);
+      try {
+        await deleteUser(adminToDelete.id);
+        setAdmins(admins.filter(a => a.id !== adminToDelete.id));
+        setShowDeleteModal(false);
+        setAdminToDelete(null);
+      } catch (error) {
+        console.error('Error deleting admin:', error);
+        alert('Failed to delete admin');
+      }
     }
   };
 
@@ -79,19 +100,37 @@ const BranchAdminsPage: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleUpdateAdmin = () => {
+  const handleUpdateAdmin = async () => {
     if (!selectedAdmin) return;
-    setAdmins(admins.map(a => a.id === selectedAdmin.id ? selectedAdmin : a));
-    setShowEditModal(false);
+    try {
+      const response = await updateUser(selectedAdmin.id, {
+        name: selectedAdmin.name,
+        email: selectedAdmin.email,
+        phone: selectedAdmin.phone || selectedAdmin.phoneNumber,
+        status: selectedAdmin.status,
+        branchId: selectedAdmin.branchId || null
+      });
+      
+      // Re-fetch admins to ensure relations and formatting are perfectly refreshed
+      fetchAdmins();
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Error updating admin:', error);
+      alert('Failed to update admin');
+    }
   };
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeFilter, setActiveFilter] = useState('All');
   const ITEMS_PER_PAGE = 5;
+  const filters = ['All', 'Active', 'Inactive'];
 
-  const filteredAdmins = admins.filter(admin => 
-    admin.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    admin.branch.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAdmins = admins
+    .filter(admin => activeFilter === 'All' || admin.status === activeFilter.toLowerCase())
+    .filter(admin => 
+      (admin.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (admin.branch?.name || admin.branch || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const totalPages = Math.ceil(filteredAdmins.length / ITEMS_PER_PAGE);
   const paginatedAdmins = filteredAdmins.slice(
@@ -151,8 +190,8 @@ const BranchAdminsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div style={{ marginBottom: '24px', display: 'flex', gap: '16px' }}>
+          {/* Search & Filters */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
             <div className="sa-search">
               <IonIcon icon={searchOutline} />
               <input 
@@ -160,6 +199,17 @@ const BranchAdminsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
+            </div>
+            <div className="sa-filters" style={{ marginBottom: 0 }}>
+              {filters.map((f) => (
+                <button
+                  key={f}
+                  className={`sa-filter-tab ${activeFilter === f ? 'sa-filter-tab--active' : ''}`}
+                  onClick={() => { setActiveFilter(f); setCurrentPage(1); }}
+                >
+                  {f}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -177,43 +227,60 @@ const BranchAdminsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedAdmins.map((admin) => (
-                  <tr key={admin.id}>
-                    <td>
-                      <div className="sa-table__user">
-                        <div className="sa-table__avatar sa-table__avatar--primary">
-                          {admin.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div className="sa-table__user-info">
-                          <span className="sa-table__user-name">{admin.name}</span>
-                          <span className="sa-table__user-email">{admin.email}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
-                        {admin.branch}
-                      </div>
-                    </td>
-                    <td>{admin.phone}</td>
-                    <td>
-                      <span className={`sa-badge sa-badge--${admin.status === 'active' ? 'active' : 'inactive'}`}>
-                        {admin.status}
-                      </span>
-                    </td>
-                    <td>{admin.joined}</td>
-                    <td>
-                      <div className="sa-table__actions">
-                        <button className="sa-table__action-btn" title="Edit Permissions" onClick={() => handleEditClick(admin)}>
-                          <IonIcon icon={createOutline} />
-                        </button>
-                        <button className="sa-table__action-btn" title="Remove Assignment" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteClick(admin)}>
-                          <IonIcon icon={trashOutline} />
-                        </button>
+                {paginatedAdmins.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ion-color-medium)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <IonIcon icon={searchOutline} style={{ fontSize: '32px', color: 'var(--ion-color-medium)' }} />
+                        <span style={{ fontSize: '15px', fontWeight: 500 }}>No administrators found</span>
+                        <span style={{ fontSize: '13px', opacity: 0.8 }}>
+                          {activeFilter === 'All' 
+                            ? "Try adjusting your search query or create a new branch admin."
+                            : `There are currently no ${activeFilter.toLowerCase()} administrators matching your criteria.`
+                          }
+                        </span>
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  paginatedAdmins.map((admin) => (
+                    <tr key={admin.id}>
+                      <td>
+                        <div className="sa-table__user">
+                          <div className="sa-table__avatar sa-table__avatar--primary">
+                            {(admin.name || '').split(' ').map((n: string) => n[0]).join('')}
+                          </div>
+                          <div className="sa-table__user-info">
+                            <span className="sa-table__user-name">{admin.name}</span>
+                            <span className="sa-table__user-email">{admin.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
+                          {admin.branch?.name || admin.branch || 'Unassigned'}
+                        </div>
+                      </td>
+                      <td>{admin.phone || admin.phoneNumber || 'Not Set'}</td>
+                      <td>
+                        <span className={`sa-badge sa-badge--${admin.status === 'active' ? 'active' : 'inactive'}`}>
+                          {admin.status}
+                        </span>
+                      </td>
+                      <td>{admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : admin.joined || 'N/A'}</td>
+                      <td>
+                        <div className="sa-table__actions">
+                          <button className="sa-table__action-btn" title="Edit Permissions" onClick={() => handleEditClick(admin)}>
+                            <IonIcon icon={createOutline} />
+                          </button>
+                          <button className="sa-table__action-btn" title="Remove Assignment" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteClick(admin)}>
+                            <IonIcon icon={trashOutline} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
 
@@ -336,13 +403,13 @@ const BranchAdminsPage: React.FC = () => {
                 <label className="sa-settings__label">Branch Assignment</label>
                 <select 
                   className="sa-settings__input"
-                  value={selectedAdmin.branch}
-                  onChange={(e) => setSelectedAdmin({ ...selectedAdmin, branch: e.target.value })}
+                  value={selectedAdmin.branchId || ''}
+                  onChange={(e) => setSelectedAdmin({ ...selectedAdmin, branchId: e.target.value })}
                 >
-                  <option>Uptown Sanctuary</option>
-                  <option>Coastal Healing Center</option>
-                  <option>Green Valley Branch</option>
-                  <option>Downtown Sanctuary</option>
+                  <option value="">Unassigned</option>
+                  {availableBranches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="sa-settings__form-group">

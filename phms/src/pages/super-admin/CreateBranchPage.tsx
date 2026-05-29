@@ -8,6 +8,7 @@ import {
   IonButtons,
   IonBackButton,
   IonIcon,
+  useIonToast,
 } from '@ionic/react';
 import {
   saveOutline,
@@ -23,6 +24,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
+import { createBranch } from '../../api/branch.api';
 import './super-admin.css';
 
 const CreateBranchPage: React.FC = () => {
@@ -61,40 +63,66 @@ const CreateBranchPage: React.FC = () => {
     }
   }, []);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [presentToast] = useIonToast();
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would be an API call
-    console.log('Creating Branch:', formData);
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    // Save to localStorage for cross-page persistence
-    const savedBranches = localStorage.getItem('ph_branches');
-    let branches = [];
-    if (savedBranches) {
-      branches = JSON.parse(savedBranches);
-    } else {
-      branches = [
-        { name: 'Uptown Sanctuary', region: 'Northern Region', status: 'active', admin: 'John Admin', phone: '0876543210', est: '2023-01-16' },
-        { name: 'Coastal Healing Center', region: 'Western Region', status: 'active', admin: 'Sarah Admin', phone: '0876543211', est: '2023-02-20' },
-        { name: 'Green Valley Branch', region: 'Southern Region', status: 'Inactive', admin: 'Mike Admin', phone: '0876543212', est: '2022-02-10' },
-        { name: 'Downtown Sanctuary', region: 'Central Region', status: 'active', admin: 'Elena Thorne', phone: '0876543212', est: '2023-04-05' },
-      ];
+    try {
+      const combinedAddress = [
+        formData.addressLine1,
+        formData.addressLine2,
+        formData.city,
+        formData.district,
+        formData.state,
+        formData.pincode
+      ].filter(Boolean).join(', ');
+
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: combinedAddress,
+        status: 'active',
+        addressLine1: formData.addressLine1,
+        addressLine2: formData.addressLine2,
+        city: formData.city,
+        district: formData.district,
+        state: formData.state,
+        pincode: formData.pincode,
+        details: formData.details
+      };
+
+      // API call to save branch data to the database
+      const response = await createBranch(payload);
+      
+      presentToast({
+        message: 'Branch created successfully!',
+        duration: 2000,
+        color: 'success',
+        position: 'top'
+      });
+
+      // Navigate back after successful creation
+      history.push({
+        pathname: ROUTES.SUPER_ADMIN.BRANCHES,
+        state: { newBranch: response.data || payload, refresh: true }
+      });
+    } catch (error) {
+      console.error('Error creating branch:', error);
+      presentToast({
+        message: 'Failed to create branch. Please try again.',
+        duration: 3000,
+        color: 'danger',
+        position: 'top'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    const newBranch = {
-      name: formData.name || 'New Branch',
-      region: formData.city ? `${formData.city} Region` : 'Unknown Region',
-      status: 'active',
-      admin: 'Unassigned',
-      phone: formData.phone || 'N/A',
-      est: new Date().toISOString().split('T')[0],
-    };
-    const updatedBranches = [...branches, newBranch];
-    localStorage.setItem('ph_branches', JSON.stringify(updatedBranches));
-
-    // After creation, navigate back
-    history.push({
-      pathname: ROUTES.SUPER_ADMIN.BRANCHES,
-      state: { newBranch: formData }
-    });
   };
 
   const handleCancel = () => {
@@ -159,7 +187,7 @@ const CreateBranchPage: React.FC = () => {
                   />
                 </div>
 
-                <div className="sa-settings__form-group">
+                {/* <div className="sa-settings__form-group">
                   <label className="sa-settings__label sa-label--required">
                     <IonIcon icon={lockClosedOutline} style={{ marginRight: '8px' }} />
                     Password
@@ -192,7 +220,7 @@ const CreateBranchPage: React.FC = () => {
                       <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} style={{ fontSize: '20px' }} />
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 <div className="sa-settings__form-group">
                   <label className="sa-settings__label sa-label--required">
@@ -223,7 +251,7 @@ const CreateBranchPage: React.FC = () => {
                   />
                 </div>
 
-                {/* <div className="sa-settings__form-group">
+                <div className="sa-settings__form-group">
                   <label className="sa-settings__label sa-label">
                     <IonIcon icon={locationOutline} style={{ marginRight: '8px' }} />
                     Address Line 2
@@ -234,7 +262,7 @@ const CreateBranchPage: React.FC = () => {
                     value={formData.addressLine2}
                     onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
                   />
-                </div> */}
+                </div>
 
                 <div className="sa-settings__form-group">
                   <label className="sa-settings__label sa-label--required">City</label>
@@ -310,8 +338,8 @@ const CreateBranchPage: React.FC = () => {
               <button type="button" className="sa-btn sa-btn--outline" onClick={handleCancel}>
                 <IonIcon icon={closeOutline} /> Cancel
               </button>
-              <button type="submit" className="sa-btn sa-btn--primary">
-                <IonIcon icon={saveOutline} /> Save Branch
+              <button type="submit" className="sa-btn sa-btn--primary" disabled={isSubmitting}>
+                <IonIcon icon={saveOutline} /> {isSubmitting ? 'Saving...' : 'Save Branch'}
               </button>
             </div>
           </form>

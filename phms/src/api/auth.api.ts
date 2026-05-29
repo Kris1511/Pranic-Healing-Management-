@@ -1,5 +1,5 @@
 import axiosInstance from './axois.instance';
-import { LoginRequest, LoginResponse, User } from '../types/api.types';
+import { LoginRequest, LoginResponse, User, ApiResponse } from '../types/api.types';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -25,12 +25,15 @@ export const authAPI = {
     const idToken = await getIdToken(userCredential.user);
 
     // 3. Send token to backend to get local user profile
-    const response = await axiosInstance.post<LoginResponse>('/auth/login', { 
+    const response = await axiosInstance.post<any>('/auth/login', { 
       token: idToken,
       role: credentials.role 
     });
 
-    return response.data;
+    return {
+      user: response.data.data,
+      token: idToken,
+    };
   },
 
   /**
@@ -44,8 +47,8 @@ export const authAPI = {
    * Get current logged-in user profile
    */
   getCurrentUser: async (): Promise<User> => {
-    const response = await axiosInstance.get<User>('/auth/me');
-    return response.data;
+    const response = await axiosInstance.get<ApiResponse<User>>('/auth/me');
+    return response.data.data;
   },
 
   /**
@@ -75,58 +78,58 @@ export const authAPI = {
   /**
    * Register new user
    */
-register: async (userData: any): Promise<LoginResponse> => {
-   console.log('REGISTER API CALLED');
-  try {
+  register: async (userData: any): Promise<LoginResponse> => {
+    console.log('REGISTER API CALLED');
+    try {
+      // 1. Create Firebase User
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        userData.email,
+        userData.password
+      );
 
-    // 1. Create Firebase User
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      userData.email,
-      userData.password
-    );
-
-    // 2. Update Firebase Profile
-    await updateProfile(userCredential.user, {
-      displayName:
-        userData.fullName ||
-        `${userData.firstName} ${userData.lastName}`,
-    });
-
-    // 3. Get Firebase Token
-    const idToken = await getIdToken(userCredential.user);
-
-    // 4. Store User in MySQL
-    const response = await axiosInstance.post<LoginResponse>(
-      '/auth/register',
-      {
-        token: idToken,
-        name:
+      // 2. Update Firebase Profile
+      await updateProfile(userCredential.user, {
+        displayName:
           userData.fullName ||
           `${userData.firstName} ${userData.lastName}`,
-        role: userData.role,
-        phoneNumber: userData.phoneNumber,
+      });
+
+      // 3. Get Firebase Token
+      const idToken = await getIdToken(userCredential.user);
+
+      // 4. Store User in MySQL
+      const response = await axiosInstance.post<any>(
+        '/auth/register',
+        {
+          token: idToken,
+          name:
+            userData.fullName ||
+            `${userData.firstName} ${userData.lastName}`,
+          role: userData.role,
+          phoneNumber: userData.phoneNumber,
+        }
+      );
+
+      return {
+        user: response.data.data,
+        token: idToken,
+      };
+    } catch (error: any) {
+      // Firebase Error Handling
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('Email already registered');
       }
-    );
 
-    return response.data;
+      if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email address');
+      }
 
-  } catch (error: any) {
+      if (error.code === 'auth/weak-password') {
+        throw new Error('Password should be at least 6 characters');
+      }
 
-    // Firebase Error Handling
-    if (error.code === 'auth/email-already-in-use') {
-      throw new Error('Email already registered');
+      throw error;
     }
-
-    if (error.code === 'auth/invalid-email') {
-      throw new Error('Invalid email address');
-    }
-
-    if (error.code === 'auth/weak-password') {
-      throw new Error('Password should be at least 6 characters');
-    }
-
-    throw error;
-  }
-},
+  },
 };
