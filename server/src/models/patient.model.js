@@ -122,6 +122,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Patient.associate = (models) => {
     Patient.belongsTo(models.Branch, { foreignKey: "branchId", as: "branch" });
+    Patient.belongsTo(models.Healer, { foreignKey: "healerId", as: "healer" });
     Patient.hasMany(models.Session, {
       foreignKey: "patientId",
       as: "sessions",

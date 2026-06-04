@@ -30,6 +30,15 @@ import BACreateHealerPage from './pages/branch-admin/CreateHealerPage';
 import BARegisterPatientPage from './pages/branch-admin/RegisterPatientPage';
 import BAPatientsPage from './pages/branch-admin/PatientsPage';
 import BAHealersPage from './pages/branch-admin/HealersPage';
+import BASessionsPage from './pages/branch-admin/SessionsPage';
+import BABookSessionPage from './pages/branch-admin/BookSessionPage';
+import BAEditSessionPage from './pages/branch-admin/EditSessionPage';
+import BADetailSessionPage from './pages/branch-admin/DetailSessionPage';
+import BAFinancePage from './pages/branch-admin/FinancePage';
+import BADocumentManagementPage from './pages/branch-admin/DocumentManagementPage';
+import BAReportPage from './pages/branch-admin/ReportPage';
+import BASettingsPage from './pages/branch-admin/SettingsPage';
+import BAVisitorsCheckInPage from './pages/branch-admin/VisitorsCheckInPage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -147,11 +156,29 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.BRANCH_ADMIN.VISITOR_LOG} exact={true}>
           <BAVisitorLogPage />
         </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.VISITOR_CHECKIN} exact={true}>
+          <BAVisitorsCheckInPage />
+        </Route>
         <Route path={ROUTES.BRANCH_ADMIN.PATIENTS} exact={true}>
           <BAPatientsPage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.HEALERS} exact={true}>
           <BAHealersPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.SESSIONS} exact={true}>
+          <BASessionsPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.BOOK_SESSION} exact={true}>
+          <BABookSessionPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.EDIT_SESSION} exact={true}>
+          <BAEditSessionPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.SESSION_DETAILS} exact={true}>
+          <BADetailSessionPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.FINANCE} exact={true}>
+          <BAFinancePage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.CREATE_HEALER} exact={true}>
           <BACreateHealerPage />
@@ -161,6 +188,15 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.EDIT_PATIENT} exact={true}>
           <BAPatientsPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.DOCUMENTS} exact={true}>
+          <BADocumentManagementPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.REPORTS} exact={true}>
+          <BAReportPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.SETTINGS} exact={true}>
+          <BASettingsPage />
         </Route>
         <Route path="/" exact={true}>
           <Redirect to={ROUTES.AUTH.LOGIN} />

@@ -544,12 +544,12 @@ const DashboardPage: React.FC = () => {
                       <IonIcon icon={arrowForwardOutline} className="sa-quick-action__icon" />
                     </div>
 
-                    <div className="sa-quick-action" onClick={() => history.push(ROUTES.BRANCH_ADMIN.VISITOR_CHECKIN)}>
+                    <div className="sa-quick-action" onClick={() => history.push(ROUTES.BRANCH_ADMIN.VISITOR_LOG)}>
                       <span className="sa-quick-action__label">Log Check-In</span>
                       <IonIcon icon={arrowForwardOutline} className="sa-quick-action__icon" />
                     </div>
                     
-                    <div className="sa-quick-action" onClick={() => setShowMarkAttendanceModal(true)}>
+                    <div className="sa-quick-action" onClick={() => history.push(ROUTES.BRANCH_ADMIN.ATTENDANCE)}>
                       <span className="sa-quick-action__label">Mark Attendance</span>
                       <IonIcon icon={arrowForwardOutline} className="sa-quick-action__icon" />
                     </div>

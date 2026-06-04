@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -25,6 +25,7 @@ import {
   calendarOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import { getPatients } from '../../api/patient.api';
 import '../branch-admin/branch-admin.css';
 import './super-admin.css';
 
@@ -37,14 +38,32 @@ const PatientsPage: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [patientToDelete, setPatientToDelete] = useState<any>(null);
   
-  const [patients, setPatients] = useState([
-    { id: 1, name: 'Elena Gilbert', email: 'elena.g@example.com', phone: '+1 234 567 8901', branch: 'Uptown Sanctuary', healer: 'Dr. Aris Varma', lastVisit: '2024-04-20', status: 'active' },
-    { id: 2, name: 'Stefan Salvatore', email: 'stefan.s@example.com', phone: '+1 234 567 8902', branch: 'Coastal Healing Center', healer: 'Maya Rose', lastVisit: '2024-04-18', status: 'recovered' },
-    { id: 3, name: 'Bonnie Bennett', email: 'bonnie.b@example.com', phone: '+1 234 567 8903', branch: 'Green Valley Branch', healer: 'Samuel Chen', lastVisit: '2024-04-22', status: 'active' },
-    { id: 4, name: 'Damon Salvatore', email: 'damon.s@example.com', phone: '+1 234 567 8904', branch: 'Downtown Sanctuary', healer: 'Lila Thorne', lastVisit: '2024-03-15', status: 'on-hold' },
-    { id: 5, name: 'Caroline Forbes', email: 'caroline.f@example.com', phone: '+1 234 567 8905', branch: 'Uptown Sanctuary', healer: 'Julian Mars', lastVisit: '2024-04-21', status: 'active' },
-    { id: 6, name: 'Matt Donovan', email: 'matt.d@example.com', phone: '+1 234 567 8906', branch: 'Coastal Healing Center', healer: 'Sofia Bell', lastVisit: '2024-04-10', status: 'recovered' },
-  ]);
+  const [patients, setPatients] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const response = await getPatients();
+        const apiPatients = Array.isArray(response) ? response : (response.data || response);
+        if (Array.isArray(apiPatients)) {
+          const formattedPatients = apiPatients.map((p: any) => ({
+            id: p.patientId || p.id,
+            name: p.name,
+            email: p.email || '',
+            phone: p.phone || p.mobile || '',
+            branch: p.branch?.name || 'Unassigned',
+            healer: p.healer?.name || p.assignedHealer || 'Unassigned',
+            lastVisit: p.updatedAt ? p.updatedAt.split('T')[0] : (p.createdAt ? p.createdAt.split('T')[0] : 'N/A'),
+            status: p.status?.toLowerCase() || 'active',
+          }));
+          setPatients(formattedPatients);
+        }
+      } catch (error) {
+        console.error('Error fetching patients:', error);
+      }
+    };
+    fetchPatients();
+  }, []);
 
   const [newPatient, setNewPatient] = useState({
     name: '',

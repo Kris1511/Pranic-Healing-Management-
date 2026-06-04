@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -21,6 +21,7 @@ import {
   ribbonOutline,
   peopleOutline,
 } from 'ionicons/icons';
+import { getHealers } from '../../api/healer.api';
 import './super-admin.css';
 
 const HealersPage: React.FC = () => {
@@ -31,14 +32,32 @@ const HealersPage: React.FC = () => {
   const [selectedHealer, setSelectedHealer] = useState<any>(null);
   const [healerToDelete, setHealerToDelete] = useState<any>(null);
   
-  const [healers, setHealers] = useState([
-    { id: 1, name: 'Dr. Aris Varma', email: 'aris.v@phms.com', specialty: 'Pranic Psychotherapy', branch: 'Uptown Sanctuary', experience: 8, load: 12, status: 'active' },
-    { id: 2, name: 'Maya Rose', email: 'maya.r@phms.com', specialty: 'Advanced Pranic Healing', branch: 'Coastal Healing Center', experience: 5, load: 8, status: 'active' },
-    { id: 3, name: 'Samuel Chen', email: 'sam.c@phms.com', specialty: 'Basic Pranic Healing', branch: 'Green Valley Branch', experience: 3, load: 15, status: 'active' },
-    { id: 4, name: 'Lila Thorne', email: 'lila.t@phms.com', specialty: 'Crystal Healing', branch: 'Downtown Sanctuary', experience: 12, load: 5, status: 'inactive' },
-    { id: 5, name: 'Julian Mars', email: 'julian.m@phms.com', specialty: 'Pranic Psychotherapy', branch: 'Uptown Sanctuary', experience: 6, load: 10, status: 'active' },
-    { id: 6, name: 'Sofia Bell', email: 'sofia.b@phms.com', specialty: 'Advanced Pranic Healing', branch: 'Coastal Healing Center', experience: 4, load: 14, status: 'active' },
-  ]);
+  const [healers, setHealers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchHealers = async () => {
+      try {
+        const response = await getHealers();
+        const apiHealers = Array.isArray(response) ? response : (response.data || response);
+        if (Array.isArray(apiHealers)) {
+          const formattedHealers = apiHealers.map((h: any) => ({
+            id: h.healerId || h.id,
+            name: h.name,
+            email: h.email || '',
+            specialty: h.specialization || 'General',
+            branch: h.branch?.name || 'Unassigned',
+            experience: h.experience || 0,
+            load: h.completedSessions || 0,
+            status: h.status?.toLowerCase() || 'active',
+          }));
+          setHealers(formattedHealers);
+        }
+      } catch (error) {
+        console.error('Error fetching healers:', error);
+      }
+    };
+    fetchHealers();
+  }, []);
 
   const [newHealer, setNewHealer] = useState({
     name: '',

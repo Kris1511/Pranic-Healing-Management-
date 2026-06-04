@@ -7,14 +7,14 @@ class PatientRepository {
 
   async findById(id) {
     return await Patient.findByPk(id, {
-      include: ['branch', 'sessions']
+      include: ['branch', 'sessions', 'healer']
     });
   }
 
   async findByPatientId(patientId) {
     return await Patient.findOne({
       where: { patientId },
-      include: ['branch']
+      include: ['branch', 'healer']
     });
   }
 
@@ -22,7 +22,7 @@ class PatientRepository {
     return await Patient.findAll({
       where: filter,
       ...options,
-      include: ['branch']
+      include: ['branch', 'healer']
     });
   }
 

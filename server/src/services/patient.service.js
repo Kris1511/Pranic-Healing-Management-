@@ -14,7 +14,8 @@ class PatientService {
       throw new ApiError(400, 'Patient ID already exists.');
     }
 
-    return await patientRepository.create(data);
+    const patient = await patientRepository.create(data);
+    return await patientRepository.findById(patient.id);
   }
 
   async getAllPatients(filter = {}) {

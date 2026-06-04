@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { IonPage, IonContent, IonIcon } from "@ionic/react";
 import {
   arrowBackOutline,
@@ -18,6 +18,7 @@ import {
 import { useHistory } from "react-router-dom";
 import { useAuthStore } from "../../store/auth.store";
 import { ROUTES } from "../../constants/routes.constant";
+import { getHealers } from "../../api/healer.api";
 import "./branch-admin.css";
 
 export default function BARegisterPatientPage() {
@@ -70,6 +71,22 @@ export default function BARegisterPatientPage() {
   // Success alert/modal control
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [newPatientId, setNewPatientId] = useState("");
+
+  const [healers, setHealers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchHealers = async () => {
+      try {
+        const response = await getHealers();
+        if (response.success) {
+          setHealers(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch healers", error);
+      }
+    };
+    fetchHealers();
+  }, []);
 
   // Handle Input Changes
   const handleInputChange = (
@@ -802,15 +819,11 @@ export default function BARegisterPatientPage() {
                             onChange={handleInputChange}
                           >
                             <option value="">Select Healer</option>
-                            <option value="Dr. Aris Varma">
-                              Dr. Aris Varma
-                            </option>
-                            <option value="Dr. Anjali Rao">
-                              Dr. Anjali Rao
-                            </option>
-                            <option value="Dr. Kevin Smith">
-                              Dr. Kevin Smith
-                            </option>
+                            {healers.map((healer: any) => (
+                              <option key={healer.id} value={healer.id}>
+                                {healer.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </div>

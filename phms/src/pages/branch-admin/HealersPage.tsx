@@ -43,6 +43,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
+import { getHealers } from '../../api/healer.api';
 import './branch-admin.css';
 import '../super-admin/super-admin.css';
 
@@ -285,10 +286,50 @@ const HealersPage: React.FC = () => {
     : (user?.branch || 'Mumbai');
 
   // ── Local Storage State Hook Up ───────────────────────────────────────────
-  const [healers, setHealers] = useState<Healer[]>(() => {
-    const saved = localStorage.getItem('phms_healers');
-    return saved ? JSON.parse(saved) : INITIAL_HEALERS;
-  });
+  const [healers, setHealers] = useState<Healer[]>([]);
+
+  useEffect(() => {
+    const fetchHealers = async () => {
+      try {
+        const response = await getHealers();
+        // Depending on response wrapper, adjust to response.data or response directly
+        const apiHealers = Array.isArray(response) ? response : (response.data || response);
+        if (Array.isArray(apiHealers)) {
+          const formattedHealers = apiHealers.map((h: any) => ({
+            id: h.healerId || h.id,
+            name: h.name,
+            gender: h.gender || 'Other',
+            dob: h.dob || '1990-01-01',
+            email: h.email || '',
+            phone: h.mobile || h.phone || '',
+            address: h.address || '',
+            certificationLevel: h.certLevel || h.certificationLevel || 'Associate Healer',
+            specialization: typeof h.specialization === 'string' ? h.specialization.split(',') : (h.specialization || []),
+            experience: h.experience || 0,
+            status: h.status?.toUpperCase() || 'ACTIVE',
+            branch: h.branch?.name || assignedBranch,
+            createdAt: h.createdAt || new Date().toISOString(),
+            cumulativeHealingCount: h.cumulativeHealingCount || 0,
+            completedSessions: h.completedSessions || 0,
+            pendingNotes: h.pendingNotes || 0,
+            urgentFollowUps: h.urgentFollowUps || 0,
+            avatarBg: ['#0f5b4b', '#1e40af', '#7c3aed', '#db2777', '#b45309'][Math.floor(Math.random() * 5)],
+            initials: h.name ? h.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase() : 'HE',
+            bio: h.bio || `Certified healer specializing in ${h.specialization || 'general healing'}.`,
+          }));
+          setHealers(formattedHealers);
+        } else {
+          throw new Error("Invalid API response");
+        }
+      } catch (error) {
+        console.error('Error fetching healers:', error);
+        // Fallback to local storage or initial if API fails
+        const saved = localStorage.getItem('phms_healers');
+        setHealers(saved ? JSON.parse(saved) : INITIAL_HEALERS);
+      }
+    };
+    fetchHealers();
+  }, [assignedBranch]);
 
   const [patients, setPatients] = useState<Patient[]>(() => {
     const saved = localStorage.getItem('phms_patients');

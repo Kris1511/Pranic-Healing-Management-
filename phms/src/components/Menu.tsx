@@ -23,6 +23,7 @@ import {
   timeOutline,
   walletOutline,
   calendarOutline,
+  documentTextOutline,
 } from 'ionicons/icons';
 import { ROUTES } from '../constants/routes.constant';
 import { useAuthStore } from '../store/auth.store';
@@ -68,7 +69,8 @@ const branchAdminNav: NavItem[] = [
   { title: 'Sessions', url: ROUTES.BRANCH_ADMIN.SESSIONS, icon: timeOutline },
   { title: 'Attendance', url: ROUTES.BRANCH_ADMIN.ATTENDANCE, icon: timeOutline, section: 'Operations' },
   { title: 'Visitor Log', url: ROUTES.BRANCH_ADMIN.VISITOR_LOG, icon: listOutline },
-  { title: 'Finance', url: ROUTES.BRANCH_ADMIN.FINANCE, icon: cashOutline, section: 'Finance' },
+  { title: 'Documents', url: ROUTES.BRANCH_ADMIN.DOCUMENTS, icon: documentTextOutline, section: 'Finance' },
+  { title: 'Finance', url: ROUTES.BRANCH_ADMIN.FINANCE, icon: cashOutline},
   { title: 'Reports', url: ROUTES.BRANCH_ADMIN.REPORTS, icon: barChartOutline },
   { title: 'Settings', url: ROUTES.BRANCH_ADMIN.SETTINGS, icon: settingsOutline, section: 'System' },
 ];
