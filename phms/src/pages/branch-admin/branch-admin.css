@@ -1,4 +1,7 @@
 /* Patient Page Specific Styles */
+:root {
+  --ba-color-primary: #1f7a6a;
+}
 
 .pa-table-container {
   padding: 0 !important;

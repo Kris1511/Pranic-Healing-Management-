@@ -75,12 +75,37 @@ const branchAdminNav: NavItem[] = [
   { title: 'Settings', url: ROUTES.BRANCH_ADMIN.SETTINGS, icon: settingsOutline, section: 'System' },
 ];
 
+const healerNav: NavItem[] = [
+  { title: 'Dashboard', url: ROUTES.HEALER.DASHBOARD, icon: gridOutline, section: 'Main' },
+  { title: 'My Patients', url: ROUTES.HEALER.PATIENTS, icon: peopleOutline },
+  { title: 'Sessions', url: ROUTES.HEALER.SESSIONS, icon: timeOutline },
+  { title: 'Session Notes', url: ROUTES.HEALER.SESSION_NOTES, icon: documentTextOutline },
+  // { title: 'Schedule', url: ROUTES.HEALER.SCHEDULE, icon: calendarOutline },
+  // { title: 'Availability', url: ROUTES.HEALER.AVAILABILITY, icon: listOutline },
+  { title: 'Profile', url: ROUTES.HEALER.PROFILE, icon: personOutline },
+];
+
+const patientNav: NavItem[] = [
+  { title: 'Dashboard', url: ROUTES.PATIENT.DASHBOARD, icon: gridOutline, section: 'Main' },
+  { title: 'Session History', url: ROUTES.PATIENT.SESSION_HISTORY, icon: timeOutline },
+  { title: 'Payment History', url: ROUTES.PATIENT.PAYMENT_HISTORY, icon: cashOutline },
+  // { title: 'Health Records', url: ROUTES.PATIENT.HEALTH_RECORDS, icon: documentTextOutline },
+  { title: 'My Profile', url: ROUTES.PATIENT.PROFILE, icon: personOutline},   // , section: 'Settings' 
+];
+
 const Menu: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
   const { user, logout } = useAuthStore();
 
-  const navItems = user?.role === 'SUPER_ADMIN' ? superAdminNav : branchAdminNav;
+  let navItems = branchAdminNav;
+  if (user?.role === 'SUPER_ADMIN') {
+    navItems = superAdminNav;
+  } else if (user?.role === 'HEALER') {
+    navItems = healerNav;
+  } else if (user?.role === 'PATIENT') {
+    navItems = patientNav;
+  }
 
   const handleNavClick = (url: string) => {
     history.push(url);

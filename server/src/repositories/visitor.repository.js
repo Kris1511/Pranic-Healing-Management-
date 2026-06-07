@@ -5,6 +5,10 @@ class VisitorRepository {
     return await Visitor.create(data);
   }
 
+  async count(filter = {}) {
+    return await Visitor.count({ where: filter });
+  }
+
   async findById(id) {
     return await Visitor.findByPk(id);
   }

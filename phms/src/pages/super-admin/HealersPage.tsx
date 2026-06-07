@@ -216,7 +216,7 @@ const HealersPage: React.FC = () => {
                     <td>
                       <div className="sa-table__user">
                         <div className="sa-table__avatar">
-                          {healer.name.split(' ').map(n => n[0]).join('')}
+                          {healer.name.split(' ').map((n: string) => n[0]).join('')}
                         </div>
                         <div className="sa-table__user-info">
                           <span className="sa-table__user-name">{healer.name}</span>

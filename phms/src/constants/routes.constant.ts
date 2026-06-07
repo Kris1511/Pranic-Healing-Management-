@@ -47,7 +47,10 @@ export const ROUTES = {
     SETTINGS: '/branch-admin/settings',
     REGISTER_PATIENT: '/branch-admin/patients/register',
     CREATE_HEALER: '/branch-admin/healers/create',
+    EDIT_HEALER: '/branch-admin/healers/edit/:id',
+    HEALER_DETAILS: '/branch-admin/healers/details/:id',
     EDIT_PATIENT: '/branch-admin/patients/edit/:id',
+    PATIENT_DETAILS: '/branch-admin/patients/details/:id',
     VISITOR_CHECKIN: '/branch-admin/visitor-log/checkin',
   },
 
@@ -56,6 +59,7 @@ export const ROUTES = {
     DASHBOARD: '/healer/dashboard',
     SESSIONS: '/healer/sessions',
     PATIENTS: '/healer/patients',
+    SESSION_NOTES: '/healer/session-notes',
     SCHEDULE: '/healer/schedule',
     AVAILABILITY: '/healer/availability',
     PROFILE: '/healer/profile',
@@ -68,6 +72,8 @@ export const ROUTES = {
     HEALERS: '/patient/healers',
     PROFILE: '/patient/profile',
     HEALTH_RECORDS: '/patient/health-records',
+    SESSION_HISTORY: '/patient/session-history',
+    PAYMENT_HISTORY: '/patient/payment-history',
     VISITORS: '/patient/visitors',
   },
 

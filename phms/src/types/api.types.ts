@@ -15,6 +15,7 @@ export interface User {
   avatar?: string;
   createdAt: string;
   updatedAt: string;
+  phoneNumber?: string;
 }
 
 export interface LoginRequest {

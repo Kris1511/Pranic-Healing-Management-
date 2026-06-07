@@ -221,7 +221,7 @@ const PatientsPage: React.FC = () => {
                     <td>
                       <div className="sa-table__user">
                         <div className="sa-table__avatar sa-table__avatar--patient">
-                          {patient.name.split(' ').map(n => n[0]).join('')}
+                          {patient.name.split(' ').map((n: string) => n[0]).join('')}
                         </div>
                         <div className="sa-table__user-info">
                           <span className="sa-table__user-name">{patient.name}</span>

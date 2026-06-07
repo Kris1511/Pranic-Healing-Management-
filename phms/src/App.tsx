@@ -27,18 +27,34 @@ import SADailyFinancePage from './pages/super-admin/DailyFinancePage';
 import BAVisitorLogPage from './pages/branch-admin/VisitorLogPage';
 import BADashboardPage from './pages/branch-admin/DashboardPage';
 import BACreateHealerPage from './pages/branch-admin/CreateHealerPage';
+import BAEditHealerPage from './pages/branch-admin/EditHealerPage';
+import BADetailHealerPage from './pages/branch-admin/DetailHealerPage';
 import BARegisterPatientPage from './pages/branch-admin/RegisterPatientPage';
 import BAPatientsPage from './pages/branch-admin/PatientsPage';
+import BAEditPatientPage from './pages/branch-admin/EditPatientPages';
 import BAHealersPage from './pages/branch-admin/HealersPage';
 import BASessionsPage from './pages/branch-admin/SessionsPage';
 import BABookSessionPage from './pages/branch-admin/BookSessionPage';
 import BAEditSessionPage from './pages/branch-admin/EditSessionPage';
-import BADetailSessionPage from './pages/branch-admin/DetailSessionPage';
+// import BADetailSessionPage from './pages/branch-admin/DetailSessionPage';
 import BAFinancePage from './pages/branch-admin/FinancePage';
 import BADocumentManagementPage from './pages/branch-admin/DocumentManagementPage';
 import BAReportPage from './pages/branch-admin/ReportPage';
 import BASettingsPage from './pages/branch-admin/SettingsPage';
 import BAVisitorsCheckInPage from './pages/branch-admin/VisitorsCheckInPage';
+
+/* Healer Pages */
+import HealerDashboardPage from './pages/healer/DashboardPage';
+import MyPatientsPage from './pages/healer/MyPatientsPage';
+import SessionLogPage from './pages/healer/SessionLogPage';
+import SessionNotesPage from './pages/healer/SessionNotesPage';
+import ProfilePage from './pages/healer/ProfilePage';
+
+/* Patient Pages */
+import PatientDashboardPage from './pages/patient/DashboardPage';
+import SessionHistoryPage from './pages/patient/SessionHistoryPage';
+import PaymentHistoryPage from './pages/patient/PaymentHistoryPage';
+import PatientProfilePage from './pages/patient/ProfilePage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -165,6 +181,12 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.BRANCH_ADMIN.HEALERS} exact={true}>
           <BAHealersPage />
         </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.EDIT_HEALER} exact={true}>
+          <BAEditHealerPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.HEALER_DETAILS} exact={true}>
+          <BADetailHealerPage />
+        </Route>
         <Route path={ROUTES.BRANCH_ADMIN.SESSIONS} exact={true}>
           <BASessionsPage />
         </Route>
@@ -174,9 +196,9 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.BRANCH_ADMIN.EDIT_SESSION} exact={true}>
           <BAEditSessionPage />
         </Route>
-        <Route path={ROUTES.BRANCH_ADMIN.SESSION_DETAILS} exact={true}>
+        {/* <Route path={ROUTES.BRANCH_ADMIN.SESSION_DETAILS} exact={true}>
           <BADetailSessionPage />
-        </Route>
+        </Route> */}
         <Route path={ROUTES.BRANCH_ADMIN.FINANCE} exact={true}>
           <BAFinancePage />
         </Route>
@@ -187,7 +209,7 @@ const AppContent: React.FC = () => {
           <BARegisterPatientPage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.EDIT_PATIENT} exact={true}>
-          <BAPatientsPage />
+          <BAEditPatientPage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.DOCUMENTS} exact={true}>
           <BADocumentManagementPage />
@@ -198,6 +220,44 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.BRANCH_ADMIN.SETTINGS} exact={true}>
           <BASettingsPage />
         </Route>
+
+        {/* Healer Portal Routes */}
+        <Route path={ROUTES.HEALER.DASHBOARD} exact={true}>
+          <HealerDashboardPage />
+        </Route>
+        <Route path={ROUTES.HEALER.PATIENTS} exact={true}>
+          <MyPatientsPage />
+        </Route>
+        <Route path={ROUTES.HEALER.SESSIONS} exact={true}>
+          <SessionLogPage />
+        </Route>
+        <Route path={ROUTES.HEALER.SESSION_NOTES} exact={true}>
+          <SessionNotesPage />
+        </Route>
+        <Route path={ROUTES.HEALER.SCHEDULE} exact={true}>
+          <SessionLogPage />
+        </Route>
+        <Route path={ROUTES.HEALER.AVAILABILITY} exact={true}>
+          <SessionLogPage />
+        </Route>
+        <Route path={ROUTES.HEALER.PROFILE} exact={true}>
+          <ProfilePage />
+        </Route>
+
+        {/* Patient Portal Routes */}
+        <Route path={ROUTES.PATIENT.DASHBOARD} exact={true}>
+          <PatientDashboardPage />
+        </Route>
+        <Route path={ROUTES.PATIENT.SESSION_HISTORY} exact={true}>
+          <SessionHistoryPage />
+        </Route>
+        <Route path={ROUTES.PATIENT.PAYMENT_HISTORY} exact={true}>
+          <PaymentHistoryPage />
+        </Route>
+        <Route path={ROUTES.PATIENT.PROFILE} exact={true}>
+          <PatientProfilePage />
+        </Route>
+
         <Route path="/" exact={true}>
           <Redirect to={ROUTES.AUTH.LOGIN} />
         </Route>

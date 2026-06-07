@@ -311,6 +311,7 @@
 
 
 import React, { useState, useEffect } from 'react';
+import axiosInstance from '../../api/axois.instance';
 import {
   IonPage,
   IonContent,
@@ -361,7 +362,7 @@ interface Visitor {
 }
 
 const VisitorLogPage: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const history = useHistory();
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -388,97 +389,50 @@ const VisitorLogPage: React.FC = () => {
     return `VIS-${String(maxNum + 1).padStart(4, '0')}`;
   };
 
-  // Initial mock data that EXACTLY matches the BRD categories!
-  const MOCK_VISITORS: Visitor[] = [
-    {
-      id: 1,
-      visitorId: 'VIS-0001',
-      name: 'Ananya Sharma',
-      type: 'Meditation',
-      contact: '+91 98765 43210',
-      entry: '08:15 AM',
-      exit: '—',
-      duration: '2h 15m',
-      status: 'Inside',
-      dateStr: '2026-10-23',
-    },
-    {
-      id: 2,
-      visitorId: 'VIS-0002',
-      name: 'Rahul Prasad',
-      type: 'Session',
-      contact: '+91 91234 56789',
-      entry: '09:30 AM',
-      exit: '10:45 AM',
-      duration: '1h 15m',
-      status: 'Exited',
-      dateStr: '2026-10-23',
-    },
-    {
-      id: 3,
-      visitorId: 'VIS-0003',
-      name: 'Meera Kapoor',
-      type: 'Walk-in',
-      contact: '+91 99887 76655',
-      entry: '10:05 AM',
-      exit: '—',
-      duration: '25m',
-      status: 'Inside',
-      dateStr: '2026-10-23',
-    },
-    {
-      id: 4,
-      visitorId: 'VIS-0004',
-      name: 'Vikram Roy',
-      type: 'Camp',
-      contact: '+91 98123 45678',
-      entry: '10:30 AM',
-      exit: '—',
-      duration: '15m',
-      status: 'Inside',
-      dateStr: '2026-10-23',
-    },
-    {
-      id: 5,
-      visitorId: 'VIS-0005',
-      name: 'Dr. Priya Varma',
-      type: 'Healer',
-      contact: '+91 98760 12345',
-      entry: '07:45 AM',
-      exit: '—',
-      duration: '2h 45m',
-      status: 'Inside',
-      dateStr: '2026-10-23',
-    },
-  ];
+  const [visitors, setVisitors] = useState<Visitor[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [visitors, setVisitors] = useState<Visitor[]>(() => {
-    const cached = localStorage.getItem('phms_visitor_logs');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {
-        return MOCK_VISITORS;
+  const fetchVisitors = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axiosInstance.get("/visitors/log");
+      
+      if (response.data && response.data.data) {
+        const fetchedVisitors = response.data.data.map((v: any) => {
+           const checkInDate = new Date(v.checkIn);
+           const checkOutDate = v.checkOut ? new Date(v.checkOut) : null;
+           
+           return {
+             id: v.id,
+             visitorId: v.visitorId || (v.id ? `VIS-${String(v.id).padStart(4, '0')}` : `VIS-0000`),
+             name: v.name || '',
+             type: v.visitorType || 'Walk-in',
+             contact: v.phone || '',
+             entry: isNaN(checkInDate.getTime()) ? '—' : checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             exit: checkOutDate && !isNaN(checkOutDate.getTime()) ? checkOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+             duration: '—', // Could calculate if needed
+             status: v.checkOut ? 'Exited' : 'Inside',
+             dateStr: isNaN(checkInDate.getTime()) ? '' : checkInDate.toISOString().split('T')[0],
+           };
+        });
+        
+        fetchedVisitors.sort((a: any, b: any) => String(b.visitorId).localeCompare(String(a.visitorId)));
+        setVisitors(fetchedVisitors);
       }
+    } catch (error) {
+      console.error('Error fetching visitor logs:', error);
+    } finally {
+      setIsLoading(false);
     }
-    localStorage.setItem('phms_visitor_logs', JSON.stringify(MOCK_VISITORS));
-    return MOCK_VISITORS;
-  });
+  };
 
   useIonViewWillEnter(() => {
-    const cached = localStorage.getItem('phms_visitor_logs');
-    if (cached) {
-      try {
-        setVisitors(JSON.parse(cached));
-      } catch (e) {
-        // ignore
-      }
-    }
+    fetchVisitors();
   });
 
   useEffect(() => {
-    localStorage.setItem('phms_visitor_logs', JSON.stringify(visitors));
-  }, [visitors]);
+    fetchVisitors();
+  }, []);
 
   // Modal State for New Entry
   const [newVisitor, setNewVisitor] = useState({
@@ -487,46 +441,39 @@ const VisitorLogPage: React.FC = () => {
     type: 'Session' as 'Walk-in' | 'Meditation' | 'Session' | 'Camp' | 'Healer',
   });
 
-  const handleCheckIn = () => {
-    if (!newVisitor.name || !newVisitor.contact) return;
+  // const handleCheckIn = () => {
+  //   if (!newVisitor.name || !newVisitor.contact) return;
 
-    const now = new Date();
-    const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  //   const now = new Date();
+  //   const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const added: Visitor = {
-      id: Date.now(),
-      visitorId: genVisId(visitors),
-      name: newVisitor.name,
-      type: newVisitor.type,
-      contact: newVisitor.contact,
-      entry: formattedTime,
-      exit: '—',
-      duration: '5m',
-      status: 'Inside',
-      dateStr: now.toISOString().split('T')[0],
-    };
+  //   const added: Visitor = {
+  //     id: Date.now(),
+  //     visitorId: genVisId(visitors),
+  //     name: newVisitor.name,
+  //     type: newVisitor.type,
+  //     contact: newVisitor.contact,
+  //     entry: formattedTime,
+  //     exit: '—',
+  //     duration: '5m',
+  //     status: 'Inside',
+  //     dateStr: now.toISOString().split('T')[0],
+  //   };
 
-    setVisitors([added, ...visitors]);
-    setNewVisitor({ name: '', contact: '', type: 'Session' });
-    setShowCheckInModal(false);
-  };
+  //   setVisitors([added, ...visitors]);
+  //   setNewVisitor({ name: '', contact: '', type: 'Session' });
+  //   setShowCheckInModal(false);
+  // };
 
-  const handleCheckOut = (id: number) => {
-    const now = new Date();
-    const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    setVisitors(
-      visitors.map((v) =>
-        v.id === id
-          ? {
-              ...v,
-              status: 'Exited',
-              exit: formattedTime,
-              duration: '1h 0m', // simulated duration
-            }
-          : v
-      )
-    );
+  const handleCheckOut = async (id: number) => {
+    try {
+      await axiosInstance.put(`/visitors/check-out/${id}`);
+      triggerToast('Visitor checked out successfully!');
+      fetchVisitors();
+    } catch (error) {
+      console.error('Error checking out visitor:', error);
+      alert('Failed to check out visitor.');
+    }
   };
 
   // Toast notification helper
@@ -563,19 +510,13 @@ const VisitorLogPage: React.FC = () => {
     }, 120);
   };
 
-  // Dynamic stats calculation using BRD baselines + live added check-ins today
+  // Dynamic stats calculation from actual database records for today
   const todayStr = new Date().toISOString().split('T')[0];
-  const liveWalkins = visitors.filter(v => v.type === 'Walk-in' && v.dateStr === todayStr).length;
-  const liveMeditation = visitors.filter(v => v.type === 'Meditation' && v.dateStr === todayStr).length;
-  const liveSessions = visitors.filter(v => v.type === 'Session' && v.dateStr === todayStr).length;
-  const liveCamp = visitors.filter(v => v.type === 'Camp' && v.dateStr === todayStr).length;
-  const liveHealers = visitors.filter(v => v.type === 'Healer' && v.dateStr === todayStr).length;
-
-  const countWalkins = 12 + liveWalkins;
-  const countMeditation = 8 + liveMeditation;
-  const countSessions = 20 + liveSessions;
-  const countCamp = 3 + liveCamp;
-  const countHealers = 2 + liveHealers;
+  const countWalkins = visitors.filter(v => v.type === 'Walk-in' && v.dateStr === todayStr).length;
+  const countMeditation = visitors.filter(v => v.type === 'Meditation' && v.dateStr === todayStr).length;
+  const countSessions = visitors.filter(v => v.type === 'Session' && v.dateStr === todayStr).length;
+  const countCamp = visitors.filter(v => v.type === 'Camp' && v.dateStr === todayStr).length;
+  const countHealers = visitors.filter(v => v.type === 'Healer' && v.dateStr === todayStr).length;
 
   // Advanced query filtering logic
   const filteredVisitors = visitors.filter((v) => {
@@ -591,7 +532,7 @@ const VisitorLogPage: React.FC = () => {
     return matchesSearch && matchesType && matchesDate && matchesStatus;
   });
 
-  const activeVisitorsInsideCount = visitors.filter((v) => v.status === 'Inside').length;
+  // const activeVisitorsInsideCount = visitors.filter((v) => v.status === 'Inside').length;
 
   return (
     <IonPage className="sa-page">
@@ -615,7 +556,7 @@ const VisitorLogPage: React.FC = () => {
               <div className="vl-title-group">
                 <h1 className="vl-title">Daily Visitor Log</h1>
                 <p className="vl-subtitle">
-                  Auditing center arrivals and departures for Monday, Oct 23, 2023
+                  Auditing center arrivals and departures for {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
                 </p>
               </div>
               <div className="vl-header-actions">
@@ -790,9 +731,10 @@ const VisitorLogPage: React.FC = () => {
                         <th>Visitor Name</th>
                         <th>Type</th>
                         <th>Contact</th>
+                        <th>Date</th>
                         <th>Entry</th>
                         <th>Exit</th>
-                        <th>Duration</th>
+                        {/* <th>Duration</th> */}
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
@@ -830,9 +772,10 @@ const VisitorLogPage: React.FC = () => {
                             <td>
                               <span className="vl-visitor-sub">{visitor.contact}</span>
                             </td>
+                            <td>{visitor.dateStr}</td>
                             <td>{visitor.entry}</td>
                             <td>{visitor.exit}</td>
-                            <td>{visitor.duration}</td>
+                            {/* <td>{visitor.duration}</td> */}
                             <td>
                               <span 
                                 className={`vl-badge-status vl-badge-status--${

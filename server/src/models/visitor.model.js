@@ -7,6 +7,12 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: () => uuidv4(),
       primaryKey: true,
     },
+    visitorId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+      field: 'visitor_id',
+    },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -16,6 +22,23 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     purpose: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    gender: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    idProof: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'id_proof',
+    },
+    address: {
       type: DataTypes.STRING,
       allowNull: true,
     },

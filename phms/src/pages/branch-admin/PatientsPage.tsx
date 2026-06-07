@@ -54,6 +54,7 @@ import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getPatients } from '../../api/patient.api';
+import { getHealers } from '../../api/healer.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
 
@@ -151,6 +152,7 @@ export interface Patient {
     smsSent: boolean;
     emailSent: boolean;
   };
+  branchId?: string;
 }
 
 const PatientsPage: React.FC = () => {
@@ -258,9 +260,10 @@ const PatientsPage: React.FC = () => {
 
   // Primary State
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [healersList, setHealersList] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchPatients = async () => {
+    const fetchInitialData = async () => {
       try {
         const response = await getPatients();
         const apiPatients = Array.isArray(response) ? response : (response.data || response);
@@ -302,6 +305,7 @@ const PatientsPage: React.FC = () => {
             statusHistory: [],
             healerHistory: [],
             feedback: [],
+            branchId: p.branchId || '',
           }));
           setPatients(formattedPatients);
           if (formattedPatients.length > 0) {
@@ -311,8 +315,18 @@ const PatientsPage: React.FC = () => {
       } catch (error) {
         console.error('Error fetching patients:', error);
       }
+
+      try {
+        const response = await getHealers();
+        const apiHealers = Array.isArray(response) ? response : (response.data || response);
+        if (Array.isArray(apiHealers)) {
+          setHealersList(apiHealers);
+        }
+      } catch (error) {
+        console.error('Error fetching healers:', error);
+      }
     };
-    fetchPatients();
+    fetchInitialData();
   }, []);
 
   // Selected Patient Workspace
@@ -359,12 +373,12 @@ const PatientsPage: React.FC = () => {
   const [appointmentForm, setAppointmentForm] = useState({
     date: '',
     time: '10:00 AM',
-    healer: 'Dr. Anjali Rao',
+    healer: '',
     status: 'Pending' as 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled' | 'Rescheduled',
   });
 
   const [sessionForm, setSessionForm] = useState({
-    healer: 'Dr. Anjali Rao',
+    healer: '',
     status: 'Scheduled' as 'Scheduled' | 'Ongoing' | 'Completed' | 'Cancelled',
     notes: '',
     followUpDate: '',
@@ -528,6 +542,9 @@ const PatientsPage: React.FC = () => {
       ],
       feedback: [],
       credentials,
+      branchId: typeof user?.branch === 'object' && user?.branch !== null 
+          ? (user.branch as any).id 
+          : (user as any)?.branchId || undefined,
     };
 
     setPatients([added, ...patients]);
@@ -1022,8 +1039,9 @@ const PatientsPage: React.FC = () => {
                     style={{ height: '36px', padding: '0 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '12px', color: '#475569', outline: 'none', fontWeight: 600, boxSizing: 'border-box' }}
                   >
                     <option value="All">All Healers</option>
-                    <option value="Dr. Anjali Rao">Dr. Anjali Rao</option>
-                    <option value="Dr. Kevin Smith">Dr. Kevin Smith</option>
+                    {healersList.map((h: any) => (
+                      <option key={h.id} value={h.name}>{h.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1062,7 +1080,7 @@ const PatientsPage: React.FC = () => {
                             <tr
                               key={patient.id}
                               className={`sa-table-row ${isSelected ? 'sa-table-row--selected' : ''}`}
-                              onClick={() => { setSelectedPatientId(patient.id); setViewMode('detail'); }}
+                              // onClick={() => { setSelectedPatientId(patient.id); setViewMode('detail'); }}
                               style={{ cursor: 'pointer', borderLeft: isSelected ? '4px solid #1f7a6a' : 'none' }}
                             >
                               <td style={{ fontWeight: '700', color: '#1f7a6a' }}>{patient.id}</td>
@@ -2119,8 +2137,9 @@ const PatientsPage: React.FC = () => {
                     onChange={(e) => setNewPatient({ ...newPatient, assignedHealer: e.target.value })}
                   >
                     <option value="None">None (Unassigned)</option>
-                    <option value="Dr. Anjali Rao">Dr. Anjali Rao</option>
-                    <option value="Dr. Kevin Smith">Dr. Kevin Smith</option>
+                    {healersList.map((h: any) => (
+                      <option key={h.id} value={h.name}>{h.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -2291,8 +2310,9 @@ const PatientsPage: React.FC = () => {
                       onChange={(e) => setEditForm({ ...editForm, assignedHealer: e.target.value })}
                     >
                       <option value="None">None (Unassigned)</option>
-                      <option value="Dr. Anjali Rao">Dr. Anjali Rao</option>
-                      <option value="Dr. Kevin Smith">Dr. Kevin Smith</option>
+                      {healersList.map((h: any) => (
+                        <option key={h.id} value={h.name}>{h.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -2357,8 +2377,9 @@ const PatientsPage: React.FC = () => {
                   value={appointmentForm.healer}
                   onChange={(e) => setAppointmentForm({ ...appointmentForm, healer: e.target.value })}
                 >
-                  <option value="Dr. Anjali Rao">Dr. Anjali Rao</option>
-                  <option value="Dr. Kevin Smith">Dr. Kevin Smith</option>
+                  {healersList.map((h: any) => (
+                    <option key={h.id} value={h.name}>{h.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="st-form-group">
@@ -2399,8 +2420,9 @@ const PatientsPage: React.FC = () => {
                   value={sessionForm.healer}
                   onChange={(e) => setSessionForm({ ...sessionForm, healer: e.target.value })}
                 >
-                  <option value="Dr. Anjali Rao">Dr. Anjali Rao</option>
-                  <option value="Dr. Kevin Smith">Dr. Kevin Smith</option>
+                  {healersList.map((h: any) => (
+                    <option key={h.id} value={h.name}>{h.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="st-form-group">

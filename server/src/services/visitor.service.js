@@ -4,6 +4,8 @@ const ApiError = require('../helpers/error.helper');
 class VisitorService {
   async checkInVisitor(data) {
     data.checkIn = new Date();
+    const count = await visitorRepository.count();
+    data.visitorId = `VIS-${String(count + 1).padStart(4, '0')}`;
     return await visitorRepository.create(data);
   }
 

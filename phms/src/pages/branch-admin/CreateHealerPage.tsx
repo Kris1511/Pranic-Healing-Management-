@@ -29,6 +29,12 @@ export default function BACreateHealerPage() {
   const { user } = useAuthStore();
   const isBranchAdmin = user?.role === "BRANCH_ADMIN";
 
+  // Dynamic Branch Name
+  const rawBranch = typeof user?.branch === 'object' && user?.branch !== null
+    ? (user.branch as any).name
+    : (user?.branch || 'Main');
+  const branchName = rawBranch.toLowerCase().includes('branch') ? rawBranch : `${rawBranch} Branch`;
+
   // Current Date display
   const formattedDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -172,9 +178,16 @@ export default function BACreateHealerPage() {
     }
 
     try {
+      const payload = {
+        ...formData,
+        branchId: typeof user?.branch === 'object' && user?.branch !== null 
+          ? (user.branch as any).id 
+          : (user as any)?.branchId || undefined
+      };
+
       const response = await axios.post(
         "http://localhost:5000/api/healers",
-        formData,
+        payload,
       );
 
       console.log("API Response:", response.data);
@@ -400,7 +413,7 @@ export default function BACreateHealerPage() {
                       lineHeight: 1.2,
                     }}
                   >
-                    Pranic Healing Management System • {formattedDate}
+                    Pranic Healing Management System • {branchName} • {formattedDate}
                   </p>
                 </div>
               </div>

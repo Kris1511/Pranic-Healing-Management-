@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import {
   IonPage,
   IonContent,
@@ -27,7 +28,8 @@ import './visitor-log.css';
 export default function BAVisitorCheckInPage() {
   const history = useHistory();
   const location = useLocation<{ from?: string }>();
-  const { user } = useAuthStore();
+  // const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const isBranchAdmin = user?.role === 'BRANCH_ADMIN';
 
   // Current Date display
@@ -63,7 +65,7 @@ export default function BAVisitorCheckInPage() {
   };
 
   // Handle Submit
-  const handleSaveRecord = (e: React.FormEvent) => {
+  const handleSaveRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       alert('Full Name is required.');
@@ -78,48 +80,42 @@ export default function BAVisitorCheckInPage() {
       return;
     }
 
-    // Load existing visitor records from localStorage
-    const cached = localStorage.getItem('phms_visitor_logs');
-    let currentVisitors: any[] = [];
-    if (cached) {
-      try {
-        currentVisitors = JSON.parse(cached);
-      } catch (err) {
-        currentVisitors = [];
-      }
+    try {
+      const payload = {
+        name: formData.name,
+        phone: formData.mobile,
+        visitorType: formData.visitorType,
+        purpose: formData.notes,
+        branchId: typeof user?.branch === 'object' && user?.branch !== null 
+          ? (user.branch as any).id 
+          : (user as any)?.branchId || undefined,
+        // Optional fields from the form (not in standard model but passed just in case)
+        email: formData.email,
+        gender: formData.gender,
+        idProof: formData.idProof,
+        address: formData.address,
+        entryDate: formData.entryDate
+      };
+
+      console.log("Token:", localStorage.getItem('token'));
+
+      const response = await axios.post("http://localhost:5000/api/visitors/check-in", 
+        payload,
+      {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+      
+      const newVisitor = response.data?.data;
+      setNewVisitorId(newVisitor?.visitorId || newVisitor?.id || `PHMS-V-${Math.floor(10000 + Math.random() * 90000)}`);
+
+      console.log('Visitor check-in successful:', response.data);
+      setShowSuccessToast(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to check in visitor. Please try again.');
     }
-
-    // Generate random visitor pass ID
-    const generatedId = `PHMS-V-${Math.floor(10000 + Math.random() * 90000)}`;
-    setNewVisitorId(generatedId);
-
-    // Sequential code helper for VIS-XXXX
-    const maxNum = currentVisitors.reduce((max, v) => {
-      const match = v.visitorId?.match(/VIS-(\d+)/);
-      return match ? Math.max(max, parseInt(match[1], 10)) : max;
-    }, 0);
-    const sequentialVisId = `VIS-${String(maxNum + 1).padStart(4, '0')}`;
-
-    const now = new Date();
-    const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const newRec = {
-      id: Date.now(),
-      visitorId: sequentialVisId,
-      name: formData.name,
-      type: formData.visitorType,
-      contact: formData.mobile,
-      entry: formattedTime,
-      exit: '—',
-      duration: '5m',
-      status: 'Inside' as const,
-      dateStr: formData.entryDate || now.toISOString().split('T')[0],
-    };
-
-    const updatedList = [newRec, ...currentVisitors];
-    localStorage.setItem('phms_visitor_logs', JSON.stringify(updatedList));
-
-    setShowSuccessToast(true);
   };
 
   const fromPath = location.state?.from || ROUTES.BRANCH_ADMIN.VISITOR_LOG;

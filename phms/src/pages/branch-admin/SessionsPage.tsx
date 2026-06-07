@@ -37,6 +37,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
+import { getSessions } from '../../api/session.api';
 import './branch-admin.css';
 
 export interface HealingSession {
@@ -102,138 +103,43 @@ const SessionsPage: React.FC = () => {
   const todayStr = new Date().toISOString().split('T')[0];
   const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-  // Sync sessions from local storage
-  const [sessions, setSessions] = useState<HealingSession[]>(() => {
-    const saved = localStorage.getItem('phms_sessions');
-    if (saved) return JSON.parse(saved);
-    return [
-      { 
-        id: 1, 
-        sessionNo: 'S-0001', 
-        date: todayStr, 
-        startTime: '09:00 AM', 
-        endTime: '10:00 AM', 
-        patient: 'Elena Gilbert', 
-        healer: 'Dr. Aris Varma', 
-        type: 'Pranic Psychotherapy', 
-        status: 'Completed',
-        paymentStatus: 'Paid',
-        paymentMethod: 'UPI',
-        followUp: { required: true, urgency: 'Urgent' },
-        notes: { treatmentType: 'Pranic Psychotherapy', observations: 'Solar plexus chakra cleared.', detailedNotes: 'Patient felt significant mental release from crown sweeps.', recommendation: 'Daily meditation logs' },
-        feedback: { rating: 5, comment: 'Incredible emotional release!' }
-      },
-      { 
-        id: 2, 
-        sessionNo: 'S-0001', 
-        date: todayStr, 
-        startTime: '11:30 AM', 
-        endTime: '12:30 PM', 
-        patient: 'Stefan Salvatore', 
-        healer: 'Julian Mars', 
-        type: 'Advanced Pranic Healing', 
-        status: 'Completed',
-        paymentStatus: 'Pending',
-        followUp: { required: true, urgency: 'Pending' },
-        notes: { treatmentType: 'Advanced Pranic Healing', observations: 'Congestion around heart chakra.', detailedNotes: 'Energy flow stabilizing. Next alignment session strongly recommended.', recommendation: 'Salt water baths twice weekly.' }
-      },
-      { 
-        id: 3, 
-        sessionNo: 'S-0001', 
-        date: todayStr, 
-        startTime: '03:00 PM', 
-        endTime: '04:00 PM', 
-        patient: 'Bonnie Bennett', 
-        healer: 'Julian Mars', 
-        type: 'Basic Pranic Healing', 
-        status: 'Scheduled',
-        paymentStatus: 'Pending',
-        followUp: { required: false, urgency: 'None' }
-      },
-      { 
-        id: 4, 
-        sessionNo: 'S-0002', 
-        date: todayStr, 
-        startTime: '04:30 PM', 
-        endTime: '05:30 PM', 
-        patient: 'Elena Gilbert', 
-        healer: 'Dr. Aris Varma', 
-        type: 'Crystal Healing', 
-        status: 'Scheduled',
-        paymentStatus: 'Pending',
-        followUp: { required: true, urgency: 'Urgent' }
-      },
-      { 
-        id: 5, 
-        sessionNo: 'S-0002', 
-        date: yesterdayStr, 
-        startTime: '09:30 AM', 
-        endTime: '10:30 AM', 
-        patient: 'Stefan Salvatore', 
-        healer: 'Dr. Aris Varma', 
-        type: 'Pranic Psychotherapy', 
-        status: 'Completed',
-        paymentStatus: 'Paid',
-        paymentMethod: 'Cash',
-        followUp: { required: false, urgency: 'None' },
-        notes: { treatmentType: 'Pranic Psychotherapy', observations: 'Emotional blockages dissolved.', detailedNotes: 'Patient sleeps much better.', recommendation: 'Continue weekly psychotherapy.' }
-      },
-      { 
-        id: 6, 
-        sessionNo: 'S-0001', 
-        date: yesterdayStr, 
-        startTime: '01:00 PM', 
-        endTime: '02:00 PM', 
-        patient: 'Matt Donovan', 
-        healer: 'Julian Mars', 
-        type: 'Advanced Pranic Healing', 
-        status: 'Cancelled',
-        paymentStatus: 'Pending',
-        followUp: { required: false, urgency: 'None' }
-      },
-      { 
-        id: 7, 
-        sessionNo: 'S-0001', 
-        date: '2026-05-20', 
-        startTime: '10:30 AM', 
-        endTime: '11:30 AM', 
-        patient: 'Tyler Lockwood', 
-        healer: 'Dr. Aris Varma', 
-        type: 'Basic Pranic Healing', 
-        status: 'Completed',
-        paymentStatus: 'Paid',
-        paymentMethod: 'UPI',
-        followUp: { required: false, urgency: 'None' },
-        notes: { treatmentType: 'Basic Pranic Healing', observations: 'Root chakra energized.', detailedNotes: 'Knee joint inflammation reduced.', recommendation: 'Follow-up in two weeks.' }
-      },
-      { 
-        id: 8, 
-        sessionNo: 'S-0001', 
-        date: '2026-05-19', 
-        startTime: '03:00 PM', 
-        endTime: '04:00 PM', 
-        patient: 'Jeremy Gilbert', 
-        healer: 'Julian Mars', 
-        type: 'Crystal Healing', 
-        status: 'Completed',
-        paymentStatus: 'Paid',
-        paymentMethod: 'Cash',
-        followUp: { required: false, urgency: 'None' },
-        notes: { treatmentType: 'Crystal Healing', observations: 'Aura sweeping performed.', detailedNotes: 'Energy flow maximized.', recommendation: 'Meditation weekly' }
+  const [sessions, setSessions] = useState<HealingSession[]>([]);
+
+  const fetchSessions = async () => {
+    try {
+      const res = await getSessions();
+      if (res.success && res.data) {
+        const mappedSessions: HealingSession[] = res.data.map((s: any, index: number) => ({
+          id: s.id || index,
+          sessionNo: `S-${String(index + 1).padStart(4, '0')}`,
+          date: s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : todayStr,
+          startTime: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '10:00 AM',
+          endTime: '11:00 AM',
+          patient: s.patient?.name || 'Unknown Patient',
+          healer: s.healer?.name || 'Unknown Healer',
+          type: s.treatments?.[0]?.type || 'Pranic Healing',
+          status: s.status === 'scheduled' ? 'Scheduled' : s.status === 'completed' ? 'Completed' : s.status === 'cancelled' ? 'Cancelled' : s.status || 'Scheduled',
+          paymentStatus: s.paymentStatus || (s.status === 'completed' ? 'Paid' : 'Pending'),
+          paymentMethod: s.paymentMethod || 'Cash',
+          followUp: { required: false, urgency: 'None' },
+          notes: s.notes ? { detailedNotes: s.notes, treatmentType: '', observations: '', recommendation: '' } : undefined,
+        }));
+        console.log("Full API Response:", res);
+    console.log("Response Data:", res.data);
+        setSessions(mappedSessions);
       }
-    ];
-  });
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error);
+      triggerToast('Failed to load sessions from database', 'danger');
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem('phms_sessions', JSON.stringify(sessions));
-  }, [sessions]);
+    fetchSessions();
+  }, []);
 
-  // Sync state with localStorage on view entering (fixes Ionic view cache dynamic stale states)
   useIonViewWillEnter(() => {
-    const saved = localStorage.getItem('phms_sessions');
-    if (saved) {
-      setSessions(JSON.parse(saved));
-    }
+    fetchSessions();
   });
 
 

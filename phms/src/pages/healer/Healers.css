@@ -1,0 +1,1219 @@
+/* Healers.css - Healer Portal Custom Styles (Aligned with Theme variables.css) */
+
+.healer-container {
+  padding: var(--space-2xl) var(--space-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Urgent Alerts Widget (BRD 6.6) */
+.healer-alert-widget {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(231, 76, 60, 0.08); /* danger color #e74c3c alpha */
+  border: 1px solid rgba(231, 76, 60, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-sm);
+  backdrop-filter: blur(10px);
+  transition: all var(--transition-fast);
+}
+
+.healer-alert-widget:hover {
+  background: rgba(231, 76, 60, 0.12);
+  border-color: rgba(231, 76, 60, 0.3);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.healer-alert-widget__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.healer-alert-widget__icon {
+  font-size: 2rem;
+  color: var(--color-danger);
+}
+
+.healer-alert-widget__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-danger);
+}
+
+.healer-alert-widget__desc {
+  margin: var(--space-xs) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-light);
+}
+
+.healer-alert-widget__count {
+  background: var(--color-danger);
+  color: var(--color-primary-contrast);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Sections */
+.healer-section-title {
+  margin: var(--space-md) 0 0 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+  color: var(--color-text-primary);
+  border-left: 4px solid var(--color-primary);
+  padding-left: var(--space-sm);
+}
+
+/* Stats Grid & Cards */
+.healer-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-lg);
+}
+
+.healer-stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.healer-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(var(--color-primary-rgb), 0.25);
+}
+
+.healer-stat-card__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  font-size: 1.4rem;
+}
+
+.healer-stat-card__icon-wrap--teal {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
+}
+
+.healer-stat-card__icon-wrap--blue {
+  background: rgba(52, 152, 219, 0.1); /* info color #3498db */
+  color: var(--color-info);
+}
+
+.healer-stat-card__icon-wrap--emerald {
+  background: rgba(39, 174, 96, 0.1); /* success color #27ae60 */
+  color: var(--color-success);
+}
+
+.healer-stat-card__icon-wrap--amber {
+  background: rgba(243, 156, 18, 0.1); /* warning color #f39c12 */
+  color: var(--color-warning);
+}
+
+.healer-stat-card__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.healer-stat-card__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-light);
+  font-weight: var(--font-weight-medium);
+}
+
+.healer-stat-card__value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+/* Assigned Patient List Widget */
+.healer-patient-list-widget {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.healer-patient-list-widget__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.healer-patient-list-widget__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.healer-patient-list-widget__view-all {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.healer-patient-list-widget__view-all:hover {
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+.healer-patient-list-widget__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.healer-patient-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-bg-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.healer-patient-row:hover {
+  background: rgba(var(--color-primary-rgb), 0.05);
+  border-color: rgba(var(--color-primary-rgb), 0.15);
+  transform: translateX(4px);
+}
+
+.healer-patient-row__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.healer-patient-row__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-info));
+  color: var(--color-primary-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.healer-patient-row__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.healer-patient-row__name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+}
+
+.healer-patient-row__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.healer-patient-row__condition {
+  background: rgba(var(--color-primary-rgb), 0.08);
+  color: var(--color-primary);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.healer-patient-row__right {
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  transition: transform var(--transition-fast);
+}
+
+.healer-patient-row:hover .healer-patient-row__right {
+  color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+/* Healer Action Grid & Cards */
+.healer-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.healer-action-card {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.healer-action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(var(--color-primary-rgb), 0.25);
+}
+
+.healer-action-card__inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+.healer-action-card__left {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  max-width: 85%;
+}
+
+.healer-action-card__icon {
+  margin-top: 0.15rem;
+}
+
+.healer-action-card__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.healer-action-card__subtitle {
+  margin: var(--space-xs) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.healer-action-card__arrow {
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.healer-action-card:hover .healer-action-card__arrow {
+  color: var(--color-primary);
+  transform: translateX(4px);
+}
+
+/* Patient List Table and Styles for Healer Pages */
+.healer-page-container {
+  padding: var(--space-xl) var(--space-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.healer-table-card {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+  margin-top: var(--space-lg);
+}
+
+.healer-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.healer-table th {
+  padding: var(--space-md);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  color: var(--color-text-light);
+  border-bottom: 2px solid var(--color-border);
+  letter-spacing: 0.05em;
+}
+
+.healer-table td {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.healer-table tbody tr {
+  transition: background var(--transition-fast);
+}
+
+.healer-table tbody tr:hover {
+  background: rgba(var(--color-primary-rgb), 0.02);
+}
+
+.healer-badge {
+  display: inline-block;
+  padding: 0.25rem var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.healer-badge--primary {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
+}
+
+.healer-badge--success {
+  background: rgba(39, 174, 96, 0.1);
+  color: var(--color-success);
+}
+
+.healer-badge--warning {
+  background: rgba(243, 156, 18, 0.1);
+  color: var(--color-warning);
+}
+
+.healer-btn {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border: none;
+  padding: 0.45rem var(--space-md);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.healer-btn:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.healer-btn--secondary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.healer-btn--secondary:hover {
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+/* Custom Search Bar */
+.sa-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  flex: 1;
+  max-width: 600px;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  margin-bottom: var(--space-lg);
+}
+
+.sa-search:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.sa-search ion-icon {
+  color: var(--color-text-muted);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.sa-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.sa-search input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Pagination (Aligned with super-admin.css) */
+.sa-table__footer {
+  padding: var(--space-lg) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-bg-primary);
+}
+
+.sa-pagination__info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.sa-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.sa-pagination__btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 var(--space-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.sa-pagination__btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.04);
+  transform: translateY(-1px);
+}
+
+.sa-pagination__btn--active {
+  background: var(--color-primary) !important;
+  color: var(--color-primary-contrast) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--shadow-primary);
+}
+
+.sa-pagination__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-tertiary);
+}
+
+/* Healer Forms & Layout (SessionNotesPage) */
+.healer-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 1.2rem;
+}
+
+.healer-back-btn:hover {
+  background: rgba(var(--color-primary-rgb), 0.08);
+  border-color: var(--color-primary);
+  transform: translateX(-2px);
+}
+
+.healer-header-box {
+  margin-bottom: var(--space-md);
+  border-left: 4px solid var(--color-primary);
+  padding-left: var(--space-sm);
+}
+
+.healer-page-title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-dark);
+}
+
+.healer-page-subtitle {
+  margin: var(--space-xs) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.healer-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.healer-form-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-2xl);
+}
+
+.healer-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.healer-form-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.healer-form-textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  transition: all var(--transition-fast);
+  resize: vertical;
+  outline: none;
+}
+
+.healer-form-textarea:focus {
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.healer-form-textarea--error {
+  border-color: var(--color-danger);
+  background: rgba(231, 76, 60, 0.02);
+}
+
+.healer-form-textarea--error:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+}
+
+.healer-form-error-text {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: var(--space-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.healer-form-toggle-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  gap: var(--space-lg);
+}
+
+.healer-form-toggle-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.healer-form-toggle-sub {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.healer-toggle-custom {
+  --background: var(--color-border);
+  --background-checked: var(--color-primary);
+  --handle-background-checked: var(--color-primary-contrast);
+}
+
+.healer-margin-top-16 {
+  margin-top: var(--space-lg);
+}
+
+/* Custom Select Dropdowns */
+.healer-form-select {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  height: 42px;
+  line-height: 1.5;
+  transition: all var(--transition-fast);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23333333' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right var(--space-md) center;
+}
+
+.healer-form-select:focus {
+  border-color: var(--color-primary);
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.healer-form-select--error {
+  border-color: var(--color-danger);
+  background: rgba(231, 76, 60, 0.02);
+}
+
+.healer-form-select--error:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+}
+
+/* Save Notes Button Alignment */
+.healer-notes-submit-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-lg);
+  width: 100%;
+}
+
+.healer-notes-submit-wrapper ion-button {
+  width: fit-content !important;
+  max-width: fit-content !important;
+  margin: 0 !important;
+}
+
+.healer-modal-content {
+  --background: transparent;
+}
+
+.healer-modal-content::part(content) {
+  border-radius: 16px;
+  background: var(--color-bg-primary, white);
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.healer-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: var(--space-lg) var(--space-xl);
+}
+
+.healer-modal-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.healer-modal-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-info));
+  color: var(--color-primary-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+}
+
+.healer-modal-name {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.healer-modal-id {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.healer-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-xl);
+}
+
+.healer-modal-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.healer-modal-sec-title {
+  margin: var(--space-md) 0 var(--space-xs) 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid rgba(var(--color-primary-rgb), 0.1);
+  padding-bottom: var(--space-xs);
+}
+
+.healer-modal-sec-title:first-child {
+  margin-top: 0;
+}
+
+.healer-modal-info-card, 
+.healer-modal-history-card, 
+.healer-modal-followup-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.healer-modal-info-item {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.healer-modal-info-item:last-child {
+  margin-bottom: 0;
+}
+
+.healer-modal-info-item strong {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.healer-modal-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: var(--space-xs);
+}
+
+.healer-modal-session-item {
+  background: var(--color-bg-primary);
+  border-left: 3px solid var(--color-primary);
+  border-top: 1px solid var(--color-border-light);
+  border-right: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.healer-modal-session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+}
+
+.healer-modal-session-date {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.healer-modal-session-proto {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.healer-modal-session-notes {
+  margin: var(--space-xs) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+/* Healer Profile Page Styles */
+.healer-profile-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .healer-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.healer-profile-left-col,
+.healer-profile-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.healer-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.healer-detail-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.healer-detail-grid__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.healer-detail-grid strong {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.healer-profile-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+}
+
+.healer-avatar-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-info));
+  border: 4px solid var(--color-bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.healer-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.healer-avatar-initials {
+  font-size: 2.2rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-contrast);
+}
+
+.healer-avatar-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  font-size: var(--font-size-xs);
+}
+
+.healer-avatar-hover-overlay ion-icon {
+  font-size: var(--font-size-2xl);
+}
+
+.healer-avatar-wrapper:hover .healer-avatar-hover-overlay {
+  opacity: 1;
+}
+
+.healer-photo-upload-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.healer-photo-upload-btn:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.healer-availability-section {
+  width: 100%;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px dashed var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.healer-availability-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.healer-status-pill-group {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.healer-status-pill {
+  flex: 1;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.healer-status-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.02);
+}
+
+.healer-status-pill.active.healer-status-pill--available {
+  background: rgba(39, 174, 96, 0.1);
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.healer-status-pill.active.healer-status-pill--busy {
+  background: rgba(231, 76, 60, 0.1);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.healer-status-pill.active.healer-status-pill--leave {
+  background: rgba(243, 156, 18, 0.1);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.healer-credential-card__label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.healer-stats-subdeck {
+  display: flex;
+  gap: var(--space-md);
+  width: 100%;
+}
+
+.healer-substat-card {
+  flex: 1;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-sm);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast);
+}
+
+.healer-substat-card:hover {
+  transform: translateY(-2px);
+}
+
+.healer-substat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.healer-substat-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.healer-cert-display {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.healer-cert-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.healer-cert-icon-container {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.healer-cert-name {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.healer-cert-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+  border-top: 1px dashed var(--color-border);
+  padding-top: var(--space-md);
+}
+
+.healer-cert-detail-label {
+  font-size: 11px;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-semibold);
+  display: block;
+}
+
+.healer-cert-detail-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-top: 2px;
+}
+
+.healer-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.healer-chip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.healer-chip-tag--teal {
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
+}
+
+.healer-chip-tag--purple {
+  background: rgba(155, 89, 182, 0.1);
+  color: #8e44ad;
+}
+
+.healer-chip-tag--blue {
+  background: rgba(52, 152, 219, 0.1);
+  color: #2980b9;
+}
+
+.healer-chip-tag--pink {
+  background: rgba(231, 76, 60, 0.1);
+  color: var(--color-danger);
+}

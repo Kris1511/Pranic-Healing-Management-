@@ -1161,10 +1161,10 @@ const HealersPage: React.FC = () => {
                               </td>
                               <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                                  <button title="View Profile" onClick={() => setSelectedHealer(healer)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b', padding: 0 }}>
+                                  <button title="View Profile" onClick={() => history.push(`/branch-admin/healers/details/${healer.id}`)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b', padding: 0 }}>
                                     <IonIcon icon={eyeOutline} />
                                   </button>
-                                  <button title="Edit Profile" onClick={() => { setEditForm(healer); setShowEditModal(true); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b', padding: 0 }}>
+                                  <button title="Edit Profile" onClick={() => history.push(`/branch-admin/healers/edit/${healer.id}`)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b', padding: 0 }}>
                                     <IonIcon icon={pencilOutline} />
                                   </button>
                                   <button title="Delete Healer" onClick={() => { if(window.confirm(`Are you sure you want to remove ${healer.name}?`)) { setHealers(prev => prev.filter(h => h.id !== healer.id)); logAudit('HEALER_DELETION', `Deleted healer ${healer.name} (ID: ${healer.id}).`); triggerToast(`Healer ${healer.name} removed.`); } }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#ef4444', padding: 0 }}>
@@ -1295,7 +1295,7 @@ const HealersPage: React.FC = () => {
 
                   {/* Action Buttons */}
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button className="sa-btn sa-btn--outline" onClick={() => { setEditForm(selectedHealer); setShowEditModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+                    <button className="sa-btn sa-btn--outline" onClick={() => history.push(`/branch-admin/healers/edit/${selectedHealer.id}`)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
                       <IonIcon icon={pencilOutline} /> Edit Profile
                     </button>
                     <button className="sa-btn sa-btn--outline" onClick={() => setShowAssignModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>

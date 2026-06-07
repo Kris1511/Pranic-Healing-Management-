@@ -207,6 +207,9 @@ export default function BARegisterPatientPage() {
         username: formData.username,
         password: formData.password,
         status: formData.accountStatus,
+        branchId: typeof user?.branch === 'object' && user?.branch !== null 
+          ? (user.branch as any).id 
+          : (user as any)?.branchId || undefined,
       };
 
       const response = await fetch("http://localhost:5000/api/patients", {
@@ -325,6 +328,7 @@ export default function BARegisterPatientPage() {
     },
     label: {
       fontSize: "11px",
+      marginTop: "10px",
       fontWeight: 800,
       color: "#475569",
       letterSpacing: "0.5px",
@@ -629,10 +633,10 @@ export default function BARegisterPatientPage() {
                               <option value="O-">O-</option>
                             </select>
                           </div>
-                          <div className="st-form-group">
-                            <label style={customStyles.label}>
-                              OCCUPATION *
-                            </label>
+                          
+                        </div>
+                        <div className="st-form-group">
+                            <label style={customStyles.label}>OCCUPATION</label>
                             <input
                               type="text"
                               name="occupation"
@@ -640,10 +644,8 @@ export default function BARegisterPatientPage() {
                               value={formData.occupation}
                               onChange={handleInputChange}
                               placeholder="Enter occupation (e.g. Engineer)"
-                              required
                             />
                           </div>
-                        </div>
                       </div>
 
                       {/* Section 2: Contact Information */}
