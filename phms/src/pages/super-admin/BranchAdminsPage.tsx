@@ -188,6 +188,12 @@ const BranchAdminsPage: React.FC = () => {
                 <div className="sa-stat-card__value">{admins.filter(a => a.status === 'active').length}</div>
               </div>
             </div>
+            <div className="sa-stat-card">
+              <div>
+                <div className="sa-stat-card__label">Inactive</div>
+                <div className="sa-stat-card__value">{admins.filter(a => a.status === 'inactive').length}</div>
+              </div>
+            </div>
           </div>
 
           {/* Search & Filters */}

@@ -27,6 +27,9 @@ import {
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
 import { getBranches } from '../../api/branch.api';
+import { getPatients } from '../../api/patient.api';
+import { getHealers } from '../../api/healer.api';
+import { getVisitorLog } from '../../api/visitor.api';
 import './super-admin.css';
 
 const DashboardPage: React.FC = () => {
@@ -34,29 +37,44 @@ const DashboardPage: React.FC = () => {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [branchesCount, setBranchesCount] = useState(0);
+  const [patientsCount, setPatientsCount] = useState(0);
+  const [healersCount, setHealersCount] = useState(0);
+  const [visitorsCount, setVisitorsCount] = useState(0);
 
   useEffect(() => {
-    const fetchBranchesCount = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const response = await getBranches();
-        if (response && response.data) {
-          setBranchesCount(response.data.length || 0);
-        } else if (Array.isArray(response)) {
-          setBranchesCount(response.length);
-        }
+        const [branches, patients, healers, visitors] = await Promise.all([
+          getBranches(),
+          getPatients(),
+          getHealers(),
+          getVisitorLog()
+        ]);
+
+        if (branches && branches.data) setBranchesCount(branches.data.length || 0);
+        else if (Array.isArray(branches)) setBranchesCount(branches.length);
+
+        if (patients && patients.data) setPatientsCount(patients.data.length || 0);
+        else if (Array.isArray(patients)) setPatientsCount(patients.length);
+
+        if (healers && healers.data) setHealersCount(healers.data.length || 0);
+        else if (Array.isArray(healers)) setHealersCount(healers.length);
+
+        if (visitors && visitors.data) setVisitorsCount(visitors.data.length || 0);
+        else if (Array.isArray(visitors)) setVisitorsCount(visitors.length);
+
       } catch (error) {
-        console.error('Error fetching branches:', error);
+        console.error('Error fetching dashboard stats:', error);
       }
     };
-    fetchBranchesCount();
+    fetchDashboardData();
   }, []);
 
   const stats = [
-    { label: 'Total Branches', value: branchesCount.toString(), detail: 'Across all regions', icon: businessOutline },
-    // { label: 'Total Patients', value: '2,840', detail: 'Organization-wide', icon: peopleOutline },
-    // { label: 'Active Sessions', value: '142', detail: 'Live now', icon: flashOutline },
-    // { label: 'Healer Count', value: '1', detail: 'Certified practitioners', icon: medkitOutline },
-    // { label: 'Total Visitors', value: '450', detail: "Today's footfall", icon: eyeOutline },
+    { label: 'Total Branches', value: branchesCount.toString(), detail: 'Across all regions', icon: businessOutline, route: ROUTES.SUPER_ADMIN.BRANCHES },
+    { label: 'Total Patients', value: patientsCount.toString(), detail: 'Organization-wide', icon: peopleOutline, route: ROUTES.SUPER_ADMIN.PATIENTS },
+    { label: 'Healer Count', value: healersCount.toString(), detail: 'Certified practitioners', icon: medkitOutline, route: ROUTES.SUPER_ADMIN.HEALERS },
+    { label: 'Daily Visitors', value: visitorsCount.toString(), detail: "Today's footfall", icon: eyeOutline, route: ROUTES.SUPER_ADMIN.VISITOR_LOG },
   ];
 
   const chartBars = [
@@ -94,7 +112,12 @@ const DashboardPage: React.FC = () => {
           {/* Stat Cards */}
           <div className="sa-stats">
             {stats.map((stat, i) => (
-              <div className="sa-stat-card" key={i}>
+              <div 
+                className="sa-stat-card" 
+                key={i}
+                onClick={() => history.push(stat.route)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div>
                   <div className="sa-stat-card__label">{stat.label}</div>
                   <div className="sa-stat-card__value">{stat.value}</div>

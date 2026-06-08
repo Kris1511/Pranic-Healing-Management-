@@ -140,11 +140,6 @@ const SessionHistoryPage: React.FC = () => {
     <IonPage className="sa-page">
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
-          <IonButtons slot="start">
-            <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
-              <IonIcon icon={arrowBackOutline} />
-            </button>
-          </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Healing Sessions History</IonTitle>
           <IonButtons slot="end">
             <IonMenuButton />

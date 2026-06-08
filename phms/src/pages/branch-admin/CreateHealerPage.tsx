@@ -77,6 +77,10 @@ export default function BACreateHealerPage() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [newHealerId, setNewHealerId] = useState("");
 
+  // Error alert/modal control
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   // Handle Input Changes
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -219,10 +223,16 @@ export default function BACreateHealerPage() {
       });
 
       setShowSuccessToast(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create Healer Error:", error);
+      const msg = error.response?.data?.message || "Failed to create healer";
 
-      alert("Failed to create healer");
+      if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("already")) {
+        setErrorMessage("A healer with this email address already exists. Please use a different email.");
+      } else {
+        setErrorMessage(msg);
+      }
+      setShowErrorModal(true);
     }
   };
 
@@ -1224,6 +1234,87 @@ export default function BACreateHealerPage() {
               style={{ width: "100%", justifyContent: "center", margin: 0 }}
             >
               Proceed to Healers List
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(15,23,42,0.6)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            className="db-corp-card"
+            style={{
+              maxWidth: "420px",
+              width: "90%",
+              padding: "32px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "16px",
+              animation: "scaleUp 0.3s ease-out",
+            }}
+          >
+            <div
+              style={{
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                background: "#fef2f2",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <IonIcon
+                icon={closeCircleOutline}
+                style={{ color: "#ef4444", fontSize: "40px" }}
+              />
+            </div>
+            <div>
+              <h3
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "800",
+                  color: "#1e293b",
+                  margin: "0 0 6px 0",
+                }}
+              >
+                Action Failed
+              </h3>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "white",
+                  margin: "0",
+                  lineHeight: 1.5,
+                }}
+              >
+                {errorMessage}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowErrorModal(false)}
+              className="sa-btn sa-btn--primary"
+              style={{ width: "100%", justifyContent: "center", margin: 0, background: "#ef4444", border: "none" }}
+            >
+              Close
             </button>
           </div>
         </div>

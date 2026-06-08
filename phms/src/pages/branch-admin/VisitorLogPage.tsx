@@ -398,21 +398,26 @@ const VisitorLogPage: React.FC = () => {
       const response = await axiosInstance.get("/visitors/log");
       
       if (response.data && response.data.data) {
-        const fetchedVisitors = response.data.data.map((v: any) => {
+         const fetchedVisitors = response.data.data.map((v: any) => {
            const checkInDate = new Date(v.checkIn);
            const checkOutDate = v.checkOut ? new Date(v.checkOut) : null;
            
+           // map backend types to UI types
+           let mappedType = v.visitorType || 'Walk-in';
+           if (mappedType === 'Healing Session' || mappedType === 'Consultation') mappedType = 'Session';
+           if (mappedType === 'Other' || mappedType === 'Inquiry') mappedType = 'Walk-in';
+
            return {
              id: v.id,
              visitorId: v.visitorId || (v.id ? `VIS-${String(v.id).padStart(4, '0')}` : `VIS-0000`),
              name: v.name || '',
-             type: v.visitorType || 'Walk-in',
+             type: mappedType as any,
              contact: v.phone || '',
              entry: isNaN(checkInDate.getTime()) ? '—' : checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
              exit: checkOutDate && !isNaN(checkOutDate.getTime()) ? checkOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
              duration: '—', // Could calculate if needed
              status: v.checkOut ? 'Exited' : 'Inside',
-             dateStr: isNaN(checkInDate.getTime()) ? '' : checkInDate.toISOString().split('T')[0],
+             dateStr: isNaN(checkInDate.getTime()) ? '' : checkInDate.toLocaleDateString('en-CA'),
            };
         });
         
@@ -511,12 +516,18 @@ const VisitorLogPage: React.FC = () => {
   };
 
   // Dynamic stats calculation from actual database records for today
-  const todayStr = new Date().toISOString().split('T')[0];
-  const countWalkins = visitors.filter(v => v.type === 'Walk-in' && v.dateStr === todayStr).length;
-  const countMeditation = visitors.filter(v => v.type === 'Meditation' && v.dateStr === todayStr).length;
-  const countSessions = visitors.filter(v => v.type === 'Session' && v.dateStr === todayStr).length;
-  const countCamp = visitors.filter(v => v.type === 'Camp' && v.dateStr === todayStr).length;
-  const countHealers = visitors.filter(v => v.type === 'Healer' && v.dateStr === todayStr).length;
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  const todayVisitors = visitors.filter(v => v.dateStr === todayStr);
+
+  const countTotalToday = todayVisitors.length;
+  const countInside = visitors.filter(v => v.status === 'Inside').length;
+  const countCheckedOutToday = todayVisitors.filter(v => v.status === 'Exited').length;
+
+  const countWalkins = visitors.filter(v => v.type === 'Walk-in').length;
+  const countMeditation = visitors.filter(v => v.type === 'Meditation').length;
+  const countSessions = visitors.filter(v => v.type === 'Session').length;
+  const countCamp = visitors.filter(v => v.type === 'Camp').length;
+  const countHealers = visitors.filter(v => v.type === 'Healer').length;
 
   // Advanced query filtering logic
   const filteredVisitors = visitors.filter((v) => {
@@ -569,6 +580,37 @@ const VisitorLogPage: React.FC = () => {
                 <button className="vl-btn-add" onClick={() => history.push('/branch-admin/visitor-log/checkin', { from: '/branch-admin/visitor-log' })}>
                   <IonIcon icon={addOutline} /> Add Visitor
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Level Summary Stats Grid */}
+          <div className="sa-stats sa-stats--3" style={{ marginBottom: '20px' }}>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--primary">
+                <IonIcon icon={peopleOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Total Visitors (Today)</div>
+                <div className="sa-stat-card__value">{countTotalToday}</div>
+              </div>
+            </div>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--warning">
+                <IonIcon icon={timeOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Currently Inside</div>
+                <div className="sa-stat-card__value">{countInside}</div>
+              </div>
+            </div>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--success">
+                <IonIcon icon={checkmarkCircleOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Check-outs Today</div>
+                <div className="sa-stat-card__value">{countCheckedOutToday}</div>
               </div>
             </div>
           </div>

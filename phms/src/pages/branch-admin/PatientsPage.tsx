@@ -1246,7 +1246,7 @@ const PatientsPage: React.FC = () => {
                   >
                     <IonIcon icon={pencilOutline} style={{ fontSize: '16px' }} /> Edit Profile
                   </button>
-                  <button 
+                  {/* <button 
                     onClick={() => setShowSesModal(true)}
                     style={{
                       display: 'flex',
@@ -1273,7 +1273,7 @@ const PatientsPage: React.FC = () => {
                     }}
                   >
                     <IonIcon icon={timeOutline} style={{ fontSize: '16px' }} /> Start Session
-                  </button>
+                  </button> */}
                 </div>
               </div>
 
@@ -1291,9 +1291,9 @@ const PatientsPage: React.FC = () => {
                   { id: 'basic', label: 'BASIC INFO' },
                   { id: 'sessions', label: 'SESSION HISTORY' },
                   { id: 'financials', label: 'PAYMENTS' },
-                  { id: 'documents', label: `DOCUMENT VAULT (${selectedPatient.documents.length})` },
-                  { id: 'feedback', label: 'FEEDBACK' },
-                  { id: 'logs', label: 'AUDIT LOGS' }
+                  // { id: 'documents', label: `DOCUMENT VAULT (${selectedPatient.documents.length})` },
+                  // { id: 'feedback', label: 'FEEDBACK' },
+                  // { id: 'logs', label: 'AUDIT LOGS' }
                 ].map((tab) => {
                   const isActive = profileTab === tab.id;
                   return (

@@ -9,19 +9,18 @@ import {
   IonIcon,
   IonMenuButton,
   IonModal,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   searchOutline,
-  logInOutline,
-  logOutOutline,
   timeOutline,
   businessOutline,
   peopleOutline,
   checkmarkCircleOutline,
   filterOutline,
-  printOutline,
   calendarOutline,
 } from 'ionicons/icons';
+import { getVisitorLog } from '../../api/visitor.api';
 import './super-admin.css';
 
 const VisitorLogPage: React.FC = () => {
@@ -30,14 +29,27 @@ const VisitorLogPage: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<any>(null);
   
-  const [visitors, setVisitors] = useState([
-    { id: 1, name: 'John Smith', phone: '+91 98765 43210', purpose: 'Consultation', branch: 'Uptown Sanctuary', checkIn: '09:15 AM', checkOut: '10:30 AM', status: 'checked-out', date: '2024-04-24' },
-    { id: 2, name: 'Anita Rao', phone: '+91 98765 43211', purpose: 'Healing Session', branch: 'Coastal Healing Center', checkIn: '10:00 AM', checkOut: null, status: 'checked-in', date: '2024-04-24' },
-    { id: 3, name: 'David Miller', phone: '+91 98765 43212', purpose: 'Inquiry', branch: 'Green Valley Branch', checkIn: '10:45 AM', checkOut: '11:15 AM', status: 'checked-out', date: '2024-04-24' },
-    { id: 4, name: 'Priya Sharma', phone: '+91 98765 43213', purpose: 'Healing Session', branch: 'Uptown Sanctuary', checkIn: '11:30 AM', checkOut: null, status: 'checked-in', date: '2024-04-24' },
-    { id: 5, name: 'Robert Wilson', phone: '+91 98765 43214', purpose: 'Consultation', branch: 'Downtown Sanctuary', checkIn: '12:00 PM', checkOut: null, status: 'checked-in', date: '2024-04-24' },
-    { id: 6, name: 'Meera Kapur', phone: '+91 98765 43215', purpose: 'Other', branch: 'Coastal Healing Center', checkIn: '08:45 AM', checkOut: '09:30 AM', status: 'checked-out', date: '2024-04-24' },
-  ]);
+  const [visitors, setVisitors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useIonViewWillEnter(() => {
+    fetchVisitors();
+  });
+
+  const fetchVisitors = async () => {
+    setLoading(true);
+    try {
+      const res = await getVisitorLog();
+      const data = res.data || res;
+      if (Array.isArray(data)) {
+        setVisitors(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch visitors:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [newVisitor, setNewVisitor] = useState({
     name: '',
@@ -71,11 +83,14 @@ const VisitorLogPage: React.FC = () => {
     ));
   };
 
-  const filteredVisitors = visitors.filter(visitor => 
-    visitor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    visitor.branch.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    visitor.purpose.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredVisitors = visitors.filter(visitor => {
+    const branchName = visitor.branch?.name || '';
+    return visitor.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           branchName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           visitor.purpose?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const getStatus = (visitor: any) => visitor.checkOut ? 'checked-out' : 'checked-in';
 
   return (
     <IonPage className="sa-page">
@@ -120,7 +135,7 @@ const VisitorLogPage: React.FC = () => {
               </div>
               <div>
                 <div className="sa-stat-card__label">Currently Inside</div>
-                <div className="sa-stat-card__value">{visitors.filter(v => v.status === 'checked-in').length}</div>
+                <div className="sa-stat-card__value">{visitors.filter(v => getStatus(v) === 'checked-in').length}</div>
               </div>
             </div>
             <div className="sa-stat-card">
@@ -129,7 +144,7 @@ const VisitorLogPage: React.FC = () => {
               </div>
               <div>
                 <div className="sa-stat-card__label">Check-outs Today</div>
-                <div className="sa-stat-card__value">{visitors.filter(v => v.status === 'checked-out').length}</div>
+                <div className="sa-stat-card__value">{visitors.filter(v => getStatus(v) === 'checked-out').length}</div>
               </div>
             </div>
           </div>
@@ -162,54 +177,60 @@ const VisitorLogPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVisitors.map((visitor) => (
-                  <tr key={visitor.id}>
-                    <td>
-                      <div className="sa-table__user">
-                        <div className="sa-table__avatar sa-table__avatar--visitor">
-                          {visitor.name.split(' ').map(n => n[0]).join('')}
+                {filteredVisitors.map((visitor) => {
+                  const checkInDate = new Date(visitor.checkIn);
+                  const checkOutDate = visitor.checkOut ? new Date(visitor.checkOut) : null;
+                  const status = getStatus(visitor);
+                  
+                  return (
+                    <tr key={visitor.id}>
+                      <td>
+                        <div className="sa-table__user">
+                          <div className="sa-table__avatar sa-table__avatar--visitor">
+                            {visitor.name?.split(' ').map((n: string) => n[0]).join('').substring(0,2).toUpperCase() || 'V'}
+                          </div>
+                          <div className="sa-table__user-info">
+                            <span className="sa-table__user-name">{visitor.name}</span>
+                            <span className="sa-table__user-email">{visitor.phone || 'No Phone'}</span>
+                          </div>
                         </div>
-                        <div className="sa-table__user-info">
-                          <span className="sa-table__user-name">{visitor.name}</span>
-                          <span className="sa-table__user-email">{visitor.phone}</span>
+                      </td>
+                      <td>
+                        <span className="sa-visitor-purpose">{visitor.purpose || visitor.visitorType || 'N/A'}</span>
+                      </td>
+                      <td>
+                        <div className="sa-table__branch-info">
+                          <IonIcon icon={businessOutline} /> {visitor.branch?.name || 'Unknown'}
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="sa-visitor-purpose">{visitor.purpose}</span>
-                    </td>
-                    <td>
-                      <div className="sa-table__branch-info">
-                        <IonIcon icon={businessOutline} /> {visitor.branch}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="sa-table__time">
-                        <IonIcon icon={timeOutline} /> {visitor.checkIn}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="sa-table__time">
-                        {visitor.checkOut ? (
-                          <><IonIcon icon={timeOutline} /> {visitor.checkOut}</>
-                        ) : (
-                          <span className="sa-text-muted">--:--</span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`sa-badge sa-badge--${visitor.status}`}>
-                        {visitor.status.replace('-', ' ')}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="sa-table__date">
-                        <IonIcon icon={calendarOutline} />
-                        {visitor.date}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="sa-table__time">
+                          <IonIcon icon={timeOutline} /> {checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="sa-table__time">
+                          {checkOutDate ? (
+                            <><IonIcon icon={timeOutline} /> {checkOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</>
+                          ) : (
+                            <span className="sa-text-muted">--:--</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`sa-badge sa-badge--${status}`}>
+                          {status.replace('-', ' ')}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="sa-table__date">
+                          <IonIcon icon={calendarOutline} />
+                          {checkInDate.toLocaleDateString()}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

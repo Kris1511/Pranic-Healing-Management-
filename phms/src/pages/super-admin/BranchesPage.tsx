@@ -37,7 +37,7 @@ const BranchesPage: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const filters = ["All", "Active", "Maintenance", "Closed"];
+  const filters = ["All", "Active", "Inactive"];
 
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,8 +114,8 @@ const BranchesPage: React.FC = () => {
 
   const totalBranches = branches.length;
   const activeBranches = branches.filter((b) => b.status === "active").length;
-  const maintenanceBranches = branches.filter(
-    (b) => b.status === "maintenance",
+  const inactiveBranches = branches.filter(
+    (b) => b.status === "inactive",
   ).length;
 
   const filteredBranches = branches
@@ -184,8 +184,8 @@ const BranchesPage: React.FC = () => {
             </div>
             <div className="sa-stat-card">
               <div>
-                <div className="sa-stat-card__label">Maintenance</div>
-                <div className="sa-stat-card__value">{maintenanceBranches}</div>
+                <div className="sa-stat-card__label">Inactive</div>
+                <div className="sa-stat-card__value">{inactiveBranches}</div>
               </div>
             </div>
           </div>
@@ -222,85 +222,98 @@ const BranchesPage: React.FC = () => {
           </div>
 
           {/* Branch Cards */}
-          <div className="sa-branches-grid">
-            {filteredBranches.map((branch, i) => (
-              <div className="sa-branch-card" key={i}>
-                <div className="sa-branch-card__header">
-                  <div className="sa-branch-card__name-row">
-                    <div className="sa-branch-card__icon">
-                      <IonIcon icon={homeOutline} />
+          {filteredBranches.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--ion-color-medium)" }}>
+              <IonIcon icon={alertCircleOutline} style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.5 }} />
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "18px", color: "var(--ion-color-dark)" }}>
+                {activeFilter === "Inactive" ? "Right now no inactive branches" : "No branches found"}
+              </h3>
+              <p style={{ margin: 0, fontSize: "14px" }}>
+                {activeFilter === "Inactive" 
+                  ? "All your branches are currently active." 
+                  : "Try adjusting your search or filters to find what you're looking for."}
+              </p>
+            </div>
+          ) : (
+            <div className="sa-branches-grid">
+              {filteredBranches.map((branch, i) => (
+                <div className="sa-branch-card" key={i}>
+                  <div className="sa-branch-card__header">
+                    <div className="sa-branch-card__name-row">
+                      <div className="sa-branch-card__icon">
+                        <IonIcon icon={homeOutline} />
+                      </div>
+                      <div>
+                        <h3 className="sa-branch-card__name">{branch.name}</h3>
+                        <p className="sa-branch-card__region">
+                          <IonIcon icon={locationOutline} />{" "}
+                          {branch.address || "No Address"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="sa-branch-card__name">{branch.name}</h3>
-                      <p className="sa-branch-card__region">
-                        <IonIcon icon={locationOutline} />{" "}
-                        {branch.address || "No Address"}
-                      </p>
-                    </div>
+                    <span className={`sa-badge sa-badge--${branch.status}`}>
+                      {branch.status}
+                    </span>
                   </div>
-                  <span className={`sa-badge sa-badge--${branch.status}`}>
-                    {branch.status}
-                  </span>
-                </div>
 
-                <div
-                  className="sa-branch-card__admin"
-                  onClick={() =>
-                    history.push(
-                      ROUTES.SUPER_ADMIN.BRANCH_DETAILS.replace(
-                        ":id",
-                        encodeURIComponent(branch.name),
-                      ),
-                    )
-                  }
-                >
-                  <div>
-                    <div className="sa-branch-card__admin-label">
-                      Branch Admin
-                    </div>
-                    <div className="sa-branch-card__admin-name">
-                      {branch.admin}
-                    </div>
-                  </div>
-                  <IonIcon
-                    icon={chevronForwardOutline}
-                    style={{ color: "#999" }}
-                  />
-                </div>
-
-                <div className="sa-branch-card__meta">
-                  <div className="sa-branch-card__meta-item">
-                    <IonIcon icon={callOutline} /> {branch.phone || "N/A"}
-                  </div>
-                  <div className="sa-branch-card__meta-item">
-                    <IonIcon icon={calendarOutline} /> Est.{" "}
-                    {branch.createdAt
-                      ? new Date(branch.createdAt).toLocaleDateString()
-                      : "N/A"}
-                  </div>
-                </div>
-
-                <div className="sa-branch-card__actions">
-                  {/* <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openEditModal(branch, i)}>Edit</button>
-                  <button className="sa-btn sa-btn--outline sa-btn--sm" style={{ flex: 1 }} onClick={() => openReportModal(branch)}>Reports</button> */}
-                  <button
-                    className="sa-btn sa-btn--outline sa-btn--sm"
-                    style={{
-                      width: "100%",
-                      color: "var(--color-danger)",
-                      borderColor: "var(--color-danger)",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                    onClick={() => handleDeleteBranch(branch)}
+                  <div
+                    className="sa-branch-card__admin"
+                    onClick={() =>
+                      history.push(
+                        ROUTES.SUPER_ADMIN.BRANCH_DETAILS.replace(
+                          ":id",
+                          encodeURIComponent(branch.id || branch._id),
+                        ),
+                      )
+                    }
                   >
-                    <IonIcon icon={trashOutline} />
-                  </button>
+                    <div>
+                      <div className="sa-branch-card__admin-label">
+                        Branch Admin
+                      </div>
+                      <div className="sa-branch-card__admin-name">
+                        {branch.name}
+                      </div>
+                    </div>
+                    <IonIcon
+                      icon={chevronForwardOutline}
+                      style={{ color: "#999" }}
+                    />
+                  </div>
+
+                  <div className="sa-branch-card__meta">
+                    <div className="sa-branch-card__meta-item">
+                      <IonIcon icon={callOutline} /> {branch.phone || "N/A"}
+                    </div>
+                    <div className="sa-branch-card__meta-item">
+                      <IonIcon icon={calendarOutline} /> Est.{" "}
+                      {branch.createdAt
+                        ? new Date(branch.createdAt).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="sa-branch-card__actions">
+                    <button
+                      className="sa-btn sa-btn--outline sa-btn--sm"
+                      style={{
+                        width: "100%",
+                        color: "var(--color-danger)",
+                        borderColor: "var(--color-danger)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                      onClick={() => handleDeleteBranch(branch)}
+                    >
+                      <IonIcon icon={trashOutline} />
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </IonContent>
 
@@ -386,8 +399,7 @@ const BranchesPage: React.FC = () => {
                   }
                 >
                   <option value="active">Active</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="closed">Closed</option>
+                  <option value="inactive">Inactive</option>
                 </select>
               </div>
             </div>

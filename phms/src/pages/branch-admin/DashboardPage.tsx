@@ -26,6 +26,9 @@ import {
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
 import { useAuthStore } from '../../store/auth.store';
+import { getVisitorLog } from '../../api/visitor.api';
+import { getPatients } from '../../api/patient.api';
+import { getHealers } from '../../api/healer.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
 
@@ -106,32 +109,15 @@ const DashboardPage: React.FC = () => {
     { id: '#TXN-7725', type: 'Expense', amount: 1500, category: 'Facility Utility Maintenance', date: '2026-05-25', method: 'Bank Transfer' },
   ]);
 
-  const [visitors, setVisitors] = useState<Visitor[]>([
-    { id: '#VIS-4091', name: 'Rahul Sharma', type: 'Walk-in', checkIn: '09:15 AM', status: 'Inside' },
-    { id: '#VIS-4092', name: 'Aarav Mehta', type: 'Meditation', checkIn: '09:45 AM', status: 'Inside' },
-    { id: '#VIS-4093', name: 'Meera Sen', type: 'Session', checkIn: '10:10 AM', status: 'Inside' },
-    { id: '#VIS-4094', name: 'Dr. Kevin Smith', type: 'Healer', checkIn: '08:30 AM', status: 'Inside' },
-    { id: '#VIS-4095', name: 'Sunil Verma', type: 'Camp', checkIn: '07:30 AM', checkOut: '11:00 AM', status: 'Completed' },
-  ]);
-
-  const [patients] = useState<PatientLog[]>([
-    { id: '#P-8921', name: 'Sarah Mitchell', healer: 'Dr. Anjali Rao', treatment: 'Lower Back Pain', regDate: '2026-05-26', status: 'Active' },
-    { id: '#P-8922', name: 'John Walker', healer: 'Dr. Kevin Smith', treatment: 'Osteoarthritis', regDate: '2026-05-25', status: 'Active' },
-    { id: '#P-8923', name: 'Elena Rostova', healer: 'Dr. Anjali Rao', treatment: 'Anxiety GAD', regDate: '2026-05-24', status: 'Inactive' },
-    { id: '#P-8924', name: 'Karan Malhotra', healer: 'Dr. Kevin Smith', treatment: 'Chronic Fatigue', regDate: '2026-05-26', status: 'Active' },
-  ]);
-
+  const [visitors, setVisitors] = useState<Visitor[]>([]);
+  const [patients, setPatients] = useState<PatientLog[]>([]);
   const [payments, setPayments] = useState<Payment[]>([
     { invoiceId: '#INV-9021', patientName: 'Sarah Mitchell', sessionRef: '#SES-301', totalAmount: 1500, paidAmount: 1500, outstandingBalance: 0, status: 'Paid', date: '2026-05-26', method: 'UPI' },
     { invoiceId: '#INV-9022', patientName: 'John Walker', sessionRef: '#SES-202', totalAmount: 2500, paidAmount: 1000, outstandingBalance: 1500, status: 'Partial', date: '2026-05-25', method: 'Cash' },
     { invoiceId: '#INV-9023', patientName: 'Elena Rostova', sessionRef: '#SES-302', totalAmount: 1200, paidAmount: 0, outstandingBalance: 1200, status: 'Pending', date: '2026-05-24' },
     { invoiceId: '#INV-9024', patientName: 'Karan Malhotra', sessionRef: '#SES-303', totalAmount: 1800, paidAmount: 1800, outstandingBalance: 0, status: 'Paid', date: '2026-05-26', method: 'Card' },
   ]);
-
-  const [healersList] = useState<Healer[]>([
-    { name: 'Dr. Anjali Rao', certificationLevel: 'Associate Pranic Healer', specialization: 'Advanced Pranic Healing & Psychotherapy', activePatientsCount: 12, cumulativeHealingCount: 148, sessionsPendingNotes: 3 },
-    { name: 'Dr. Kevin Smith', certificationLevel: 'Certified Pranic Healer', specialization: 'Pranic Psychotherapy', activePatientsCount: 8, cumulativeHealingCount: 95, sessionsPendingNotes: 1 },
-  ]);
+  const [healersList, setHealersList] = useState<Healer[]>([]);
 
   const [workerAttendanceList, setWorkerAttendanceList] = useState<WorkerAttendance[]>([
     { id: '#WRK-001', name: 'Sanjay M.', role: 'Senior Healer', checkIn: '08:50 AM', checkOut: '05:30 PM', status: 'Present' },
@@ -166,19 +152,44 @@ const DashboardPage: React.FC = () => {
   const options: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric', year: 'numeric' };
   const formattedDate = today.toLocaleDateString('en-US', options);
 
-  // Simulated live skeleton trigger
+  // Fetch dynamic data for Dashboard
   useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [visRes, patRes, healRes] = await Promise.all([
+          getVisitorLog(),
+          getPatients(),
+          getHealers()
+        ]);
+        
+        // Ensure today's visitors are calculated properly or just pass them raw
+        // The stat logic uses .length so the exact schema map isn't fully required for counts,
+        // but it expects checkout as boolean logic in some places:
+        const mappedVis = (visRes.data || []).map((v: any) => ({ ...v, status: v.checkOut ? 'Completed' : 'Inside' }));
+
+        setVisitors(mappedVis);
+        setPatients(patRes.data || []);
+        setHealersList(healRes.data || []);
+      } catch (e) {
+        console.error('Failed to fetch dashboard data:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboardData();
   }, []);
 
   // Calculated Core Analytics Metrics
   const totalIncomeToday = transactions.filter(t => t.type === 'Income' && t.date === '2026-05-26').reduce((sum, t) => sum + t.amount, 0);
   const totalExpenseToday = transactions.filter(t => t.type === 'Expense' && t.date === '2026-05-26').reduce((sum, t) => sum + t.amount, 0);
   const netBalanceToday = totalIncomeToday - totalExpenseToday;
-  const newPatientsCount = patients.filter(p => p.regDate === '2026-05-26').length;
-  const activeCasesCount = patients.filter(p => p.status === 'Active').length;
+  
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  // For patients, assuming 'createdAt' from the real DB gives the registration date
+  const newPatientsCount = patients.filter(p => p.createdAt && new Date(p.createdAt as any).toLocaleDateString('en-CA') === todayStr).length;
+  // If 'status' is different from the mock ('Active' vs 'active'), we handle it safely:
+  const activeCasesCount = patients.filter(p => p.status === 'Active' || p.status === 'active').length;
 
   const pendingPaymentsCount = payments.filter(p => p.status === 'Pending' || p.status === 'Partial').length;
   const activeHealersCount = healersList.length;
