@@ -24,6 +24,8 @@ import {
   walletOutline,
   calendarOutline,
   documentTextOutline,
+  chevronDownOutline,
+  chevronForwardOutline,
 } from 'ionicons/icons';
 import { ROUTES } from '../constants/routes.constant';
 import { useAuthStore } from '../store/auth.store';
@@ -32,9 +34,10 @@ import './Menu.css';
 
 interface NavItem {
   title: string;
-  url: string;
+  url?: string;
   icon: string;
   section?: string;
+  subItems?: { title: string; url: string; icon: string }[];
 }
 
 const superAdminNav: NavItem[] = [
@@ -53,10 +56,21 @@ const superAdminNav: NavItem[] = [
   { title: 'Daily Visitor Log', url: ROUTES.SUPER_ADMIN.VISITOR_LOG, icon: listOutline, section: 'Daily Logs' },
   { title: 'Worker Attendance', url: ROUTES.SUPER_ADMIN.ATTENDANCE, icon: timeOutline },
 
+  /* Treatment Section */
+  { 
+    title: 'Treatment', 
+    icon: leafOutline, 
+    subItems: [
+      { title: 'Treatment Category', url: ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES, icon: listOutline },
+      { title: 'Treatment Type', url: ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST, icon: medkitOutline },
+    ] 
+  },
+
   /* Finance Section */
   { title: 'Revenue', url: ROUTES.SUPER_ADMIN.REVENUE, icon: cashOutline, section: 'Finance' },
   { title: 'Daily Income & Expense', url: ROUTES.SUPER_ADMIN.DAILY_FINANCE, icon: walletOutline },
   { title: 'Reports', url: ROUTES.SUPER_ADMIN.REPORTS, icon: barChartOutline },
+  
 
   /* System Section */
   { title: 'Settings', url: ROUTES.SUPER_ADMIN.SETTINGS, icon: settingsOutline, section: 'System' },
@@ -97,6 +111,7 @@ const Menu: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
   const { user, logout } = useAuthStore();
+  const [expandedItems, setExpandedItems] = React.useState<string[]>([]);
 
   let navItems = branchAdminNav;
   if (user?.role === 'SUPER_ADMIN') {
@@ -107,7 +122,19 @@ const Menu: React.FC = () => {
     navItems = patientNav;
   }
 
-  const handleNavClick = (url: string) => {
+  const handleNavClick = (item: NavItem) => {
+    if (item.subItems) {
+      setExpandedItems(prev =>
+        prev.includes(item.title)
+          ? prev.filter(t => t !== item.title)
+          : [...prev, item.title]
+      );
+    } else if (item.url) {
+      history.push(item.url);
+    }
+  };
+
+  const handleSubNavClick = (url: string) => {
     history.push(url);
   };
 
@@ -139,17 +166,47 @@ const Menu: React.FC = () => {
         {/* Navigation Items */}
         <nav className="app-menu__nav">
           {navItems.map((item, index) => {
-            const isActive = location.pathname === item.url;
+            const isActive = item.url ? location.pathname === item.url : false;
+            const hasSubItems = !!item.subItems;
+            const isExpanded = expandedItems.includes(item.title);
+            const isSubItemActive = hasSubItems && item.subItems?.some(sub => location.pathname === sub.url);
+            
             return (
-              <React.Fragment key={item.url + index}>
+              <React.Fragment key={(item.url || item.title) + index}>
                 {item.section && <div className="app-menu__section-title">{item.section}</div>}
                 <button
-                  className={`app-menu__nav-item ${isActive ? 'app-menu__nav-item--active' : ''}`}
-                  onClick={() => handleNavClick(item.url)}
+                  className={`app-menu__nav-item ${(isActive || (isSubItemActive && !isExpanded)) ? 'app-menu__nav-item--active' : ''}`}
+                  onClick={() => handleNavClick(item)}
                 >
                   <IonIcon icon={item.icon} className="app-menu__nav-icon" />
                   <span className="app-menu__nav-label">{item.title}</span>
+                  {hasSubItems && (
+                    <IonIcon 
+                      icon={isExpanded ? chevronDownOutline : chevronForwardOutline} 
+                      className="app-menu__nav-chevron" 
+                      style={{ marginLeft: 'auto', opacity: 0.7 }}
+                    />
+                  )}
                 </button>
+                
+                {hasSubItems && isExpanded && (
+                  <div className="app-menu__sub-items" style={{ background: 'rgba(0,0,0,0.03)' }}>
+                    {item.subItems!.map((subItem, subIndex) => {
+                      const isSubActive = location.pathname === subItem.url;
+                      return (
+                        <button
+                          key={subItem.url + subIndex}
+                          className={`app-menu__nav-item app-menu__sub-nav-item ${isSubActive ? 'app-menu__nav-item--active' : ''}`}
+                          onClick={() => handleSubNavClick(subItem.url)}
+                          style={{ paddingLeft: '3rem', fontSize: '0.9em', minHeight: '40px' }}
+                        >
+                          <IonIcon icon={subItem.icon} className="app-menu__nav-icon" style={{ fontSize: '1.2em' }} />
+                          <span className="app-menu__nav-label">{subItem.title}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </React.Fragment>
             );
           })}

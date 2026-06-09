@@ -21,6 +21,8 @@ import {
 import { useHistory, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
+import { getHealers } from '../../api/healer.api';
+import { getSessionById, updateSession } from '../../api/session.api';
 import './branch-admin.css';
 
 interface Patient {
@@ -91,6 +93,7 @@ export default function EditSessionsPages() {
 
   // Target session
   const [targetSession, setTargetSession] = useState<HealingSession | null>(null);
+  const [targetSessionBackend, setTargetSessionBackend] = useState<any>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -109,51 +112,94 @@ export default function EditSessionsPages() {
     recommendation: '',
     paymentStatus: 'Pending' as 'Paid' | 'Pending',
     paymentMethod: 'UPI' as 'UPI' | 'Cash',
+    sessionFee: 1200,
     rating: 5,
     comment: '',
   });
 
   // Load and pre-populate target session data
   useEffect(() => {
-    const found = sessions.find(s => s.id === Number(id));
-    if (found) {
-      setTargetSession(found);
-      
-      // Clean healer name string (if it starts with "Dr. ", we can strip it or keep it based on preference,
-      // but let's match the option value in activeHealers which has Dr. prepended dynamically or exactly match)
-      let cleanHealerName = found.healer;
-      if (cleanHealerName.startsWith('Dr. ')) {
-        cleanHealerName = cleanHealerName.replace('Dr. ', '');
+    const fetchData = async () => {
+      try {
+        const healersRes = await getHealers();
+        if (healersRes.success) {
+          // setRegisteredHealers(healersRes.data);
+          localStorage.setItem('phms_healers', JSON.stringify(healersRes.data));
+        }
+
+        const sessionRes = await getSessionById(id);
+        if (sessionRes.success && sessionRes.data) {
+          const s = sessionRes.data;
+          setTargetSessionBackend(s);
+          const mappedMockSession: any = {
+            id: s.id,
+            status: s.status === 'scheduled' ? 'Scheduled' : s.status === 'completed' ? 'Completed' : s.status === 'cancelled' ? 'Cancelled' : s.status || 'Scheduled',
+            paymentStatus: s.paymentStatus || (s.status === 'completed' ? 'Paid' : 'Pending'),
+          };
+          setTargetSession(mappedMockSession);
+
+          setFormData(prev => ({
+            ...prev,
+            patientName: s.patient?.name || 'Unknown Patient',
+            sessionNo: `S-${s.id.substring(0, 4)}`,
+            healer: s.healer?.name || '',
+            date: s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : '',
+            startTime: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '',
+            endTime: '',
+            type: s.treatments?.[0]?.type || 'Basic Pranic Healing',
+            status: mappedMockSession.status,
+            observations: s.notes || '',
+            paymentStatus: mappedMockSession.paymentStatus,
+            paymentMethod: s.paymentMethod || 'UPI',
+            sessionFee: s.totalAmount || 1200,
+          }));
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to fetch from API:', error);
       }
 
-      setFormData({
-        patientName: found.patient,
-        sessionNo: found.sessionNo,
-        healer: cleanHealerName,
-        date: found.date,
-        startTime: found.startTime,
-        endTime: found.endTime,
-        type: found.type,
-        status: found.status,
-        followUpRequired: found.followUp?.required || false,
-        followUpUrgency: found.followUp?.urgency || 'None',
-        observations: found.notes?.observations || '',
-        detailedNotes: found.notes?.detailedNotes || '',
-        recommendation: found.notes?.recommendation || '',
-        paymentStatus: found.paymentStatus,
-        paymentMethod: found.paymentMethod || 'UPI',
-        rating: found.feedback?.rating || 5,
-        comment: found.feedback?.comment || '',
-      });
-    } else if (sessions.length > 0) {
-      triggerToast(`Session ID ${id} not found in registry.`, 'danger');
-      history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
-    }
+      // Fallback to local storage (mock data)
+      const found = sessions.find(s => s.id === Number(id) || s.id.toString() === id);
+      if (found) {
+        setTargetSession(found);
+        
+        let cleanHealerName = found.healer;
+        if (cleanHealerName.startsWith('Dr. ')) {
+          cleanHealerName = cleanHealerName.replace('Dr. ', '');
+        }
+
+        setFormData({
+          patientName: found.patient,
+          sessionNo: found.sessionNo,
+          healer: cleanHealerName,
+          date: found.date,
+          startTime: found.startTime,
+          endTime: found.endTime,
+          type: found.type,
+          status: found.status,
+          followUpRequired: found.followUp?.required || false,
+          followUpUrgency: found.followUp?.urgency || 'None',
+          observations: found.notes?.observations || '',
+          detailedNotes: found.notes?.detailedNotes || '',
+          recommendation: found.notes?.recommendation || '',
+          paymentStatus: found.paymentStatus,
+          paymentMethod: found.paymentMethod || 'UPI',
+          sessionFee: 1200,
+          rating: found.feedback?.rating || 5,
+          comment: found.feedback?.comment || '',
+        });
+      } else if (sessions.length > 0) {
+        triggerToast(`Session ID ${id} not found in registry.`, 'danger');
+        history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
+      }
+    };
+    fetchData();
   }, [id, sessions]);
 
   // Dynamic healers list falling back to default active healers if empty
   const activeHealers = registeredHealers.length > 0
-    ? registeredHealers.filter(h => h.status === 'ACTIVE')
+    ? registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE')
     : [
         { id: 'H-2091', name: 'Aris Varma', specialization: ['Advanced Pranic Healing'] },
         { id: 'H-2104', name: 'Julian Mars', specialization: ['Pranic Psychotherapy'] },
@@ -180,7 +226,7 @@ export default function EditSessionsPages() {
   };
 
   // Handle form submission
-  const handleSaveSession = (e: React.FormEvent) => {
+  const handleSaveSession = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.patientName.trim()) {
@@ -191,6 +237,28 @@ export default function EditSessionsPages() {
     const healerFullName = formData.healer.toLowerCase().startsWith('dr.') 
       ? formData.healer 
       : `Dr. ${formData.healer}`;
+      
+    // Find matching active healer for ID
+    const selectedHealer = activeHealers.find(h => h.name === formData.healer || `Dr. ${h.name}` === formData.healer);
+    const healerId = selectedHealer?.id;
+
+    if (targetSessionBackend) {
+      // Backend update
+      try {
+        const payload = {
+          healerId: healerId || targetSessionBackend.healerId,
+          sessionDate: new Date(`${formData.date}T00:00:00`).toISOString(),
+          notes: formData.observations || formData.detailedNotes || targetSessionBackend.notes,
+          status: formData.status.toLowerCase(),
+          paymentStatus: formData.paymentStatus,
+          paymentMethod: formData.paymentMethod,
+          totalAmount: formData.sessionFee
+        };
+        await updateSession(id, payload);
+      } catch (error) {
+        console.error('Failed to update session on backend', error);
+      }
+    }
 
     const updatedSessions = sessions.map(s => {
       if (s.id === Number(id)) {
@@ -501,7 +569,8 @@ export default function EditSessionsPages() {
                             >
                               {activeHealers.map((h, i) => (
                                 <option key={i} value={h.name}>
-                                  Dr. {h.name} {h.specialization ? `(${h.specialization.join(', ')})` : ''}
+                                  {/* Dr. {h.name} {h.specialization ? `(${h.specialization.join(', ')})` : ''} */}
+                                  Dr. {h.name} {Array.isArray(h.specialization) ? `(${h.specialization.join(', ')})` : ''}
                                 </option>
                               ))}
                             </select>
@@ -725,9 +794,36 @@ export default function EditSessionsPages() {
                         </div>
 
                         <div className="st-form" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                          {formData.paymentStatus === 'Paid' ? (
+                          
+                          <div className="st-form-group">
+                            <label style={customStyles.label}>Session Fee (₹) *</label>
+                            <input 
+                              type="number"
+                              required
+                              className="st-input"
+                              style={customStyles.grayInput}
+                              placeholder="e.g. 1200"
+                              value={formData.sessionFee}
+                              onChange={(e) => setFormData({ ...formData, sessionFee: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div className="st-form-group">
-                              <label style={customStyles.label}>Payment Method *</label>
+                              <label style={customStyles.label}>Payment Status</label>
+                              <select 
+                                className="st-input" 
+                                style={customStyles.grayInput}
+                                value={formData.paymentStatus}
+                                onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value as any })}
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Paid">Paid</option>
+                              </select>
+                            </div>
+
+                            <div className="st-form-group">
+                              <label style={customStyles.label}>Payment Method</label>
                               <select 
                                 className="st-input" 
                                 style={customStyles.grayInput}
@@ -738,12 +834,7 @@ export default function EditSessionsPages() {
                                 <option value="Cash">Cash Ledger</option>
                               </select>
                             </div>
-                          ) : (
-                            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <IonIcon icon={alertCircleOutline} style={{ fontSize: '18px', color: '#64748b' }} />
-                              <span>Payment Method is locked. Select payment status "Paid" to set payment type.</span>
-                            </div>
-                          )}
+                          </div>
                         </div>
                       </div>
                     </div>

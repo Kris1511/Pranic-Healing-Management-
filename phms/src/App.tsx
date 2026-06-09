@@ -21,6 +21,12 @@ import SASettingsPage from './pages/super-admin/SettingsPage';
 import SAPatientsPage from './pages/super-admin/PatientsPage';
 import SAVisitorLogPage from './pages/super-admin/VisitorLogPage';
 import SAAttendancePage from './pages/super-admin/AttendancePage';
+import SATreatmentCategoriesPage from './pages/super-admin/TreatmentCategoriesPage';
+import SACreateTreatmentCategoryPage from './pages/super-admin/CreateTreatmentCategoryPage';
+import SAEditTreatmentCategoryPage from './pages/super-admin/EditTreatmentCategoryPage';
+import SATreatmentCategoryDetailsPage from './pages/super-admin/TreatmentCategoryDetailsPage';
+import SATreatmentTypePage from './pages/super-admin/TreatmentTypePage';
+import SACreateTreatmentTypePage from './pages/super-admin/CreateTreatmentTypePage';
 import BAAttendancePage from './pages/branch-admin/AttendancePage';
 import SARevenuePage from './pages/super-admin/RevenuePage';
 import SADailyFinancePage from './pages/super-admin/DailyFinancePage';
@@ -36,7 +42,7 @@ import BAHealersPage from './pages/branch-admin/HealersPage';
 import BASessionsPage from './pages/branch-admin/SessionsPage';
 import BABookSessionPage from './pages/branch-admin/BookSessionPage';
 import BAEditSessionPage from './pages/branch-admin/EditSessionPage';
-// import BADetailSessionPage from './pages/branch-admin/DetailSessionPage';
+import BADetailSessionPage from './pages/branch-admin/DetailsSessionPage';
 import BAFinancePage from './pages/branch-admin/FinancePage';
 import BADocumentManagementPage from './pages/branch-admin/DocumentManagementPage';
 import BAReportPage from './pages/branch-admin/ReportPage';
@@ -158,6 +164,24 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.SUPER_ADMIN.ATTENDANCE} exact={true}>
           <SAAttendancePage />
         </Route>
+        <Route path={ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES} exact={true}>
+          <SATreatmentCategoriesPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.CREATE_TREATMENT_CATEGORY} exact={true}>
+          <SACreateTreatmentCategoryPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.EDIT_TREATMENT_CATEGORY} exact={true}>
+          <SAEditTreatmentCategoryPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.TREATMENT_CATEGORY_DETAILS} exact={true}>
+          <SATreatmentCategoryDetailsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST} exact={true}>
+          <SATreatmentTypePage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.CREATE_TREATMENT_TYPE} exact={true}>
+          <SACreateTreatmentTypePage />
+        </Route>
         <Route path={ROUTES.SUPER_ADMIN.SETTINGS} exact={true}>
           <SASettingsPage />
         </Route>
@@ -196,9 +220,9 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.BRANCH_ADMIN.EDIT_SESSION} exact={true}>
           <BAEditSessionPage />
         </Route>
-        {/* <Route path={ROUTES.BRANCH_ADMIN.SESSION_DETAILS} exact={true}>
+        <Route path={ROUTES.BRANCH_ADMIN.SESSION_DETAILS} exact={true}>
           <BADetailSessionPage />
-        </Route> */}
+        </Route>
         <Route path={ROUTES.BRANCH_ADMIN.FINANCE} exact={true}>
           <BAFinancePage />
         </Route>

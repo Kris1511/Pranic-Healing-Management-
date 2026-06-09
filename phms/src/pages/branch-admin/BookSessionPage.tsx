@@ -20,6 +20,8 @@ import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getPatients } from '../../api/patient.api';
+import { createSession } from '../../api/session.api';
+import { getHealers } from '../../api/healer.api';
 import './branch-admin.css';
 
 interface Patient {
@@ -77,28 +79,33 @@ export default function CreateBookSession() {
   // Load healers and patients from database to provide responsive selectors
   const [registeredPatients, setRegisteredPatients] = useState<any[]>([]);
 
+  const [registeredHealers, setRegisteredHealers] = useState<Healer[]>(() => {
+    const saved = localStorage.getItem('phms_healers');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   useEffect(() => {
-    const fetchPatients = async () => {
+    const fetchPatientsAndHealers = async () => {
       try {
         const response = await getPatients();
         if (response.success) {
           setRegisteredPatients(response.data);
         }
+        const healersRes = await getHealers();
+        if (healersRes.success) {
+          setRegisteredHealers(healersRes.data);
+          localStorage.setItem('phms_healers', JSON.stringify(healersRes.data));
+        }
       } catch (error) {
-        console.error('Failed to fetch patients:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
-    fetchPatients();
+    fetchPatientsAndHealers();
   }, []);
-
-  const [registeredHealers] = useState<Healer[]>(() => {
-    const saved = localStorage.getItem('phms_healers');
-    return saved ? JSON.parse(saved) : [];
-  });
 
   // Dynamic healers list falling back to default mock list if empty
   const activeHealers = registeredHealers.length > 0
-    ? registeredHealers.filter(h => h.status === 'ACTIVE')
+    ? registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE')
     : [
         { id: 'H-2091', name: 'Aris Varma', specialization: ['Advanced Pranic Healing'] },
         { id: 'H-2104', name: 'Julian Mars', specialization: ['Pranic Psychotherapy'] },
@@ -153,6 +160,16 @@ export default function CreateBookSession() {
     setFormData(prev => ({ ...prev, sessionFee: fee }));
   }, [formData.type]);
 
+  // Ensure selected healer is valid when healer list loads
+  useEffect(() => {
+    if (activeHealers.length > 0) {
+      const isValid = activeHealers.some(h => h.name === formData.healer || `Dr. ${h.name}` === formData.healer);
+      if (!isValid) {
+        setFormData(prev => ({ ...prev, healer: activeHealers[0].name }));
+      }
+    }
+  }, [activeHealers, formData.healer]);
+
   // Handle patient autocomplete / registration state
   const handlePatientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const patId = e.target.value;
@@ -191,11 +208,11 @@ export default function CreateBookSession() {
   };
 
   // Handle form submission
-  const handleBookSession = (e: React.FormEvent) => {
+  const handleBookSession = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.patientName.trim()) {
-      triggerToast('Patient name is required.', 'danger');
+    if (!formData.selectedPatientId) {
+      triggerToast('Patient selection is required.', 'danger');
       return;
     }
 
@@ -205,6 +222,38 @@ export default function CreateBookSession() {
       : `Dr. ${formData.healer}`;
       
     const sessionNo = getNextSessionNo(finalPatientName);
+
+    const selectedHealer = activeHealers.find(h => h.name === formData.healer || `Dr. ${h.name}` === formData.healer);
+    const healerId = selectedHealer?.id;
+
+    if (!healerId) {
+      triggerToast('Valid healer selection is required.', 'danger');
+      return;
+    }
+
+    const branchId = typeof user?.branch === 'object' && user?.branch !== null 
+          ? (user.branch as any).id 
+          : (user as any)?.branchId || undefined;
+
+    const payload = {
+      patientId: formData.selectedPatientId,
+      healerId: healerId,
+      branchId: branchId,
+      sessionDate: new Date(`${formData.date}T00:00:00`).toISOString(),
+      notes: `Treatment: ${formData.type}`,
+      status: 'scheduled',
+      totalAmount: formData.sessionFee,
+      paymentStatus: formData.paymentStatus,
+      paymentMethod: formData.paymentMethod
+    };
+
+    try {
+      await createSession(payload);
+    } catch (error) {
+      console.error(error);
+      triggerToast('Failed to book session on server.', 'danger');
+      return;
+    }
     const totalBilled = formData.sessionFee;
     const amountPaid = formData.paymentStatus === 'Paid' ? totalBilled : 0;
     const outstanding = totalBilled - amountPaid;
@@ -467,7 +516,7 @@ export default function CreateBookSession() {
                             >
                               {activeHealers.map((h, i) => (
                                 <option key={i} value={h.name}>
-                                  Dr. {h.name} {h.specialization ? `(${h.specialization.join(', ')})` : ''}
+                                  Dr. {h.name} {Array.isArray(h.specialization) ? `(${h.specialization.join(', ')})` : ''}
                                 </option>
                               ))}
                             </select>
