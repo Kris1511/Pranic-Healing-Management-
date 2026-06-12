@@ -15,6 +15,7 @@ import {
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
+import { getTreatmentCategories, deleteTreatmentCategory } from '../../api/treatmentCategory.api';
 import {
   gridOutline,
   addOutline,
@@ -41,19 +42,17 @@ const TreatmentCategoriesPage: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
 
   useIonViewWillEnter(() => {
-    const savedCategories = localStorage.getItem('ph_treatment_categories');
-    if (savedCategories) {
-      setCategories(JSON.parse(savedCategories));
-    } else {
-      const INITIAL_CATEGORIES = [
-        { id: 1, name: 'Physical Healing', code: 'PH-001', treatmentCount: 12, description: 'Focuses on physical ailments and bodily restoration.', createdAt: '2024-05-01', status: 'Active' },
-        { id: 2, name: 'Emotional Healing', code: 'EH-002', treatmentCount: 8, description: 'Addressing emotional trauma and inner peace.', createdAt: '2024-05-02', status: 'Active' },
-        { id: 3, name: 'Mental Wellness', code: 'MW-003', treatmentCount: 15, description: 'Mental clarity, stress management, and focus.', createdAt: '2024-05-03', status: 'Active' },
-        { id: 4, name: 'Chakra Healing', code: 'CH-004', treatmentCount: 10, description: 'Balancing and aligning the energy centers.', createdAt: '2024-05-04', status: 'Inactive' },
-      ];
-      setCategories(INITIAL_CATEGORIES);
-      localStorage.setItem('ph_treatment_categories', JSON.stringify(INITIAL_CATEGORIES));
-    }
+    const loadCategories = async () => {
+      try {
+        const response = await getTreatmentCategories();
+        if (response.success && response.data) {
+          setCategories(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories', error);
+      }
+    };
+    loadCategories();
   });
 
   const filteredCategories = categories.filter(c => {
@@ -66,12 +65,18 @@ const TreatmentCategoriesPage: React.FC = () => {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const handleDelete = (id: number) => {
-    const updatedCategories = categories.filter(c => c.id !== id);
-    setCategories(updatedCategories);
-    localStorage.setItem('ph_treatment_categories', JSON.stringify(updatedCategories));
-    setToastMessage('Category deleted successfully');
-    setShowToast(true);
+  const handleDelete = async (id: number | string) => {
+    try {
+      await deleteTreatmentCategory(id as string);
+      const updatedCategories = categories.filter(c => c.id !== id);
+      setCategories(updatedCategories);
+      setToastMessage('Category deleted successfully');
+      setShowToast(true);
+    } catch (error) {
+      console.error('Failed to delete category', error);
+      setToastMessage('Failed to delete category');
+      setShowToast(true);
+    }
   };
 
   return (
@@ -178,7 +183,7 @@ const TreatmentCategoriesPage: React.FC = () => {
                         </td>
                         <td style={{ color: '#64748b', fontSize: '13px' }}>{cat.description}</td>
                         <td style={{ color: '#64748b', fontSize: '13px', textAlign: 'center' }}>
-                          {new Date(cat.createdAt).toLocaleDateString('en-GB')}
+                          {new Date(cat.createdAt || Date.now()).toLocaleDateString('en-GB')}
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <span className={`sa-badge sa-badge--${cat.status.toLowerCase()}`}>

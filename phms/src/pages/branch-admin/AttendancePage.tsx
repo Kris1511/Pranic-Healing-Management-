@@ -313,13 +313,18 @@ import {
   peopleOutline,
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
+import { getAttendanceHistory, saveAttendanceRecord } from '../../api/attendence.api';
+import { getUsers } from '../../api/user.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
 
 interface WorkerDailyAttendance {
-  id: number;
+  id: number | string;
+  userId?: number | string;
   name: string;
   role: string;
+  branchId?: string;
+  branchName?: string;
   checkIn: string;
   checkOut: string;
   status: 'Present' | 'Absent' | 'Half Day' | 'Select...';
@@ -363,9 +368,92 @@ const AttendancePage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterWorkerName, setFilterWorkerName] = useState('');
 
+  // Fetch from API
+  const [isLoading, setIsLoading] = useState(false);
+  
+  React.useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        setIsLoading(true);
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Fetch today's records
+        const response = await getAttendanceHistory(undefined, { date: today });
+        const records = response.data || [];
+        
+        // Fetch all healers for the current branch
+        const branchId = (user as any)?.branchId || (typeof user?.branch === 'object' && user?.branch !== null ? (user.branch as any).id : undefined);
+        const usersRes = await getUsers({ role: 'HEALER', branchId });
+        const healersList = usersRes.data || [];
+
+        // Map healers list to daily attendance entries, merging with existing records
+        const mappedDaily = healersList.map((healer: any) => {
+          const record = records.find((r: any) => (r.userId || r.user?.id) === healer.id);
+          if (record) {
+            return {
+              id: record.id,
+              userId: healer.id,
+              name: healer.name || 'Unknown',
+              role: healer.role === 'HEALER' ? 'Healer' : (healer.role || 'Staff'),
+              branchId: record.branch?.id || healer.branch?.id || 'N/A',
+              branchName: record.branch?.name || healer.branch?.name || 'Unassigned',
+              checkIn: record.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+              checkOut: record.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+              status: record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'Present',
+            };
+          } else {
+            return {
+              id: healer.id,
+              userId: healer.id,
+              name: healer.name || 'Unknown',
+              role: healer.role === 'HEALER' ? 'Healer' : (healer.role || 'Staff'),
+              branchId: healer.branch?.id || 'N/A',
+              branchName: healer.branch?.name || healer.branch?.name || 'Unassigned',
+              checkIn: 'N/A',
+              checkOut: 'N/A',
+              status: 'Select...',
+            };
+          }
+        });
+
+        // Add any other attendance records that are not healers
+        records.forEach((record: any) => {
+          const userId = record.userId || record.user?.id;
+          const exists = mappedDaily.some((d: any) => d.userId === userId);
+          if (!exists) {
+            mappedDaily.push({
+              id: record.id,
+              userId: userId,
+              name: record.user?.name || 'Unknown',
+              role: record.user?.role || 'Staff',
+              branchId: record.branch?.id || 'N/A',
+              branchName: record.branch?.name || 'Unassigned',
+              checkIn: record.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+              checkOut: record.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+              status: record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'Present',
+            });
+          }
+        });
+        
+        setDailyAttendance(mappedDaily);
+      } catch (error) {
+        console.error('Failed to fetch attendance history', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAttendance();
+  }, [user]);
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
+  const [dailyCurrentPage, setDailyCurrentPage] = useState(1);
+  const DAILY_ITEMS_PER_PAGE = 5;
+
+  React.useEffect(() => {
+    setDailyCurrentPage(1);
+  }, [searchQuery]);
 
   const handleWorkerClick = (workerName: string) => {
     setFilterWorkerName(workerName);
@@ -380,12 +468,16 @@ const AttendancePage: React.FC = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<WorkerDailyAttendance | null>(null);
 
+  const [editCheckIn, setEditCheckIn] = useState('');
+  const [editCheckOut, setEditCheckOut] = useState('');
+  const [editStatus, setEditStatus] = useState<'Present' | 'Absent' | 'Half Day' | 'Select...'>('Present');
+
   // Daily staff attendance data matching the screenshot!
   const [dailyAttendance, setDailyAttendance] = useState<WorkerDailyAttendance[]>([
-    { id: 1, name: 'Elena Rodriguez', role: 'Senior Healer', checkIn: '08:15 AM', checkOut: '--', status: 'Present' },
-    { id: 2, name: 'David Park', role: 'Admin Staff', checkIn: 'N/A', checkOut: 'N/A', status: 'Absent' },
-    { id: 3, name: 'Ayesha Khan', role: 'Lead Healer', checkIn: '09:30 AM', checkOut: '--', status: 'Half Day' },
-    { id: 4, name: 'Samuel Peterson', role: 'Physician', checkIn: '08:00 AM', checkOut: '--', status: 'Select...' },
+    { id: 1, name: 'Elena Rodriguez', role: 'Senior Healer', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: '08:15 AM', checkOut: '--', status: 'Present' },
+    { id: 2, name: 'David Park', role: 'Admin Staff', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: 'N/A', checkOut: 'N/A', status: 'Absent' },
+    { id: 3, name: 'Ayesha Khan', role: 'Lead Healer', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: '09:30 AM', checkOut: '--', status: 'Half Day' },
+    { id: 4, name: 'Samuel Peterson', role: 'Physician', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: '08:00 AM', checkOut: '--', status: 'Select...' },
   ]);
 
   // Historical log items matching the screenshot (expanded for pagination support)!
@@ -404,89 +496,72 @@ const AttendancePage: React.FC = () => {
     { id: 12, date: 'Oct 19, 2023', workerName: 'Ayesha Khan', status: 'Present', hours: '8.5h', remarks: 'Regular shift.' },
   ]);
 
-  const handleUpdateStatus = (status: 'Present' | 'Absent' | 'Half Day' | 'Select...') => {
+  const handleSaveAttendance = async () => {
     if (!selectedWorker) return;
-    if (status === 'Select...') return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const payload: any = {
+        userId: selectedWorker.userId || selectedWorker.id, // Fallback for mock data if needed
+        date: today,
+        status: editStatus.toLowerCase(),
+      };
 
-    const now = new Date();
-    const currentTimeStr = getFormattedTime(now);
-    const currentDateStr = getFormattedDate(now);
-
-    let updatedCheckIn = selectedWorker.checkIn;
-    let updatedCheckOut = selectedWorker.checkOut;
-
-    if (status === 'Present') {
-      updatedCheckIn = currentTimeStr;
-      updatedCheckOut = '--';
-    } else if (status === 'Half Day') {
-      if (selectedWorker.checkIn === 'N/A' || selectedWorker.checkIn === '--') {
-        updatedCheckIn = '08:30 AM';
+      if (editCheckIn) {
+        payload.checkIn = new Date(`${today}T${editCheckIn}`).toISOString();
+      } else {
+        payload.checkIn = null;
       }
-      updatedCheckOut = currentTimeStr;
-    } else if (status === 'Absent') {
-      updatedCheckIn = 'N/A';
-      updatedCheckOut = 'N/A';
-    }
+      
+      if (editCheckOut) {
+        payload.checkOut = new Date(`${today}T${editCheckOut}`).toISOString();
+      } else {
+        payload.checkOut = null;
+      }
 
-    setDailyAttendance(
-      dailyAttendance.map((w) =>
-        w.id === selectedWorker.id
-          ? {
-              ...w,
-              status,
-              checkIn: updatedCheckIn,
-              checkOut: updatedCheckOut,
-            }
-          : w
-      )
-    );
+      await saveAttendanceRecord(payload);
+      
+      // Update local state for immediate feedback
+      let displayCheckIn = editCheckIn ? new Date(`${today}T${editCheckIn}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+      let displayCheckOut = editCheckOut ? new Date(`${today}T${editCheckOut}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
 
-    // Determine hours based on status
-    let hours = '0.0h';
-    if (status === 'Present') {
-      hours = '8.0h';
-    } else if (status === 'Half Day') {
-      hours = '4.0h';
-    }
+      if (editStatus === 'Absent') {
+        displayCheckIn = 'N/A';
+        displayCheckOut = 'N/A';
+      }
 
-    // Determine remarks
-    const remarks = `Marked ${status} via attendance page.`;
-
-    setHistoricalLogs((prevLogs) => {
-      const existingLogIndex = prevLogs.findIndex(
-        (log) => log.workerName === selectedWorker.name && log.date === currentDateStr
+      setDailyAttendance(
+        dailyAttendance.map((w) =>
+          w.id === selectedWorker.id
+            ? {
+                ...w,
+                status: editStatus,
+                checkIn: displayCheckIn,
+                checkOut: displayCheckOut,
+              }
+            : w
+        )
       );
 
-      if (existingLogIndex >= 0) {
-        const updatedLogs = [...prevLogs];
-        updatedLogs[existingLogIndex] = {
-          ...updatedLogs[existingLogIndex],
-          status: status as 'Present' | 'Absent' | 'Half Day',
-          hours,
-          remarks,
-        };
-        return updatedLogs;
-      } else {
-        const newLog: HistoricalLog = {
-          id: prevLogs.length > 0 ? Math.max(...prevLogs.map((l) => l.id)) + 1 : 1,
-          date: currentDateStr,
-          workerName: selectedWorker.name,
-          status: status as 'Present' | 'Absent' | 'Half Day',
-          hours,
-          remarks,
-        };
-        return [newLog, ...prevLogs];
-      }
-    });
-
-    setShowStatusModal(false);
-    setSelectedWorker(null);
+      setShowStatusModal(false);
+      setSelectedWorker(null);
+    } catch (error) {
+      console.error('Failed to save attendance', error);
+      alert('Failed to save attendance record.');
+    }
   };
 
   const filteredDaily = dailyAttendance.filter((w) =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     w.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const dailyTotalPages = Math.ceil(filteredDaily.length / DAILY_ITEMS_PER_PAGE);
+  const dailyActivePage = Math.min(dailyCurrentPage, Math.max(dailyTotalPages, 1));
+  const dailyIndexOfLastItem = dailyActivePage * DAILY_ITEMS_PER_PAGE;
+  const dailyIndexOfFirstItem = dailyIndexOfLastItem - DAILY_ITEMS_PER_PAGE;
+  const paginatedDaily = filteredDaily.slice(dailyIndexOfFirstItem, dailyIndexOfLastItem);
 
   const filteredHistory = historicalLogs.filter((log) => {
     let matchesDate = true;
@@ -560,7 +635,7 @@ const AttendancePage: React.FC = () => {
             <div className="sa-stat-card">
               <div>
                 <div className="sa-stat-card__label">TOTAL STAFF</div>
-                <div className="sa-stat-card__value">28</div>
+                <div className="sa-stat-card__value">{dailyAttendance.length}</div>
                 {/* <div className="sa-stat-card__detail">
                   <span style={{ color: '#10b981' }}>~ +2</span>
                 </div> */}
@@ -574,7 +649,7 @@ const AttendancePage: React.FC = () => {
             <div className="sa-stat-card">
               <div>
                 <div className="sa-stat-card__label">PRESENT TODAY</div>
-                <div className="sa-stat-card__value">22</div>
+                <div className="sa-stat-card__value">{dailyAttendance.filter(w => w.status === 'Present').length}</div>
                 {/* <div className="sa-stat-card__detail">
                   <span style={{ color: '#10b981' }}>~ 82%</span>
                 </div> */}
@@ -588,7 +663,7 @@ const AttendancePage: React.FC = () => {
             <div className="sa-stat-card">
               <div>
                 <div className="sa-stat-card__label">ABSENT</div>
-                <div className="sa-stat-card__value">3</div>
+                <div className="sa-stat-card__value">{dailyAttendance.filter(w => w.status === 'Absent').length}</div>
                 {/* <div className="sa-stat-card__detail">
                   <span style={{ color: '#ef4444' }}>~ -1</span>
                 </div> */}
@@ -602,7 +677,7 @@ const AttendancePage: React.FC = () => {
             <div className="sa-stat-card">
               <div>
                 <div className="sa-stat-card__label">HALF DAY</div>
-                <div className="sa-stat-card__value">3</div>
+                <div className="sa-stat-card__value">{dailyAttendance.filter(w => w.status === 'Half Day').length}</div>
                 {/* <div className="sa-stat-card__detail">
                   <span style={{ color: '#f59e0b' }}>~ Stable</span>
                 </div> */}
@@ -626,6 +701,8 @@ const AttendancePage: React.FC = () => {
                 <tr>
                   <th>WORKER NAME</th>
                   <th>ROLE</th>
+                  {/* <th>BRANCH ID</th> */}
+                  <th>BRANCH NAME</th>
                   <th>CHECK-IN</th>
                   <th>CHECK-OUT</th>
                   <th>STATUS</th>
@@ -633,7 +710,9 @@ const AttendancePage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredDaily.map((worker) => (
+                {isLoading ? (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '20px' }}>Loading...</td></tr>
+                ) : paginatedDaily.map((worker) => (
                   <tr key={worker.id}>
                     <td>
                       <div 
@@ -651,6 +730,16 @@ const AttendancePage: React.FC = () => {
                       </div>
                     </td>
                     <td>{worker.role}</td>
+                    {/* <td>
+                      <span className="sa-text-muted" style={{ fontSize: '0.85rem' }}>
+                        {worker.branchId || 'N/A'}
+                      </span>
+                    </td> */}
+                    <td>
+                      <span style={{ fontWeight: 500 }}>
+                        {worker.branchName || 'Unassigned'}
+                      </span>
+                    </td>
                     <td>
                       <div className="sa-table__time">
                         {worker.checkIn}
@@ -680,6 +769,37 @@ const AttendancePage: React.FC = () => {
                         className="sa-table__action-btn"
                         onClick={() => {
                           setSelectedWorker(worker);
+                          setEditStatus(worker.status === 'Select...' ? 'Present' : worker.status);
+                          
+                          // Convert '08:15 AM' to '08:15'
+                          const parseTime = (timeStr: string) => {
+                            if (!timeStr || timeStr === 'N/A' || timeStr === '--') return '';
+                            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                            if (match) {
+                              let [_, h, m, modifier] = match;
+                              let hours = parseInt(h, 10);
+                              if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                              if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
+                              return `${hours.toString().padStart(2, '0')}:${m}`;
+                            }
+                            return '';
+                          };
+
+                          const now = new Date();
+                          const current24h = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                          
+                          let defaultIn = parseTime(worker.checkIn);
+                          let defaultOut = parseTime(worker.checkOut);
+
+                          if (!defaultIn) {
+                            // morning current time default or fallback to 09:00
+                            defaultIn = now.getHours() < 12 ? current24h : '09:00';
+                          }
+                          // We don't automatically fill defaultOut anymore, leaving it empty
+                          // so the user can just set Check-In in the morning and Check-Out in the evening.
+
+                          setEditCheckIn(defaultIn);
+                          setEditCheckOut(defaultOut);
                           setShowStatusModal(true);
                         }}
                       >
@@ -690,10 +810,50 @@ const AttendancePage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+
+            <div className="sa-pagination" style={{ marginTop: '16px' }}>
+              <span className="sa-pagination__info">
+                {filteredDaily.length > 0 ? (
+                  `Showing ${dailyIndexOfFirstItem + 1}-${Math.min(dailyIndexOfLastItem, filteredDaily.length)} of ${filteredDaily.length} records`
+                ) : (
+                  'Showing 0-0 of 0 records'
+                )}
+              </span>
+              <div className="sa-pagination__controls">
+                <button
+                  className="sa-pagination__btn"
+                  onClick={() => setDailyCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={dailyActivePage === 1}
+                >
+                  <IonIcon icon={chevronBackOutline} />
+                </button>
+                {Array.from({ length: dailyTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    className={`sa-pagination__btn ${dailyActivePage === pageNum ? 'sa-pagination__btn--active' : ''}`}
+                    onClick={() => setDailyCurrentPage(pageNum)}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+                {dailyTotalPages === 0 && (
+                  <button className="sa-pagination__btn sa-pagination__btn--active" disabled>
+                    1
+                  </button>
+                )}
+                <button
+                  className="sa-pagination__btn"
+                  onClick={() => setDailyCurrentPage((p) => Math.min(p + 1, dailyTotalPages))}
+                  disabled={dailyActivePage === dailyTotalPages || dailyTotalPages === 0}
+                >
+                  <IonIcon icon={chevronForwardOutline} />
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Historical Logs Full-Width Section */}
-          <div className="sa-section" id="historical-attendance-logs">
+          {/* <div className="sa-section" id="historical-attendance-logs">
             <div className="sa-section__header">
               <div>
                 <h2 className="sa-section__title">Historical Attendance Logs</h2>
@@ -709,7 +869,6 @@ const AttendancePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Filter Panel */}
             <div className="sa-filters">
               <input
                 type="text"
@@ -778,7 +937,6 @@ const AttendancePage: React.FC = () => {
               </button>
             </div>
 
-            {/* Log Table */}
             <table className="sa-table">
               <thead>
                 <tr>
@@ -824,7 +982,6 @@ const AttendancePage: React.FC = () => {
               </tbody>
             </table>
 
-            {/* Table Pagination */}
             <div className="sa-pagination">
               <span className="sa-pagination__info">
                 {filteredHistory.length > 0 ? (
@@ -864,7 +1021,7 @@ const AttendancePage: React.FC = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </IonContent>
 
@@ -877,32 +1034,54 @@ const AttendancePage: React.FC = () => {
           </div>
           <div className="sa-modal__body">
             {selectedWorker && (
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ textAlign: 'center'}}>
                 <h3 style={{ margin: '0 0 4px 0' }}>{selectedWorker.name}</h3>
                 <p className="sa-text-muted">{selectedWorker.role}</p>
               </div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="sa-form-group">
+                <label className="sa-form-label">Status</label>
+                <select 
+                  className="sa-input" 
+                  value={editStatus} 
+                  onChange={(e: any) => setEditStatus(e.target.value)}
+                >
+                  <option value="Present">Present</option>
+                  <option value="Half Day">Half Day</option>
+                  <option value="Absent">Absent</option>
+                </select>
+              </div>
+              
+              {editStatus !== 'Absent' && (
+                <>
+                  <div className="sa-form-group">
+                    <label className="sa-form-label">Check-In Time</label>
+                    <input 
+                      type="time" 
+                      className="sa-input" 
+                      value={editCheckIn} 
+                      onChange={(e) => setEditCheckIn(e.target.value)} 
+                    />
+                  </div>
+                  <div className="sa-form-group">
+                    <label className="sa-form-label">Check-Out Time</label>
+                    <input 
+                      type="time" 
+                      className="sa-input" 
+                      value={editCheckOut} 
+                      onChange={(e) => setEditCheckOut(e.target.value)} 
+                    />
+                  </div>
+                </>
+              )}
+
               <button 
                 className="sa-btn sa-btn--primary"
-                style={{ width: '240px', justifyContent: 'center' }}
-                onClick={() => handleUpdateStatus('Present')}
+                style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
+                onClick={handleSaveAttendance}
               >
-                Mark Present
-              </button>
-              <button 
-                className="sa-btn sa-btn--danger"
-                style={{ width: '240px', justifyContent: 'center' }}
-                onClick={() => handleUpdateStatus('Absent')}
-              >
-                Mark Absent
-              </button>
-              <button 
-                className="sa-btn sa-btn--warning"
-                style={{ width: '240px', justifyContent: 'center' }}
-                onClick={() => handleUpdateStatus('Half Day')}
-              >
-                Mark Half Day
+                Save Attendance
               </button>
             </div>
           </div>

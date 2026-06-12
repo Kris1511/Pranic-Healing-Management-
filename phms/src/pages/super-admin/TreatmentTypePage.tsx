@@ -28,34 +28,15 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
+import { getTreatmentTypes, deleteTreatmentType } from '../../api/treatmentType.api';
+import { getTreatmentCategories } from '../../api/treatmentCategory.api';
 import './super-admin.css';
 
 const TreatmentTypePage: React.FC = () => {
   const history = useHistory();
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [treatments, setTreatments] = useState([
-    { id: 1, name: 'Stress Relief Healing', category: 'Mental Wellness', description: 'Energetically clearing stress and mental tension.', createdDate: '2024-01-15', sessionDuration: '45 min', status: 'Active' },
-    { id: 2, name: 'Chakra Cleansing', category: 'Energy Maintenance', description: 'Balancing and purifying the main energy centers.', createdDate: '2024-01-15', sessionDuration: '30 min', status: 'Active' },
-    { id: 3, name: 'Emotional Healing', category: 'Psychological', description: 'Releasing suppressed emotions and trauma.', createdDate: '2024-01-18', sessionDuration: '1 hr', status: 'Active' },
-    { id: 4, name: 'Physical Pain Healing', category: 'Physical Health', description: 'Addressing localized physical ailments and pain.', createdDate: '2024-01-20', sessionDuration: '45 min', status: 'Active' },
-    { id: 5, name: 'Energy Balancing', category: 'General Wellness', description: 'Harmonizing the overall energy body.', createdDate: '2024-01-22', sessionDuration: '30 min', status: 'Active' },
-    { id: 6, name: 'Pranic Psychotherapy', category: 'Specialized', description: 'Advanced healing for psychological conditions.', createdDate: '2024-02-05', sessionDuration: '1 hr', status: 'Active' },
-    { id: 7, name: 'Meditation Therapy', category: 'Spiritual', description: 'Guided healing through meditative states.', createdDate: '2024-02-10', sessionDuration: '45 min', status: 'Active' },
-    { id: 8, name: 'Distance Healing', category: 'Remote', description: 'Healing sessions conducted from a distance.', createdDate: '2024-02-12', sessionDuration: '30 min', status: 'Active' },
-    { id: 9, name: 'Aura Cleansing', category: 'Energy Maintenance', description: 'Purifying the outer energy shell.', createdDate: '2024-02-15', sessionDuration: '30 min', status: 'Active' },
-    { id: 10, name: 'Relationship Healing', category: 'Social', description: 'Improving energetic ties between individuals.', createdDate: '2024-02-18', sessionDuration: '1 hr', status: 'Active' },
-    { id: 11, name: 'Sleep Disorder Healing', category: 'Physical Health', description: 'Improving sleep patterns and insomnia.', createdDate: '2024-03-01', sessionDuration: '45 min', status: 'Active' },
-    { id: 12, name: 'Anxiety Relief Healing', category: 'Psychological', description: 'Calming the nervous system and mind.', createdDate: '2024-03-05', sessionDuration: '45 min', status: 'Active' },
-    { id: 13, name: 'Depression Support Healing', category: 'Psychological', description: 'Uplifting the energetic state and mood.', createdDate: '2024-03-08', sessionDuration: '1 hr', status: 'Active' },
-    { id: 14, name: 'Back Pain Healing', category: 'Physical Health', description: 'Targeted healing for spinal and back issues.', createdDate: '2024-03-10', sessionDuration: '45 min', status: 'Active' },
-    { id: 15, name: 'Migraine Relief Healing', category: 'Physical Health', description: 'Specialized healing for chronic headaches.', createdDate: '2024-03-12', sessionDuration: '30 min', status: 'Active' },
-    { id: 16, name: 'Heart Chakra Healing', category: 'Specific Chakra', description: 'Focusing on emotional and cardiovascular energy.', createdDate: '2024-03-15', sessionDuration: '45 min', status: 'Active' },
-    { id: 17, name: 'Solar Plexus Healing', category: 'Specific Chakra', description: 'Addressing digestive and willpower energy.', createdDate: '2024-03-18', sessionDuration: '45 min', status: 'Active' },
-    { id: 18, name: 'General Wellness Healing', category: 'General Wellness', description: 'Standard maintenance for overall health.', createdDate: '2024-03-20', sessionDuration: '30 min', status: 'Active' },
-    { id: 19, name: 'Follow-up Healing', category: 'General Wellness', description: 'Secondary session to stabilize previous healing.', createdDate: '2024-03-22', sessionDuration: '30 min', status: 'Active' },
-    { id: 20, name: 'Advanced Pranic Healing', category: 'Specialized', description: 'High-level healing using color pranas.', createdDate: '2024-03-25', sessionDuration: '1.5 hrs', status: 'Active' },
-  ]);
+  const [treatments, setTreatments] = useState<any[]>([]);
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTreatment, setSelectedTreatment] = useState<any>(null);
@@ -67,14 +48,21 @@ const TreatmentTypePage: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   
   useIonViewWillEnter(() => {
-    const saved = localStorage.getItem('ph_treatments');
-    if (saved) {
-      setTreatments(JSON.parse(saved));
-    }
-    const savedCats = localStorage.getItem('ph_treatment_categories');
-    if (savedCats) {
-      setCategories(JSON.parse(savedCats));
-    }
+    const loadData = async () => {
+      try {
+        const typeResponse = await getTreatmentTypes();
+        if (typeResponse.success && typeResponse.data) {
+          setTreatments(typeResponse.data);
+        }
+        const catResponse = await getTreatmentCategories();
+        if (catResponse.success && catResponse.data) {
+          setCategories(catResponse.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch data', error);
+      }
+    };
+    loadData();
   });
 
   const handleDeleteClick = (treatment: any) => {
@@ -82,14 +70,19 @@ const TreatmentTypePage: React.FC = () => {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (selectedTreatment) {
-      const updated = treatments.filter(t => t.id !== selectedTreatment.id);
-      setTreatments(updated);
-      localStorage.setItem('ph_treatments', JSON.stringify(updated));
-      setShowToast(true);
-      setShowDeleteModal(false);
-      setSelectedTreatment(null);
+      try {
+        await deleteTreatmentType(selectedTreatment.id);
+        const updated = treatments.filter(t => t.id !== selectedTreatment.id);
+        setTreatments(updated);
+        setShowToast(true);
+      } catch (error) {
+        console.error('Failed to delete', error);
+      } finally {
+        setShowDeleteModal(false);
+        setSelectedTreatment(null);
+      }
     }
   };
 
@@ -98,7 +91,7 @@ const TreatmentTypePage: React.FC = () => {
                          t.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'All' || (t as any).status === filterStatus;
     const matchesCategory = filterCategory === 'All' || t.category === filterCategory;
-    const matchesDate = !filterDate || t.createdDate === filterDate;
+    const matchesDate = !filterDate || new Date(t.createdAt || t.createdDate).toLocaleDateString() === new Date(filterDate).toLocaleDateString();
     return matchesSearch && matchesStatus && matchesCategory && matchesDate;
   });
 
@@ -249,7 +242,7 @@ const TreatmentTypePage: React.FC = () => {
                         <td style={{ color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <IonIcon icon={calendarOutline} style={{ fontSize: '14px' }} />
-                            {treatment.createdDate}
+                            {new Date(treatment.createdAt || treatment.createdDate).toLocaleDateString()}
                           </div>
                         </td>
                         <td style={{ whiteSpace: 'nowrap' }}>
@@ -267,13 +260,13 @@ const TreatmentTypePage: React.FC = () => {
                           <div className="sa-table__actions" style={{ justifyContent: 'center' }}>
                             <button 
                               className="sa-table__action-btn sa-action-btn--view"
-                            //   onClick={() => history.push(ROUTES.SUPER_ADMIN.TREATMENT_TYPE_DETAILS.replace(':id', treatment.id.toString()))}
+                              // onClick={() => history.push(ROUTES.SUPER_ADMIN.TREATMENT_TYPE_DETAILS.replace(':id', treatment.id.toString()))}
                             >
                               <IonIcon icon={eyeOutline} />
                             </button>
                             <button 
                               className="sa-table__action-btn sa-action-btn--edit"
-                            //   onClick={() => history.push(ROUTES.SUPER_ADMIN.EDIT_TREATMENT_TYPE.replace(':id', treatment.id.toString()))}
+                              // onClick={() => history.push(ROUTES.SUPER_ADMIN.EDIT_TREATMENT_TYPE.replace(':id', treatment.id.toString()))}
                             >
                               <IonIcon icon={createOutline} />
                             </button>

@@ -36,6 +36,7 @@ const { sendResponse } = require('../helpers/response.helper');
 
 class HealerController {
   register = async (req, res) => {
+    if (req.branchId) req.body.branchId = req.branchId;
     const healer = await healerService.registerHealer(req.body);
 
     return sendResponse(
@@ -47,7 +48,9 @@ class HealerController {
   };
 
   getAll = async (req, res) => {
-    const healers = await healerService.getAllHealers(req.query);
+    const filter = { ...req.query };
+    if (req.branchId) filter.branchId = req.branchId;
+    const healers = await healerService.getAllHealers(filter);
 
     return sendResponse(
       res,
@@ -58,7 +61,7 @@ class HealerController {
   };
 
   getById = async (req, res) => {
-    const healer = await healerService.getHealerById(req.params.id);
+    const healer = await healerService.getHealerById(req.params.id, req.branchId);
 
     return sendResponse(
       res,
@@ -71,7 +74,8 @@ class HealerController {
   update = async (req, res) => {
     const healer = await healerService.updateHealer(
       req.params.id,
-      req.body
+      req.body,
+      req.branchId
     );
 
     return sendResponse(
@@ -83,7 +87,7 @@ class HealerController {
   };
 
   delete = async (req, res) => {
-    await healerService.deleteHealer(req.params.id);
+    await healerService.deleteHealer(req.params.id, req.branchId);
 
     return sendResponse(
       res,

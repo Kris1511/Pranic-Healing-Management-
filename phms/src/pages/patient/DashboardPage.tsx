@@ -28,6 +28,51 @@ const PatientDashboardPage: React.FC = () => {
 
   const userName = user?.name || 'Valued Patient';
 
+  const [upcomingCount, setUpcomingCount] = React.useState(0);
+  const [completedCount, setCompletedCount] = React.useState(0);
+  const [recordsCount, setRecordsCount] = React.useState(0);
+
+  React.useEffect(() => {
+    let patientName = userName;
+    const savedPatients = localStorage.getItem('phms_patients');
+    if (savedPatients) {
+      try {
+        const parsed = JSON.parse(savedPatients);
+        const found = parsed.find((p: any) => p.email?.toLowerCase() === user?.email?.toLowerCase());
+        if (found) {
+          patientName = found.name;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    const savedSessions = localStorage.getItem('phms_sessions');
+    let upcoming = 0;
+    let completed = 0;
+
+    if (savedSessions) {
+      try {
+        const parsed = JSON.parse(savedSessions);
+        const filtered = parsed.filter(
+          (s: any) => s.patient?.toLowerCase().trim() === patientName.toLowerCase().trim()
+        );
+        upcoming = filtered.filter((s: any) => s.status === 'Scheduled').length;
+        completed = filtered.filter((s: any) => s.status === 'Completed').length;
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      upcoming = 1;
+      completed = 12;
+    }
+
+    setUpcomingCount(upcoming);
+    setCompletedCount(completed);
+    setRecordsCount(completed > 0 ? completed : 4);
+  }, [user?.email, userName]);
+
+
   return (
     <IonPage className="sa-page">
       <IonHeader className="ion-no-border">
@@ -62,7 +107,7 @@ const PatientDashboardPage: React.FC = () => {
               </div>
               <div className="healer-stat-card__info">
                 <span className="healer-stat-card__label">Upcoming Sessions</span>
-                <span className="healer-stat-card__value">1</span>
+                <span className="healer-stat-card__value">{upcomingCount}</span>
               </div>
             </div>
 
@@ -72,7 +117,7 @@ const PatientDashboardPage: React.FC = () => {
               </div>
               <div className="healer-stat-card__info">
                 <span className="healer-stat-card__label">Completed Sessions</span>
-                <span className="healer-stat-card__value">12</span>
+                <span className="healer-stat-card__value">{completedCount}</span>
               </div>
             </div>
 
@@ -82,7 +127,7 @@ const PatientDashboardPage: React.FC = () => {
               </div>
               <div className="healer-stat-card__info">
                 <span className="healer-stat-card__label">Health Records</span>
-                <span className="healer-stat-card__value">4</span>
+                <span className="healer-stat-card__value">{recordsCount}</span>
               </div>
             </div>
           </div>

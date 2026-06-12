@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const sessionController = require('../controllers/session.controller');
 const { protect } = require('../middlewares/auth.middleware');
+const branchScope = require('../middlewares/branchScope.middleware');
 
 router.use(protect);
+router.use(branchScope);
 
 router.route('/')
   .post(sessionController.create)

@@ -23,6 +23,8 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
+import { createTreatmentType } from '../../api/treatmentType.api';
+import { getTreatmentCategories } from '../../api/treatmentCategory.api';
 import './super-admin.css';
 
 const SACreateTreatmentTypePage: React.FC = () => {
@@ -45,20 +47,20 @@ const SACreateTreatmentTypePage: React.FC = () => {
   const [treatments, setTreatments] = useState<any[]>([]);
 
   useEffect(() => {
-    // Load Categories
-    const savedCats = localStorage.getItem('ph_treatment_categories');
-    if (savedCats) {
-      setCategories(JSON.parse(savedCats));
-    }
-
-    // Load existing Treatments for uniqueness check
-    const savedTreatments = localStorage.getItem('ph_treatments');
-    if (savedTreatments) {
-      setTreatments(JSON.parse(savedTreatments));
-    }
+    const loadCategories = async () => {
+      try {
+        const response = await getTreatmentCategories();
+        if (response.success && response.data) {
+          setCategories(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load categories', error);
+      }
+    };
+    loadCategories();
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // 1. Mandatory Checks
     if (!formData.name.trim() || !formData.category) {
       setToastMessage('Treatment Name and Category are required');
@@ -67,38 +69,20 @@ const SACreateTreatmentTypePage: React.FC = () => {
       return;
     }
 
-    // 2. Duplicate Check
-    const isDuplicate = treatments.some(
-      (t) => t.name.toLowerCase() === formData.name.toLowerCase()
-    );
-    if (isDuplicate) {
-      setToastMessage('Treatment Name already exists');
+    try {
+      await createTreatmentType(formData);
+      setToastMessage('Treatment Type saved successfully!');
+      setToastColor('success');
+      setShowToast(true);
+
+      setTimeout(() => {
+        handleReset();
+      }, 1500);
+    } catch (error: any) {
+      setToastMessage(error.response?.data?.message || 'Failed to save treatment type');
       setToastColor('danger');
       setShowToast(true);
-      return;
     }
-
-    // 3. Create New Treatment Type
-    const newTreatment = {
-      id: Date.now(),
-      ...formData,
-      createdDate: new Date().toISOString().split('T')[0],
-      createdTime: new Date().toLocaleTimeString(),
-      createdBy: 'Super Admin',
-      totalSessions: 0, // Initial sessions used
-      lastUpdated: new Date().toISOString(),
-    };
-
-    const updatedTreatments = [...treatments, newTreatment];
-    localStorage.setItem('ph_treatments', JSON.stringify(updatedTreatments));
-
-    setToastMessage('Treatment Type saved successfully!');
-    setToastColor('success');
-    setShowToast(true);
-
-    setTimeout(() => {
-      history.push(ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST);
-    }, 1500);
   };
 
   const handleReset = () => {

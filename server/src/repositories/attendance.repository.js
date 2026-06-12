@@ -7,7 +7,7 @@ class AttendanceRepository {
 
   async findById(id) {
     return await Attendance.findByPk(id, {
-      include: ['user']
+      include: ['user', 'branch']
     });
   }
 
@@ -15,7 +15,7 @@ class AttendanceRepository {
     return await Attendance.findAll({
       where: filter,
       ...options,
-      include: ['user']
+      include: ['user', 'branch']
     });
   }
 

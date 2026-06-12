@@ -1,4 +1,5 @@
 const attendanceRepository = require('../repositories/attendance.repository');
+const userRepository = require('../repositories/user.repository');
 const ApiError = require('../helpers/error.helper');
 
 class AttendanceService {
@@ -11,8 +12,12 @@ class AttendanceService {
       throw new ApiError(400, 'Attendance already marked for today.');
     }
 
+    const user = await userRepository.findById(userId);
+    if (!user) throw new ApiError(404, 'User not found.');
+
     return await attendanceRepository.create({
       userId,
+      branchId: user.branchId,
       date: today,
       checkIn: new Date(),
       status
@@ -32,6 +37,33 @@ class AttendanceService {
 
   async getUserAttendance(userId, filter = {}) {
     return await attendanceRepository.findAll({ userId, ...filter });
+  }
+
+  async getAttendanceList(filter = {}) {
+    return await attendanceRepository.findAll(filter);
+  }
+
+  async saveAttendance(data) {
+    const { userId, date, checkIn, checkOut, status } = data;
+    const existing = await attendanceRepository.findAll({ userId, date });
+    
+    let branchId = null;
+    const user = await userRepository.findById(userId);
+    if (!user) throw new ApiError(404, 'User not found.');
+    branchId = user.branchId;
+
+    if (existing.length > 0) {
+      return await attendanceRepository.update(existing[0].id, { checkIn, checkOut, status, branchId });
+    } else {
+      return await attendanceRepository.create({
+        userId,
+        branchId,
+        date,
+        checkIn,
+        checkOut,
+        status
+      });
+    }
   }
 }
 

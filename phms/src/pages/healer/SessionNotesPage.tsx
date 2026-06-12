@@ -10,6 +10,8 @@ import {
   IonIcon,
   useIonToast,
   IonToggle,
+  IonSpinner,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   documentTextOutline,
@@ -18,20 +20,21 @@ import {
   personOutline,
   leafOutline,
 } from 'ionicons/icons';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import AppInput from '../../components/common/AppInput';
 import AppButton from '../../components/common/AppButton';
 import AppCard from '../../components/common/AppCard';
+import { getPatients } from '../../api/patient.api';
+import { createSession, updateSession, getSessionById } from '../../api/session.api';
 import '../branch-admin/branch-admin.css';
 import './Healers.css';
 
-const mockPatients = [
-  { label: 'Rajesh Kumar (PAT-10023)', value: 'PAT-10023' },
-  { label: 'Priya Sharma (PAT-10045)', value: 'PAT-10045' },
-  { label: 'Amit Patel (PAT-10088)', value: 'PAT-10088' },
-  { label: 'Sunita Rao (PAT-10112)', value: 'PAT-10112' },
-  { label: 'Vikram Singh (PAT-10156)', value: 'PAT-10156' },
-];
+interface AssignedPatient {
+  id: string;
+  patientId: string;
+  name: string;
+  branchId: string;
+}
 
 const treatmentOptions = [
   { label: 'Basic Pranic Healing', value: 'Basic Pranic Healing' },
@@ -42,8 +45,15 @@ const treatmentOptions = [
 
 const SessionNotesPage: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const [present] = useIonToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [patients, setPatients] = useState<AssignedPatient[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Parse query params
+  const query = new URLSearchParams(location.search);
+  const sessionId = query.get('sessionId');
 
   const [formData, setFormData] = useState({
     patientId: '',
@@ -55,6 +65,82 @@ const SessionNotesPage: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch initial assigned patients and existing session notes if editing, or reset form if not editing
+  useIonViewWillEnter(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const patientsRes = await getPatients();
+        const apiPatients = Array.isArray(patientsRes) ? patientsRes : (patientsRes.data || patientsRes);
+        
+        let fetchedPatients: AssignedPatient[] = [];
+        if (Array.isArray(apiPatients)) {
+          fetchedPatients = apiPatients.map((p: any) => ({
+            id: p.id,
+            patientId: p.patientId || 'N/A',
+            name: p.name,
+            branchId: p.branchId || ''
+          }));
+          setPatients(fetchedPatients);
+        }
+
+        // If editing an existing session
+        if (sessionId) {
+          const sessionRes = await getSessionById(sessionId);
+          const session = sessionRes.data || sessionRes;
+          if (session) {
+            const rawNotes = session.notes || '';
+            let observations = '';
+            let notes = rawNotes;
+            let recommendation = '';
+            let followUp = false;
+
+            if (rawNotes.includes('Observations:')) {
+              const parts = rawNotes.split('\n\n');
+              parts.forEach((part: string) => {
+                if (part.startsWith('Observations:')) {
+                  observations = part.replace('Observations:', '').trim();
+                } else if (part.startsWith('Notes:')) {
+                  notes = part.replace('Notes:', '').trim();
+                } else if (part.startsWith('Recommendations:')) {
+                  recommendation = part.replace('Recommendations:', '').trim();
+                } else if (part.startsWith('Follow-up Required:')) {
+                  followUp = part.replace('Follow-up Required:', '').trim().toLowerCase() === 'yes';
+                }
+              });
+            }
+
+            setFormData({
+              patientId: session.patientId || '',
+              treatmentType: session.treatments?.[0]?.treatmentName || 'Basic Pranic Healing',
+              observations,
+              notes,
+              recommendation,
+              followUp,
+            });
+          }
+        } else {
+          // If not editing (fresh note), reset form fields and errors to empty
+          setFormData({
+            patientId: '',
+            treatmentType: '',
+            observations: '',
+            notes: '',
+            recommendation: '',
+            followUp: false,
+          });
+          setErrors({});
+        }
+      } catch (err) {
+        console.error('Failed to load form initialization data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  });
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
@@ -89,11 +175,30 @@ const SessionNotesPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Simulate API submit delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const combinedNotes = `Observations: ${formData.observations}\n\nNotes: ${formData.notes}\n\nRecommendations: ${formData.recommendation}\n\nFollow-up Required: ${formData.followUp ? 'Yes' : 'No'}`;
+
+      if (sessionId) {
+        // Update existing session
+        await updateSession(sessionId, {
+          notes: combinedNotes,
+          status: 'completed',
+        });
+      } else {
+        // Create new session
+        const selectedPatientObj = patients.find(p => p.id === formData.patientId);
+        const branchId = selectedPatientObj ? selectedPatientObj.branchId : undefined;
+
+        await createSession({
+          patientId: formData.patientId,
+          notes: combinedNotes,
+          status: 'completed',
+          sessionDate: new Date().toISOString(),
+          branchId,
+        });
+      }
       
       present({
-        message: 'Session notes saved successfully!',
+        message: sessionId ? 'Session notes updated successfully!' : 'Session notes saved successfully!',
         duration: 2000,
         position: 'top',
         color: 'success',
@@ -111,7 +216,7 @@ const SessionNotesPage: React.FC = () => {
 
       history.push('/healer/dashboard');
     } catch (err) {
-      console.error(err);
+      console.error('Failed to submit session notes:', err);
       present({
         message: 'Failed to save session notes.',
         duration: 2000,
@@ -159,11 +264,17 @@ const SessionNotesPage: React.FC = () => {
                       className={`healer-form-select ${errors.patientId ? 'healer-form-select--error' : ''}`}
                     >
                       <option value="">Select a patient...</option>
-                      {mockPatients.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
+                      {loading ? (
+                        <option disabled>Loading assigned patients...</option>
+                      ) : patients.length === 0 ? (
+                        <option disabled>No assigned patients found</option>
+                      ) : (
+                        patients.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.patientId})
+                          </option>
+                        ))
+                      )}
                     </select>
                     {errors.patientId && (
                       <span className="healer-form-error-text">

@@ -22,6 +22,8 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import AppCard from '../../components/common/AppCard';
+import { getSessions } from '../../api/session.api';
+import { getPatients } from '../../api/patient.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 
@@ -54,86 +56,162 @@ const SessionHistoryPage: React.FC = () => {
   const [sessions, setSessions] = React.useState<HealingSession[]>([]);
   const [selectedSession, setSelectedSession] = React.useState<HealingSession | null>(null);
 
-  // Load sessions from localStorage
+  // Load sessions from localStorage & Backend API
   React.useEffect(() => {
-    // 1. Resolve patient name
-    let patientName = userName;
-    let currentHealer = 'Dr. Shailesh';
-    const savedPatients = localStorage.getItem('phms_patients');
-    if (savedPatients) {
+    const loadData = async () => {
+      // 1. Resolve patient name and healer
+      let patientName = userName;
+      let currentHealer = 'Dr. Arjun';
+      let patientDbId = '';
+
+      // 1a. Try to fetch patient details from backend to resolve their exact name and healer
       try {
-        const parsed = JSON.parse(savedPatients);
-        const found = parsed.find((p: any) => p.email?.toLowerCase() === userEmail.toLowerCase());
-        if (found) {
-          patientName = found.name;
-          currentHealer = found.assignedHealer || 'Dr. Shailesh';
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // 2. Load sessions matching patientName
-    const savedSessions = localStorage.getItem('phms_sessions');
-    let filtered: HealingSession[] = [];
-    if (savedSessions) {
-      try {
-        const parsed: HealingSession[] = JSON.parse(savedSessions);
-        filtered = parsed.filter(
-          (s) => s.patient?.toLowerCase().trim() === patientName.toLowerCase().trim()
-        );
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // Fallback/Sample data for session history if empty
-    if (filtered.length === 0) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-      filtered = [
-        {
-          id: Date.now() - 3600000 * 2, // Booked 2 hours ago
-          sessionNo: 'SESS-2041',
-          date: tomorrowStr,
-          startTime: '10:00 AM',
-          endTime: '11:00 AM',
-          patient: patientName,
-          healer: currentHealer,
-          type: 'Advanced Pranic Healing',
-          status: 'Scheduled',
-          paymentStatus: 'Pending'
-        },
-        {
-          id: Date.now() - 3600000 * 48, // Booked 2 days ago
-          sessionNo: 'SESS-2035',
-          date: yesterdayStr,
-          startTime: '11:00 AM',
-          endTime: '12:00 PM',
-          patient: patientName,
-          healer: currentHealer,
-          type: 'Basic Pranic Healing',
-          status: 'Completed',
-          paymentStatus: 'Paid',
-          notes: {
-            treatmentType: 'Basic Pranic Healing',
-            observations: 'Patient reported moderate stress levels and shoulder tension. Performed aura cleansing and energized the solar plexus and throat chakras. Patient felt lighter immediately after the session.',
-            detailedNotes: 'Successfully completed the basic chakra alignment protocol. Cleansed both front and back solar plexus chakras. Energized the throat chakra to ease communication blockages.',
-            recommendation: 'Perform soft breathing exercises daily in the morning. Hydrate well and walk in nature twice a day.'
+        const patientsRes = await getPatients({ email: userEmail });
+        if (patientsRes && patientsRes.success && Array.isArray(patientsRes.data) && patientsRes.data.length > 0) {
+          const dbPatient = patientsRes.data[0];
+          patientName = dbPatient.name;
+          patientDbId = dbPatient.id;
+          if (dbPatient.healer) {
+            currentHealer = dbPatient.healer.name.startsWith('Dr.') ? dbPatient.healer.name : `Dr. ${dbPatient.healer.name}`;
           }
         }
-      ];
-    }
+      } catch (err) {
+        console.warn('Backend patient details fetch failed, using offline patient name resolution:', err);
+      }
 
-    // Sort by date/time descending
-    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setSessions(filtered);
+      // 1b. Fallback to localStorage patients resolution
+      const savedPatients = localStorage.getItem('phms_patients');
+      if (savedPatients && patientName === userName) {
+        try {
+          const parsed = JSON.parse(savedPatients);
+          const found = parsed.find((p: any) => p.email?.toLowerCase() === userEmail.toLowerCase());
+          if (found) {
+            patientName = found.name;
+            currentHealer = found.assignedHealer || 'Dr. Arjun';
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // 2. Fetch backend sessions (Online Mode)
+      let backendSessions: HealingSession[] = [];
+      let fetchSuccess = false;
+
+      try {
+        const sessionsRes = await getSessions();
+        if (sessionsRes && Array.isArray(sessionsRes.data)) {
+          fetchSuccess = true;
+          sessionsRes.data.forEach((s: any) => {
+            const patient = s.patient;
+            const isMatch = patient && (
+              patient.email?.toLowerCase() === userEmail.toLowerCase() ||
+              patient.id === patientDbId ||
+              patient.name?.toLowerCase().trim() === patientName.toLowerCase().trim()
+            );
+
+            if (isMatch) {
+              const sessionNo = s.sessionNo || `S-${s.id?.substring(0, 4) || 'XXXX'}`;
+              
+              if (!backendSessions.some(existing => existing.sessionNo === sessionNo)) {
+                const mappedSession: HealingSession = {
+                  id: s.id,
+                  sessionNo: sessionNo,
+                  date: new Date(s.sessionDate || s.createdAt || Date.now()).toISOString().split('T')[0],
+                  startTime: s.startTime || '10:00 AM',
+                  endTime: s.endTime || '11:00 AM',
+                  patient: patientName,
+                  healer: s.healer?.name ? (s.healer.name.startsWith('Dr.') ? s.healer.name : `Dr. ${s.healer.name}`) : currentHealer,
+                  type: s.type || 'Basic Pranic Healing',
+                  status: s.status === 'scheduled' ? 'Scheduled' : (s.status === 'completed' ? 'Completed' : 'Cancelled'),
+                  paymentStatus: s.paymentStatus === 'Paid' ? 'Paid' : 'Pending',
+                  notes: s.notes ? {
+                    treatmentType: s.type || 'Basic Pranic Healing',
+                    observations: s.notes || '—',
+                    detailedNotes: '—',
+                    recommendation: '—'
+                  } : undefined
+                };
+                backendSessions.push(mappedSession);
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Backend sessions fetch failed:', err);
+      }
+
+      // If backend loading is successful and we retrieved data, show only database data to prevent local storage duplication
+      if (fetchSuccess && backendSessions.length > 0) {
+        backendSessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setSessions(backendSessions);
+        return;
+      }
+
+      // 3. Fallback/Offline Mode: Load sessions matching patientName from localStorage
+      const savedSessions = localStorage.getItem('phms_sessions');
+      let filtered: HealingSession[] = [];
+      if (savedSessions) {
+        try {
+          const parsed: HealingSession[] = JSON.parse(savedSessions);
+          filtered = parsed.filter(
+            (s) => s.patient?.toLowerCase().trim() === patientName.toLowerCase().trim()
+          );
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Fallback/Sample data for session history if empty
+      if (filtered.length === 0) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+        filtered = [
+          {
+            id: Date.now() - 3600000 * 2, // Booked 2 hours ago
+            sessionNo: 'SESS-2041',
+            date: tomorrowStr,
+            startTime: '10:00 AM',
+            endTime: '11:00 AM',
+            patient: patientName,
+            healer: currentHealer,
+            type: 'Advanced Pranic Healing',
+            status: 'Scheduled',
+            paymentStatus: 'Pending'
+          },
+          {
+            id: Date.now() - 3600000 * 48, // Booked 2 days ago
+            sessionNo: 'SESS-2035',
+            date: yesterdayStr,
+            startTime: '11:00 AM',
+            endTime: '12:00 PM',
+            patient: patientName,
+            healer: currentHealer,
+            type: 'Basic Pranic Healing',
+            status: 'Completed',
+            paymentStatus: 'Paid',
+            notes: {
+              treatmentType: 'Basic Pranic Healing',
+              observations: 'Patient reported moderate stress levels and shoulder tension. Performed aura cleansing and energized the solar plexus and throat chakras. Patient felt lighter immediately after the session.',
+              detailedNotes: 'Successfully completed the basic chakra alignment protocol. Cleansed both front and back solar plexus chakras. Energized the throat chakra to ease communication blockages.',
+              recommendation: 'Perform soft breathing exercises daily in the morning. Hydrate well and walk in nature twice a day.'
+            }
+          }
+        ];
+      }
+
+      // Sort by date/time descending
+      filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setSessions(filtered);
+    };
+
+    loadData();
   }, [userEmail, userName]);
 
   return (

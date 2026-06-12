@@ -29,6 +29,7 @@ export const authAPI = {
       token: idToken,
       role: credentials.role 
     });
+    console.log('Login API Response:', response.data);
 
     return {
       user: response.data.data,
@@ -40,7 +41,12 @@ export const authAPI = {
    * Logout user - typically just clears client-side state
    */
   logout: async (): Promise<void> => {
-    await axiosInstance.post('/auth/logout');
+    try {
+      await axiosInstance.post('/auth/logout');
+    } catch (error) {
+      console.warn('Backend logout failed, proceeding with client logout', error);
+    }
+    await signOut(auth);
   },
 
   /**

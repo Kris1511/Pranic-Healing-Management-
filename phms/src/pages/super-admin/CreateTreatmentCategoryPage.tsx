@@ -13,6 +13,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
 import { saveOutline, closeOutline } from 'ionicons/icons';
+import { createTreatmentCategory } from '../../api/treatmentCategory.api';
 import './super-admin.css';
 
 const CreateTreatmentCategoryPage: React.FC = () => {
@@ -32,7 +33,7 @@ const CreateTreatmentCategoryPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.code) {
       setToastMessage('Please fill in all required fields');
@@ -40,24 +41,20 @@ const CreateTreatmentCategoryPage: React.FC = () => {
       return;
     }
 
-    const savedCategories = localStorage.getItem('ph_treatment_categories');
-    const categories = savedCategories ? JSON.parse(savedCategories) : [];
-    
-    const newCategory = {
-      id: Date.now(),
-      ...formData,
-      treatmentCount: 0,
-      createdAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem('ph_treatment_categories', JSON.stringify([...categories, newCategory]));
-    
-    setToastMessage('Treatment Category Created Successfully!');
-    setShowToast(true);
-    
-    setTimeout(() => {
-      history.push(ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES);
-    }, 1500);
+    try {
+      await createTreatmentCategory(formData);
+      setToastMessage('Treatment Category Created Successfully!');
+      setShowToast(true);
+      console.log("Validation successful: ", formData);
+
+      
+      setTimeout(() => {
+        history.push(ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES);
+      }, 1500);
+    } catch (error: any) {
+      setToastMessage(error.response?.data?.message || 'Failed to create treatment category');
+      setShowToast(true);
+    }
   };
 
   return (
@@ -174,7 +171,7 @@ const CreateTreatmentCategoryPage: React.FC = () => {
           message={toastMessage}
           duration={2000}
           color={toastMessage.includes('Successfully') ? 'success' : 'danger'}
-          position="bottom"
+          position="top"
         />
       </IonContent>
     </IonPage>

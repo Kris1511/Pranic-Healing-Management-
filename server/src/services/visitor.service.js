@@ -9,11 +9,15 @@ class VisitorService {
     return await visitorRepository.create(data);
   }
 
-  async checkOutVisitor(id) {
-    const visitor = await visitorRepository.update(id, { checkOut: new Date() });
-    if (!visitor) {
+  async checkOutVisitor(id, branchId) {
+    const existing = await visitorRepository.findById(id);
+    if (!existing) {
       throw new ApiError(404, 'Visitor record not found.');
     }
+    if (branchId && existing.branchId !== branchId) {
+      throw new ApiError(403, 'Unauthorized access to branch data.');
+    }
+    const visitor = await visitorRepository.update(id, { checkOut: new Date() });
     return visitor;
   }
 

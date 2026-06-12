@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { checkInVisitor } from '../../api/visitor.api';
 import {
   IonPage,
   IonContent,
@@ -99,18 +99,12 @@ export default function BAVisitorCheckInPage() {
 
       console.log("Token:", localStorage.getItem('token'));
 
-      const response = await axios.post("http://localhost:5000/api/visitors/check-in", 
-        payload,
-      {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+      const responseData = await checkInVisitor(payload);
       
-      const newVisitor = response.data?.data;
+      const newVisitor = responseData?.data;
       setNewVisitorId(newVisitor?.visitorId || newVisitor?.id || `PHMS-V-${Math.floor(10000 + Math.random() * 90000)}`);
 
-      console.log('Visitor check-in successful:', response.data);
+      console.log('Visitor check-in successful:', responseData);
       setShowSuccessToast(true);
     } catch (err) {
       console.error(err);

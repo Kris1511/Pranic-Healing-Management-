@@ -5,6 +5,7 @@ import Menu from './components/Menu';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import SessionExpiredPage from './pages/auth/SessionExpiredPage';
 import { ROUTES } from './constants/routes.constant';
 
 /* Super Admin Pages */
@@ -100,6 +101,7 @@ const AUTH_ROUTES = [
   ROUTES.AUTH.SIGNUP,
   ROUTES.AUTH.FORGOT_PASSWORD,
   ROUTES.AUTH.RESET_PASSWORD,
+  ROUTES.AUTH.SESSION_EXPIRED,
 ];
 
 const AppContent: React.FC = () => {
@@ -119,6 +121,9 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path={ROUTES.AUTH.FORGOT_PASSWORD} exact={true}>
           <ForgotPasswordPage />
+        </Route>
+        <Route path={ROUTES.AUTH.SESSION_EXPIRED} exact={true}>
+          <SessionExpiredPage />
         </Route>
 
         {/* Super Admin Routes */}

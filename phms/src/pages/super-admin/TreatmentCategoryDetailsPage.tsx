@@ -20,6 +20,7 @@ import {
 } from 'ionicons/icons';
 import { useParams } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
+import { getTreatmentCategoryById } from '../../api/treatmentCategory.api';
 import './super-admin.css';
 
 const SATreatmentCategoryDetailsPage: React.FC = () => {
@@ -27,12 +28,17 @@ const SATreatmentCategoryDetailsPage: React.FC = () => {
   const [category, setCategory] = useState<any>(null);
 
   useEffect(() => {
-    const savedCategories = localStorage.getItem('ph_treatment_categories');
-    if (savedCategories) {
-      const allCategories = JSON.parse(savedCategories);
-      const foundCategory = allCategories.find((c: any) => c.id.toString() === id);
-      setCategory(foundCategory);
-    }
+    const fetchCategory = async () => {
+      try {
+        const response = await getTreatmentCategoryById(id);
+        if (response.success && response.data) {
+          setCategory(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load category', error);
+      }
+    };
+    fetchCategory();
   }, [id]);
 
   if (!category) {
@@ -104,7 +110,7 @@ const SATreatmentCategoryDetailsPage: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
               <InfoItem 
                 label="Created Date" 
-                value={new Date(category.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} 
+                value={new Date(category.createdAt || category.createdDate || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} 
                 icon={calendarOutline} 
               />
               <InfoItem 

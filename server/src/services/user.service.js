@@ -62,27 +62,26 @@ class UserService {
     return await userRepository.findAll(filter);
   }
 
-  async getUserById(id) {
+  async getUserById(id, branchId) {
     const user = await userRepository.findById(id);
     if (!user) {
       throw new ApiError(404, 'User not found.');
     }
+    if (branchId && user.branchId !== branchId) {
+      throw new ApiError(403, 'Unauthorized access to branch data.');
+    }
     return user;
   }
 
-  async updateUser(id, data) {
+  async updateUser(id, data, branchId) {
+    const existing = await this.getUserById(id, branchId);
     const user = await userRepository.update(id, data);
-    if (!user) {
-      throw new ApiError(404, 'User not found.');
-    }
     return user;
   }
 
-  async deleteUser(id) {
+  async deleteUser(id, branchId) {
+    await this.getUserById(id, branchId);
     const user = await userRepository.delete(id);
-    if (!user) {
-      throw new ApiError(404, 'User not found.');
-    }
     return user;
   }
 }

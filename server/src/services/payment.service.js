@@ -12,10 +12,13 @@ class PaymentService {
     return await paymentRepository.findAll(filter);
   }
 
-  async getPaymentById(id) {
+  async getPaymentById(id, branchId) {
     const payment = await paymentRepository.findById(id);
     if (!payment) {
       throw new ApiError(404, 'Payment record not found.');
+    }
+    if (branchId && payment.branchId !== branchId) {
+      throw new ApiError(403, 'Unauthorized access to branch data.');
     }
     return payment;
   }

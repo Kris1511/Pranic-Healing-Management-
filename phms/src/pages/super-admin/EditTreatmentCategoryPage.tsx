@@ -21,6 +21,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
+import { getTreatmentCategoryById, updateTreatmentCategory } from '../../api/treatmentCategory.api';
 import './super-admin.css';
 
 const SAEditTreatmentCategoryPage: React.FC = () => {
@@ -37,28 +38,31 @@ const SAEditTreatmentCategoryPage: React.FC = () => {
     status: 'Active',
   });
 
-  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedCategories = localStorage.getItem('ph_treatment_categories');
-    if (savedCategories) {
-      const allCategories = JSON.parse(savedCategories);
-      setCategories(allCategories);
-      const foundCategory = allCategories.find((c: any) => c.id.toString() === id);
-      if (foundCategory) {
-        setFormData({
-          name: foundCategory.name,
-          code: foundCategory.code || '',
-          description: foundCategory.description || '',
-          status: foundCategory.status,
-        });
+    const fetchCategory = async () => {
+      try {
+        const response = await getTreatmentCategoryById(id);
+        if (response.success && response.data) {
+          const foundCategory = response.data;
+          setFormData({
+            name: foundCategory.name,
+            code: foundCategory.code || '',
+            description: foundCategory.description || '',
+            status: foundCategory.status,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load category', error);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    fetchCategory();
   }, [id]);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     // 1. Validate Name
     if (!formData.name.trim()) {
       setToastMessage('Category Name is required');
@@ -67,50 +71,24 @@ const SAEditTreatmentCategoryPage: React.FC = () => {
       return;
     }
 
-    // 2. Validate Uniqueness (excluding current ID)
-    const isDuplicate = categories.some(
-      (cat) => cat.name.toLowerCase() === formData.name.toLowerCase() && cat.id.toString() !== id
-    );
-    if (isDuplicate) {
-      setToastMessage('Category Name already exists');
+    try {
+      await updateTreatmentCategory(id, formData);
+      setToastMessage('Category updated successfully!');
+      setToastColor('success');
+      setShowToast(true);
+
+      setTimeout(() => {
+        history.push(ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES);
+      }, 1500);
+    } catch (error: any) {
+      setToastMessage(error.response?.data?.message || 'Failed to update category');
       setToastColor('danger');
       setShowToast(true);
-      return;
     }
-
-    // 3. Update Category
-    const updatedCategories = categories.map((cat) => {
-      if (cat.id.toString() === id) {
-        return {
-          ...cat,
-          ...formData,
-          lastUpdated: new Date().toISOString(),
-        };
-      }
-      return cat;
-    });
-
-    localStorage.setItem('ph_treatment_categories', JSON.stringify(updatedCategories));
-
-    setToastMessage('Category updated successfully!');
-    setToastColor('success');
-    setShowToast(true);
-
-    setTimeout(() => {
-      history.push(ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES);
-    }, 1500);
   };
 
   const handleReset = () => {
-    const foundCategory = categories.find((c: any) => c.id.toString() === id);
-    if (foundCategory) {
-      setFormData({
-        name: foundCategory.name,
-        code: foundCategory.code || '',
-        description: foundCategory.description || '',
-        status: foundCategory.status,
-      });
-    }
+    // Reset functionality can be implemented by refetching from the API
   };
 
   const handleCancel = () => {

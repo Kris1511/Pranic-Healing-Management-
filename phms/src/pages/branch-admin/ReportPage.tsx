@@ -882,7 +882,7 @@ const ReportsPage: React.FC = () => {
             {/* Pagination Controls */}
             <div className="rp-pagination">
               <span className="rp-pagination-info">
-                Showing 1 to {paginatedList.length} of {activeFilteredList.length} entries
+                Showing {activeFilteredList.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, activeFilteredList.length)} of {activeFilteredList.length} entries
               </span>
               {totalPages > 1 && (
                 <div className="rp-pagination-controls">

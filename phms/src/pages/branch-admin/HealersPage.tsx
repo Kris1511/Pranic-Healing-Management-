@@ -113,128 +113,9 @@ export interface Notification {
 
 // ─── Default Mock Data ───────────────────────────────────────────────────────
 
-const INITIAL_HEALERS: Healer[] = [
-  {
-    id: 'H-2091',
-    name: 'Dr. David Anselm',
-    gender: 'Male',
-    dob: '1985-05-12',
-    email: 'david.a@phms.com',
-    phone: '+91 98765 43210',
-    address: 'Flat 402, Sea Breeze, Mumbai',
-    certificationLevel: 'Master Healer (M1)',
-    specialization: ['Stress Healing', 'Energy Cleansing', 'Aura Cleansing'],
-    experience: 7,
-    status: 'ACTIVE',
-    branch: 'Mumbai',
-    createdAt: '2021-01-15',
-    cumulativeHealingCount: 458,
-    completedSessions: 940,
-    pendingNotes: 4,
-    urgentFollowUps: 0,
-    avatarBg: '#0f5b4b',
-    initials: 'DA',
-    bio: 'Specializes in stress management, corporate burnout recovery, and psychosomatic healing using advanced Pranic techniques.',
-  },
-  {
-    id: 'H-2104',
-    name: 'Elena Kovic',
-    gender: 'Female',
-    dob: '1992-08-23',
-    email: 'e.kovic@phms.com',
-    phone: '+91 98765 43211',
-    address: 'Sector 15, Vashi, Mumbai',
-    certificationLevel: 'Energy Cleansing Specialist',
-    specialization: ['Energy Cleansing', 'Chakra Balancing'],
-    experience: 4,
-    status: 'ACTIVE',
-    branch: 'Mumbai',
-    createdAt: '2022-03-10',
-    cumulativeHealingCount: 212,
-    completedSessions: 520,
-    pendingNotes: 0,
-    urgentFollowUps: 2,
-    avatarBg: '#1e40af',
-    initials: 'EK',
-    bio: 'Expert in aura cleansing, chakra balancing and advanced pranic healing for emotional trauma recovery.',
-  },
-  {
-    id: 'H-1988',
-    name: 'Marcus Jensen',
-    gender: 'Male',
-    dob: '1980-11-04',
-    email: 'm.jensen@phms.com',
-    phone: '+91 98765 43213',
-    address: 'Camp Area, Pune',
-    certificationLevel: 'Trauma Relief Certified',
-    specialization: ['Grief Therapy', 'PTSD Care'],
-    experience: 9,
-    status: 'ACTIVE',
-    branch: 'Pune',
-    createdAt: '2019-08-01',
-    cumulativeHealingCount: 89,
-    completedSessions: 680,
-    pendingNotes: 2,
-    urgentFollowUps: 0,
-    avatarBg: '#7c3aed',
-    initials: 'MJ',
-    bio: 'Handles cases of grief, loss, PTSD, and trauma recovery with compassionate pranic techniques.',
-  },
-  {
-    id: 'H-1822',
-    name: 'Dr. Anjali Rao',
-    gender: 'Female',
-    dob: '1978-04-18',
-    email: 'anjali.rao@phms.com',
-    phone: '+91 98765 43299',
-    address: 'Bandra West, Mumbai',
-    certificationLevel: 'Master Healer (M1)',
-    specialization: ['Stress Healing', 'Grief Therapy'],
-    experience: 12,
-    status: 'ACTIVE',
-    branch: 'Mumbai',
-    createdAt: '2018-02-14',
-    cumulativeHealingCount: 820,
-    completedSessions: 1450,
-    pendingNotes: 1,
-    urgentFollowUps: 1,
-    avatarBg: '#db2777',
-    initials: 'AR',
-    bio: 'A veteran master healer with deep expertise in psychotherapy and trauma mitigation.',
-  },
-  {
-    id: 'H-1845',
-    name: 'Dr. Kevin Smith',
-    gender: 'Male',
-    dob: '1983-09-30',
-    email: 'kevin.smith@phms.com',
-    phone: '+91 98765 43224',
-    address: 'Powai, Mumbai',
-    certificationLevel: 'Associate Healer',
-    specialization: ['Energy Cleansing', 'Chakra Balancing'],
-    experience: 6,
-    status: 'INACTIVE',
-    branch: 'Mumbai',
-    createdAt: '2019-11-20',
-    cumulativeHealingCount: 310,
-    completedSessions: 720,
-    pendingNotes: 0,
-    urgentFollowUps: 0,
-    avatarBg: '#b45309',
-    initials: 'KS',
-    bio: 'Associate healer passionate about basic chakra restoration and localized physical treatments.',
-  }
-];
+const INITIAL_HEALERS: Healer[] = [];
 
-const INITIAL_PATIENTS: Patient[] = [
-  { id: '#P-101', name: 'Sarah Mitchell', caseType: 'Chronic Back Pain', sessionCount: 12, status: 'Active', lastSessionDate: '2026-05-20', assignedHealerId: 'H-2091' },
-  { id: '#P-102', name: 'John Walker', caseType: 'Post-Trauma Recovery', sessionCount: 8, status: 'Active', lastSessionDate: '2026-05-22', assignedHealerId: 'H-2104' },
-  { id: '#P-103', name: 'Elena Rostova', caseType: 'Generalized Anxiety', sessionCount: 15, status: 'Active', lastSessionDate: '2026-05-25', assignedHealerId: 'H-1822' },
-  { id: '#P-104', name: 'Michael Chen', caseType: 'Corporate Burnout Recovery', sessionCount: 4, status: 'Active', lastSessionDate: '2026-05-26', assignedHealerId: 'H-2091' },
-  { id: '#P-105', name: 'Emily Davis', caseType: 'Insomnia & Sleep Alignment', sessionCount: 0, status: 'Active', lastSessionDate: 'Never', assignedHealerId: 'H-1845' },
-  { id: '#P-106', name: 'Rohan Mehta', caseType: 'Hypertension Management', sessionCount: 6, status: 'Active', lastSessionDate: '2026-05-18', assignedHealerId: 'H-1822' },
-  { id: '#P-107', name: 'Priyah Sharma', caseType: 'Migraine Therapy', sessionCount: 2, status: 'Active', lastSessionDate: '2026-05-24', assignedHealerId: 'H-2091' }
-];
+const INITIAL_PATIENTS: Patient[] = [];
 
 const INITIAL_SESSION_HISTORY = [
   { sessionNumber: 'SES-912', patientName: 'Sarah Mitchell', treatmentType: 'Aura Cleansing', date: '2026-05-20', notesStatus: 'Completed', healerId: 'H-2091' },
@@ -323,18 +204,13 @@ const HealersPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching healers:', error);
-        // Fallback to local storage or initial if API fails
-        const saved = localStorage.getItem('phms_healers');
-        setHealers(saved ? JSON.parse(saved) : INITIAL_HEALERS);
+        setHealers([]);
       }
     };
     fetchHealers();
   }, [assignedBranch]);
 
-  const [patients, setPatients] = useState<Patient[]>(() => {
-    const saved = localStorage.getItem('phms_patients');
-    return saved ? JSON.parse(saved) : INITIAL_PATIENTS;
-  });
+  const [patients, setPatients] = useState<Patient[]>([]);
 
   const [reassignmentLogs, setReassignmentLogs] = useState<ReassignmentLog[]>(() => {
     const saved = localStorage.getItem('phms_reassignment_logs');

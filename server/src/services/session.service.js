@@ -11,27 +11,26 @@ class SessionService {
     return await sessionRepository.findAll(filter);
   }
 
-  async getSessionById(id) {
+  async getSessionById(id, branchId) {
     const session = await sessionRepository.findById(id);
     if (!session) {
       throw new ApiError(404, 'Session not found.');
     }
+    if (branchId && session.branchId !== branchId) {
+      throw new ApiError(403, 'Unauthorized access to branch data.');
+    }
     return session;
   }
 
-  async updateSession(id, data) {
+  async updateSession(id, data, branchId) {
+    const existing = await this.getSessionById(id, branchId);
     const session = await sessionRepository.update(id, data);
-    if (!session) {
-      throw new ApiError(404, 'Session not found.');
-    }
     return session;
   }
 
-  async deleteSession(id) {
+  async deleteSession(id, branchId) {
+    await this.getSessionById(id, branchId);
     const session = await sessionRepository.delete(id);
-    if (!session) {
-      throw new ApiError(404, 'Session not found.');
-    }
     return session;
   }
 }

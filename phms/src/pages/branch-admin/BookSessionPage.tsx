@@ -681,6 +681,18 @@ export default function CreateBookSession() {
                               </select>
                             </div>
                           </div>
+
+                          {formData.paymentMethod === 'UPI' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '8px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                              <p style={{ fontSize: '13px', fontWeight: 700, color: '#0d5c46', marginBottom: '12px' }}>Scan to Pay via UPI</p>
+                              <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=branchadmin@upi&pn=PHMS%20Branch&am=${formData.sessionFee}&cu=INR`} 
+                                alt="UPI QR Code" 
+                                style={{ width: '150px', height: '150px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} 
+                              />
+                              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '12px', textAlign: 'center' }}>Amount: ₹{formData.sessionFee}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { createHealer } from "../../api/healer.api";
 import { IonPage, IonContent, IonIcon } from "@ionic/react";
 import {
   arrowBackOutline,
@@ -189,14 +189,11 @@ export default function BACreateHealerPage() {
           : (user as any)?.branchId || undefined
       };
 
-      const response = await axios.post(
-        "http://localhost:5000/api/healers",
-        payload,
-      );
+      const responseData = await createHealer(payload);
 
-      console.log("API Response:", response.data);
+      console.log("API Response:", responseData);
 
-      setNewHealerId(response.data.data.healerId);
+      setNewHealerId(responseData.data.healerId);
 
       setFormData({
         name: "",

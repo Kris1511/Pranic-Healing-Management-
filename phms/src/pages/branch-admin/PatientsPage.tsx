@@ -973,14 +973,14 @@ const PatientsPage: React.FC = () => {
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Total Registered</span>
                   <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{mtdRegistered}</span>
                 </div>
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {/* <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Daily Appts Queue</span>
                   <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>18</span>
                 </div>
                 <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #8b5cf6', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Documents Vaulted</span>
                   <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>24</span>
-                </div>
+                </div> */}
                 <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #ef4444', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Pending Balance</span>
                   <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>₹2500</span>

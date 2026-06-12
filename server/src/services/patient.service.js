@@ -51,27 +51,26 @@ class PatientService {
     return await patientRepository.findAll(filter);
   }
 
-  async getPatientById(id) {
+  async getPatientById(id, branchId) {
     const patient = await patientRepository.findById(id);
     if (!patient) {
       throw new ApiError(404, 'Patient not found.');
     }
+    if (branchId && patient.branchId !== branchId) {
+      throw new ApiError(403, 'Unauthorized access to branch data.');
+    }
     return patient;
   }
 
-  async updatePatient(id, data) {
+  async updatePatient(id, data, branchId) {
+    const existing = await this.getPatientById(id, branchId); // reusing getPatientById for validation
     const patient = await patientRepository.update(id, data);
-    if (!patient) {
-      throw new ApiError(404, 'Patient not found.');
-    }
     return patient;
   }
 
-  async deletePatient(id) {
+  async deletePatient(id, branchId) {
+    await this.getPatientById(id, branchId); // reusing getPatientById for validation
     const patient = await patientRepository.delete(id);
-    if (!patient) {
-      throw new ApiError(404, 'Patient not found.');
-    }
     return patient;
   }
 }

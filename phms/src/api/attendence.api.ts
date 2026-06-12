@@ -5,3 +5,8 @@ export const getAttendanceHistory = async (userId?: string, params?: any) => {
   const response = await axiosInstance.get(url, { params });
   return response.data;
 };
+
+export const saveAttendanceRecord = async (data: any) => {
+  const response = await axiosInstance.post('/attendance/save', data);
+  return response.data;
+};

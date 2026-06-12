@@ -34,9 +34,21 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      // Clear auth state and redirect to login
+      const responseData = error.response?.data as any;
+      const errorMessage = responseData?.message || responseData?.error || '';
+      
+      // Clear auth state and redirect to login/session-expired
       useAuthStore.getState().logout();
-      window.location.href = '/auth/login';
+
+      if (
+        errorMessage.includes('auth/id-token-expired') || 
+        errorMessage.includes('token expired') ||
+        errorMessage.includes('Firebase ID token has expired')
+      ) {
+         window.location.href = '/auth/session-expired';
+      } else {
+         window.location.href = '/auth/signin';
+      }
     }
 
     // Handle 403 Forbidden

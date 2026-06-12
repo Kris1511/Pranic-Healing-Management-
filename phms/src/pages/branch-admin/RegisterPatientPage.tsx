@@ -19,6 +19,7 @@ import { useHistory } from "react-router-dom";
 import { useAuthStore } from "../../store/auth.store";
 import { ROUTES } from "../../constants/routes.constant";
 import { getHealers } from "../../api/healer.api";
+import { createPatient } from "../../api/patient.api";
 import "./branch-admin.css";
 
 export default function BARegisterPatientPage() {
@@ -216,66 +217,52 @@ export default function BARegisterPatientPage() {
           : (user as any)?.branchId || undefined,
       };
 
-      const response = await fetch("http://localhost:5000/api/patients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(payload),
+      const result = await createPatient(payload);
+
+      setNewPatientId(result.data.patientId);
+
+      // Clear form
+      setFormData({
+        name: "",
+        mobile: "",
+        email: "",
+        gender: "Female",
+        dateOfBirth: "",
+        age: "",
+        bloodGroup: "O+",
+        occupation: "",
+        emergencyContact: "",
+        address: "",
+        status: "Active",
+        medicalHistory: "",
+        treatmentType: "Pranic Psychotherapy",
+        assignedHealer: "",
+        username: "",
+        password: "",
+        accountStatus: "Active",
       });
 
-      const result = await response.json();
+      // Clear uploaded files
+      setUploadedFiles({
+        reports: null,
+        labResults: null,
+        prescriptions: null,
+        scanImages: null,
+        consultationNotes: null,
+        idProofs: null,
+        healingRecords: null,
+      });
 
-      if (response.ok) {
-        setNewPatientId(result.data.patientId);
-
-        // Clear form
-        setFormData({
-          name: "",
-          mobile: "",
-          email: "",
-          gender: "Female",
-          dateOfBirth: "",
-          age: "",
-          bloodGroup: "O+",
-          occupation: "",
-          emergencyContact: "",
-          address: "",
-          status: "Active",
-          medicalHistory: "",
-          treatmentType: "Pranic Psychotherapy",
-          assignedHealer: "",
-          username: "",
-          password: "",
-          accountStatus: "Active",
-        });
-
-        // Clear uploaded files
-        setUploadedFiles({
-          reports: null,
-          labResults: null,
-          prescriptions: null,
-          scanImages: null,
-          consultationNotes: null,
-          idProofs: null,
-          healingRecords: null,
-        });
-
-        setShowSuccessToast(true);
-        console.log("Patient registered successfully:", result.data);
-      } else {
-        const msg = result.message || "Failed to register patient";
-        if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("already")) {
-          setErrorMessage("A patient with this email address already exists. Please use a different email.");
-        } else {
-          setErrorMessage(msg);
-        }
-        setShowErrorModal(true);
-      }
-    } catch (error) {
+      setShowSuccessToast(true);
+      console.log("Patient registered successfully:", result.data);
+    } catch (error: any) {
       console.error(error);
-      setErrorMessage("Failed to register patient due to a network or server error.");
+      const msg = error.response?.data?.message || "Failed to register patient";
+      if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("already")) {
+        setErrorMessage("A patient with this email address already exists. Please use a different email.");
+      } else {
+        setErrorMessage(msg);
+      }
       setShowErrorModal(true);
     }
   };

@@ -26,6 +26,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import AppCard from '../../components/common/AppCard';
+import { getPatients } from '../../api/patient.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 
@@ -51,10 +52,10 @@ const ProfilePage: React.FC = () => {
     mobile: userPhone,
     gender: 'Male' as const,
     age: 35,
-    bloodGroup: 'O+ ',
+    bloodGroup: 'O+',
     dateOfBirth: '1991-04-12',
     occupation: 'Engineer',
-    assignedHealer: 'Dr. Shailesh',
+    assignedHealer: 'Dr. Arjun',
     regDate: '2025-10-15',
     lastVisitDate: '2026-06-01',
     status: 'Active' as const,
@@ -75,34 +76,73 @@ const ProfilePage: React.FC = () => {
   const [currentPatient, setCurrentPatient] = React.useState<any>(null);
 
   React.useEffect(() => {
-    const savedPatients = localStorage.getItem('phms_patients');
-    let list: any[] = [];
-    if (savedPatients) {
-      try {
-        list = JSON.parse(savedPatients);
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const fetchDbPatient = async () => {
+      let foundPatient: any = null;
 
-    // Match patient by email
-    let foundPatient = list.find((p: any) => p.email?.toLowerCase() === userEmail.toLowerCase());
-    if (foundPatient) {
+      // 1. Try to fetch patient details from backend database
+      try {
+        const res = await getPatients({ email: userEmail });
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const dbPatient = res.data[0];
+          foundPatient = {
+            id: dbPatient.patientId || dbPatient.id || user?.id || 'pat-1',
+            name: dbPatient.name || userName,
+            email: dbPatient.email || userEmail,
+            mobile: dbPatient.phone || userPhone,
+            gender: dbPatient.gender || 'Male',
+            age: dbPatient.age || 35,
+            bloodGroup: dbPatient.bloodGroup || 'O+',
+            dateOfBirth: dbPatient.dob || '1991-04-12',
+            occupation: dbPatient.occupation || 'Engineer',
+            assignedHealer: dbPatient.healer?.name ? (dbPatient.healer.name.startsWith('Dr.') ? dbPatient.healer.name : `Dr. ${dbPatient.healer.name}`) : 'Dr. Arjun',
+            regDate: dbPatient.createdAt ? new Date(dbPatient.createdAt).toISOString().split('T')[0] : '2025-10-15',
+            lastVisitDate: dbPatient.updatedAt ? new Date(dbPatient.updatedAt).toISOString().split('T')[0] : '2026-06-01',
+            status: dbPatient.status || 'Active',
+            address: dbPatient.address || '404 Tranquil Hills, Powai, Mumbai',
+            treatmentType: dbPatient.treatmentType || 'Basic Pranic Healing',
+            emergencyContact: {
+              name: 'Emergency Contact',
+              relation: 'Mobile',
+              mobile: dbPatient.emergencyContact || '+91 98765 43219'
+            },
+            medicalInfo: {
+              conditions: dbPatient.medicalHistory ? dbPatient.medicalHistory.split(',').map((c: string) => c.trim()) : ['Chronic Fatigue', 'Mild Insomnia'],
+            },
+            profilePhoto: user?.avatar || ''
+          };
+        }
+      } catch (err) {
+        console.warn('Backend patient details fetch failed, using offline patient profile:', err);
+      }
+
+      // 2. Fallback to localStorage patients resolution
+      if (!foundPatient) {
+        const savedPatients = localStorage.getItem('phms_patients');
+        let list: any[] = [];
+        if (savedPatients) {
+          try {
+            list = JSON.parse(savedPatients);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        foundPatient = list.find((p: any) => p.email?.toLowerCase() === userEmail.toLowerCase());
+        if (!foundPatient) {
+          foundPatient = defaultPatient;
+          list.push(defaultPatient);
+          localStorage.setItem('phms_patients', JSON.stringify(list));
+        }
+      }
+
       // Sync auth avatar to patient profilePhoto if not set
       if (!foundPatient.profilePhoto && user?.avatar) {
         foundPatient.profilePhoto = user.avatar;
-        const updatedList = list.map((p: any) => 
-          p.email?.toLowerCase() === userEmail.toLowerCase() ? foundPatient : p
-        );
-        localStorage.setItem('phms_patients', JSON.stringify(updatedList));
       }
       setCurrentPatient(foundPatient);
-    } else {
-      // Add default patient to localStorage if not found so they exist
-      setCurrentPatient(defaultPatient);
-      list.push(defaultPatient);
-      localStorage.setItem('phms_patients', JSON.stringify(list));
-    }
+    };
+
+    fetchDbPatient();
   }, [userEmail, userName, userPhone, rawBranch, user?.avatar]);
 
   // Save updates to localStorage and state

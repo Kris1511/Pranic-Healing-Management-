@@ -13,9 +13,29 @@ class AttendanceController {
     return sendResponse(res, 200, 'Check-out marked successfully', attendance);
   };
 
+  saveAttendance = async (req, res) => {
+    const attendance = await attendanceService.saveAttendance(req.body);
+    return sendResponse(res, 200, 'Attendance saved successfully', attendance);
+  };
+
   getHistory = async (req, res) => {
-    const userId = req.params.userId || req.user.id;
-    const history = await attendanceService.getUserAttendance(userId, req.query);
+    let filter = { ...req.query };
+    let userId = req.params.userId;
+    
+    const roleUpper = req.user.role ? req.user.role.toUpperCase() : '';
+    if (!userId && (roleUpper === 'USER' || roleUpper === 'HEALER' || roleUpper === 'PATIENT')) {
+      userId = req.user.id;
+    }
+
+    if (userId) {
+      filter.userId = userId;
+    }
+
+    if (req.branchId) {
+      filter.branchId = req.branchId;
+    }
+
+    const history = await attendanceService.getAttendanceList(filter);
     return sendResponse(res, 200, 'Attendance history retrieved successfully', history);
   };
 }

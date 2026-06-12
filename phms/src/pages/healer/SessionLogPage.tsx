@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -9,6 +9,7 @@ import {
   IonMenuButton,
   IonIcon,
   IonSearchbar,
+  IonSpinner,
 } from '@ionic/react';
 import {
   timeOutline,
@@ -20,6 +21,7 @@ import {
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useHistory } from 'react-router-dom';
+import { getSessions } from '../../api/session.api';
 import './Healers.css';
 
 interface Session {
@@ -39,67 +41,54 @@ const SessionLogPage: React.FC = () => {
   const history = useHistory();
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
   const [searchText, setSearchText] = useState('');
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock sessions list (BRD 6.11)
-  const [sessions] = useState<Session[]>([
-    {
-      id: '1',
-      sessionId: 'SES-2001',
-      patientName: 'Rajesh Kumar',
-      patientId: 'PAT-10023',
-      date: '2026-06-07',
-      time: '10:00 AM - 10:45 AM',
-      status: 'Completed',
-      protocol: 'Basic Pranic Healing - Back pain protocol',
-      notesAdded: true,
-    },
-    {
-      id: '2',
-      sessionId: 'SES-2002',
-      patientName: 'Priya Sharma',
-      patientId: 'PAT-10045',
-      date: '2026-06-07',
-      time: '02:30 PM - 03:15 PM',
-      status: 'In Progress',
-      protocol: 'Advanced Pranic Healing - Stress & Anxiety protocol',
-      notesAdded: false,
-    },
-    {
-      id: '3',
-      sessionId: 'SES-2003',
-      patientName: 'Amit Patel',
-      patientId: 'PAT-10088',
-      date: '2026-06-07',
-      time: '05:00 PM - 05:45 PM',
-      status: 'Scheduled',
-      protocol: 'Pranic Psychotherapy - Post-stroke healing',
-      notesAdded: false,
-    },
-    {
-      id: '4',
-      sessionId: 'SES-1994',
-      patientName: 'Neha Gupta',
-      patientId: 'PAT-10112',
-      date: '2026-06-05',
-      time: '11:30 AM - 12:15 PM',
-      status: 'Completed',
-      protocol: 'Basic Pranic Healing - Insomnia protocol',
-      notesAdded: true,
-    },
-    {
-      id: '5',
-      sessionId: 'SES-1988',
-      patientName: 'Rajesh Kumar',
-      patientId: 'PAT-10023',
-      date: '2026-06-03',
-      time: '10:00 AM - 10:45 AM',
-      status: 'Completed',
-      protocol: 'Basic Pranic Healing - Back pain protocol',
-      notesAdded: true,
-    },
-  ]);
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  const todayStr = '2026-06-07'; // Match mock date to current mock context date
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getSessions();
+        const apiSessions = Array.isArray(response) ? response : (response.data || response);
+
+        if (Array.isArray(apiSessions)) {
+          const mapStatus = (status: string): Session['status'] => {
+            const s = status ? status.toLowerCase() : '';
+            if (s === 'completed') return 'Completed';
+            if (s === 'cancelled') return 'Cancelled';
+            if (s === 'ongoing' || s === 'in progress') return 'In Progress';
+            return 'Scheduled';
+          };
+
+          const formattedSessions: Session[] = apiSessions.map((s: any) => ({
+            id: s.id,
+            sessionId: s.id ? 'SES-' + s.id.substring(0, 5).toUpperCase() : 'SES-N/A',
+            patientName: s.patient?.name || 'Unknown Patient',
+            patientId: s.patient?.patientId || 'N/A',
+            date: s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : 'N/A',
+            time: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+            status: mapStatus(s.status),
+            protocol: s.treatments && s.treatments.length > 0 
+              ? s.treatments.map((t: any) => t.treatmentName).join(', ') 
+              : 'Pranic Restoration',
+            notesAdded: !!s.notes,
+          }));
+          setSessions(formattedSessions);
+        }
+      } catch (err: any) {
+        console.error('Failed to load sessions log:', err);
+        setError('Failed to retrieve sessions log.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSessions();
+  }, []);
 
   const filteredSessions = sessions.filter((session) => {
     const matchesSearch =
@@ -185,12 +174,25 @@ const SessionLogPage: React.FC = () => {
                   <th>Date & Time</th>
                   <th>Protocol / Treatment</th>
                   <th>Status</th>
-                  {/* <th>Notes Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th> */}
+                  <th>Notes Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredSessions.length > 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '3rem' }}>
+                      <IonSpinner name="crescent" />
+                      <p style={{ margin: '0.5rem 0 0 0', fontWeight: 500, color: 'var(--ion-color-medium)' }}>Loading sessions...</p>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--ion-color-danger)' }}>
+                      <p style={{ margin: 0, fontWeight: 500 }}>{error}</p>
+                    </td>
+                  </tr>
+                ) : filteredSessions.length > 0 ? (
                   filteredSessions.map((session) => (
                     <tr key={session.id}>
                       <td style={{ fontWeight: 600 }}>{session.sessionId}</td>
@@ -213,7 +215,7 @@ const SessionLogPage: React.FC = () => {
                       <td>
                         <span className={getStatusClass(session.status)}>{session.status}</span>
                       </td>
-                      {/* <td>
+                      <td>
                         {session.notesAdded ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#10b981', fontWeight: 600, fontSize: '0.85rem' }}>
                             <IonIcon icon={checkmarkCircleOutline} /> Saved
@@ -233,7 +235,7 @@ const SessionLogPage: React.FC = () => {
                           <IonIcon icon={documentTextOutline} />
                           {session.notesAdded ? 'Edit Notes' : 'Add Notes'}
                         </button>
-                      </td> */}
+                      </td>
                     </tr>
                   ))
                 ) : (

@@ -40,27 +40,26 @@ class HealerService {
     return await healerRepository.findAll(filter);
   }
 
-  async getHealerById(id) {
+  async getHealerById(id, branchId) {
     const healer = await healerRepository.findById(id);
     if (!healer) {
       throw new ApiError(404, 'Healer not found.');
     }
+    if (branchId && healer.branchId !== branchId) {
+      throw new ApiError(403, 'Unauthorized access to branch data.');
+    }
     return healer;
   }
 
-  async updateHealer(id, data) {
+  async updateHealer(id, data, branchId) {
+    const existing = await this.getHealerById(id, branchId);
     const healer = await healerRepository.update(id, data);
-    if (!healer) {
-      throw new ApiError(404, 'Healer not found.');
-    }
     return healer;
   }
 
-  async deleteHealer(id) {
+  async deleteHealer(id, branchId) {
+    await this.getHealerById(id, branchId);
     const healer = await healerRepository.delete(id);
-    if (!healer) {
-      throw new ApiError(404, 'Healer not found.');
-    }
     return healer;
   }
 }

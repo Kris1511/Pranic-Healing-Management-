@@ -28,6 +28,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'present',
     },
+    branchId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
   }, {
     tableName: 'attendance',
     timestamps: true,
@@ -36,6 +40,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Attendance.associate = (models) => {
     Attendance.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+    Attendance.belongsTo(models.Branch, { foreignKey: 'branchId', as: 'branch' });
   };
 
   return Attendance;

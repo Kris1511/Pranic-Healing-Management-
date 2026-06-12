@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -8,6 +8,7 @@ import {
   IonButtons,
   IonMenuButton,
   IonIcon,
+  IonSpinner,
 } from '@ionic/react';
 import {
   personOutline,
@@ -28,6 +29,9 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import AppCard from '../../components/common/AppCard';
+import { getHealers, updateHealer } from '../../api/healer.api';
+import { getPatients } from '../../api/patient.api';
+import { getSessions } from '../../api/session.api';
 import '../branch-admin/branch-admin.css';
 import './Healers.css';
 
@@ -45,139 +49,129 @@ const ProfilePage: React.FC = () => {
     : (user?.branch || 'Mumbai Main');
   const branchName = rawBranch.toLowerCase().includes('branch') ? rawBranch : `${rawBranch} Branch`;
 
-  // Default healer schema for fallback
-  const defaultHealer = {
-    id: user?.id || 'healer-1',
-    name: userName,
-    email: userEmail,
-    phone: userPhone,
-    gender: 'Male' as const,
-    dob: '1985-05-15',
-    address: '123 Spiritual Way, Mumbai',
-    certificationLevel: 'Associate Certified Pranic Healer (ACPH)',
-    specialization: ['Basic Pranic Healing', 'Advanced Pranic Healing', 'Pranic Psychotherapy', 'Crystal Healing'],
-    experience: 8,
-    cumulativeHealingCount: 142,
-    completedSessions: 142,
-    pendingNotes: 0,
-    urgentFollowUps: 0,
-    status: 'ACTIVE' as const,
-    branch: rawBranch,
-    avatarBg: '#0f766e',
-    availabilityStatus: 'Available',
-    emergencyContact: '+91 98765 43211',
-    alternatePhone: '+91 98765 43212',
-    certName: 'ACPH Certificate',
-    certIssueDate: '2024-01-15',
-    certNumber: 'ACPH-2024-8902',
-    profilePhoto: user?.avatar || ''
-  };
-
   // States
-  const [healersList, setHealersList] = React.useState<any[]>([]);
-  const [currentHealer, setCurrentHealer] = React.useState<any>(null);
-  const [activePatientsCount, setActivePatientsCount] = React.useState(12);
-  const [lastSessionText, setLastSessionText] = React.useState('Today 10:30 AM');
-  const [lastLoginText, setLastLoginText] = React.useState('Today 08:15 AM');
+  const [currentHealer, setCurrentHealer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activePatientsCount, setActivePatientsCount] = useState(0);
+  const [healingStats, setHealingStats] = useState({
+    cumulative: 0,
+    thisMonth: 0,
+    thisWeek: 0,
+  });
 
-
-  // Fetch healer statistics and properties on mount / change
-  React.useEffect(() => {
-    const savedHealers = localStorage.getItem('phms_healers');
-    let list: any[] = [];
-    if (savedHealers) {
+  // Fetch healer statistics and properties on mount
+  useEffect(() => {
+    const fetchProfileData = async () => {
       try {
-        list = JSON.parse(savedHealers);
-        setHealersList(list);
-      } catch (e) {
-        console.error('Error parsing healers list', e);
-      }
-    }
+        setLoading(true);
+        const [healersRes, patientsRes, sessionsRes] = await Promise.all([
+          getHealers({ email: userEmail }),
+          getPatients(),
+          getSessions(),
+        ]);
 
-    // Lookup healer
-    let foundHealer = list.find((h: any) => h.email?.toLowerCase() === userEmail.toLowerCase());
-    
-    // Sync default healer if not found in localStorage registry
-    if (!foundHealer && user) {
-      foundHealer = { ...defaultHealer };
-      list.push(foundHealer);
-      localStorage.setItem('phms_healers', JSON.stringify(list));
-      setHealersList(list);
-    }
+        const apiHealers = Array.isArray(healersRes) ? healersRes : (healersRes.data || healersRes);
+        const apiPatients = Array.isArray(patientsRes) ? patientsRes : (patientsRes.data || patientsRes);
+        const apiSessions = Array.isArray(sessionsRes) ? sessionsRes : (sessionsRes.data || sessionsRes);
 
-    if (foundHealer) {
-      setCurrentHealer(foundHealer);
-    } else {
-      setCurrentHealer(defaultHealer);
-    }
-
-    // Load active patient count assigned to this healer
-    const savedPatients = localStorage.getItem('phms_patients');
-    if (savedPatients && foundHealer) {
-      try {
-        const patients = JSON.parse(savedPatients);
-        const healerId = foundHealer.id;
-        const healerName = foundHealer.name;
-        const activeCount = patients.filter(
-          (p: any) => 
-            (p.assignedHealerId === healerId || p.assignedHealer === healerName) &&
-            p.status === 'Active'
-        ).length;
-        setActivePatientsCount(activeCount || 12); // Use fallback of 12 if 0
-      } catch (e) {
-        console.error('Error parsing patients list', e);
-      }
-    }
-
-    // Load last session details dynamically
-    const savedSessions = localStorage.getItem('phms_sessions');
-    if (savedSessions && foundHealer) {
-      try {
-        const sessionsList = JSON.parse(savedSessions);
-        const healerSessions = sessionsList.filter(
-          (s: any) => s.healerId === foundHealer.id || s.healerName === foundHealer.name
-        );
-        if (healerSessions.length > 0) {
-          healerSessions.sort((a: any, b: any) => {
-            const dateA = new Date(a.date + ' ' + (a.time || '00:00')).getTime();
-            const dateB = new Date(b.date + ' ' + (b.time || '00:00')).getTime();
-            return dateB - dateA;
-          });
-          const lastSession = healerSessions[0];
-          setLastSessionText(`${lastSession.date} ${lastSession.time || '10:30 AM'}`);
+        let healer = apiHealers[0];
+        
+        // If not found in the DB, construct fallback structure
+        if (!healer) {
+          healer = {
+            id: user?.id || 'healer-1',
+            name: userName,
+            email: userEmail,
+            phone: userPhone,
+            gender: 'Male',
+            dob: '1985-05-15',
+            address: '123 Spiritual Way, Mumbai',
+            certLevel: 'Associate Certified Pranic Healer (ACPH)',
+            specialization: 'Basic Pranic Healing, Advanced Pranic Healing, Pranic Psychotherapy, Crystal Healing',
+            experience: 8,
+            status: 'ACTIVE',
+            branch: rawBranch,
+            availabilityStatus: 'Available',
+            emergencyContact: '+91 98765 43211',
+            alternatePhone: '+91 98765 43212',
+            certName: 'ACPH Certificate',
+            certIssueDate: '2024-01-15',
+            certNumber: 'ACPH-2024-8902',
+            profilePhoto: user?.avatar || ''
+          };
         }
-      } catch (e) {
-        console.error('Error parsing sessions', e);
+
+        // Parse specialization comma-separated string to array
+        const specs = healer.specialization
+          ? healer.specialization.split(',').map((s: string) => s.trim())
+          : ['Basic Pranic Healing', 'Advanced Pranic Healing', 'Pranic Psychotherapy', 'Crystal Healing'];
+
+        setCurrentHealer({
+          ...healer,
+          specializationArray: specs,
+          certificationLevel: healer.certLevel || healer.certificationLevel || 'Associate Certified Pranic Healer (ACPH)',
+          certNumber: healer.healerId || healer.certNumber || 'ACPH-2024-8902',
+          phone: healer.mobile || healer.phone || userPhone,
+          availabilityStatus: healer.status === 'Active' || healer.status === 'ACTIVE' ? 'Available' : healer.status
+        });
+
+        // Load active patient count
+        if (Array.isArray(apiPatients)) {
+          setActivePatientsCount(apiPatients.length);
+        }
+
+        // Calculate healing session statistics
+        if (Array.isArray(apiSessions)) {
+          const completedSessions = apiSessions.filter(s => s.status === 'completed');
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const startOfWeek = new Date();
+          startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday as start of week
+
+          const thisMonthSessions = completedSessions.filter(s => s.sessionDate && new Date(s.sessionDate) >= startOfMonth);
+          const thisWeekSessions = completedSessions.filter(s => s.sessionDate && new Date(s.sessionDate) >= startOfWeek);
+
+          setHealingStats({
+            cumulative: completedSessions.length,
+            thisMonth: thisMonthSessions.length,
+            thisWeek: thisWeekSessions.length
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load profile details:', err);
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [user, userEmail, userName, userPhone, rawBranch]);
+    };
 
-  // Save changes to localStorage and local state
-  const saveHealerUpdates = (updatedFields: any) => {
-    const activeHealer = currentHealer || { ...defaultHealer };
-    const mergedHealer = { ...activeHealer, ...updatedFields };
+    fetchProfileData();
+  }, [userEmail, userName, userPhone, rawBranch]);
 
-    setCurrentHealer(mergedHealer);
+  // Save changes to database and local state
+  const saveHealerUpdates = async (updatedFields: any) => {
+    if (!currentHealer?.id) return;
+    try {
+      const dbFields = { ...updatedFields };
+      // Map availability status to status if updated
+      if (updatedFields.availabilityStatus) {
+        dbFields.status = updatedFields.availabilityStatus;
+      }
+      
+      await updateHealer(currentHealer.id, dbFields);
+      setCurrentHealer((prev: any) => ({ ...prev, ...updatedFields }));
 
-    const updatedList = healersList.map((h: any) => 
-      h.email?.toLowerCase() === userEmail.toLowerCase() ? mergedHealer : h
-    );
-    if (!updatedList.some((h: any) => h.email?.toLowerCase() === userEmail.toLowerCase())) {
-      updatedList.push(mergedHealer);
-    }
-    
-    setHealersList(updatedList);
-    localStorage.setItem('phms_healers', JSON.stringify(updatedList));
-
-    // Update global auth store state
-    if (updatedFields.profilePhoto !== undefined) {
-      updateUser({ avatar: updatedFields.profilePhoto });
-    }
-    if (updatedFields.name !== undefined) {
-      updateUser({ name: updatedFields.name });
-    }
-    if (updatedFields.phone !== undefined) {
-      updateUser({ phoneNumber: updatedFields.phone });
+      // Update global auth store state
+      if (updatedFields.profilePhoto !== undefined) {
+        updateUser({ avatar: updatedFields.profilePhoto });
+      }
+      if (updatedFields.name !== undefined) {
+        updateUser({ name: updatedFields.name });
+      }
+      if (updatedFields.phone !== undefined) {
+        updateUser({ phoneNumber: updatedFields.phone });
+      }
+    } catch (err) {
+      console.error('Failed to save healer updates:', err);
     }
   };
 
@@ -193,8 +187,6 @@ const ProfilePage: React.FC = () => {
       reader.readAsDataURL(file);
     }
   };
-
-
 
   const userInitials = (currentHealer?.name || userName)
     ? `${(currentHealer?.name || userName)[0] || 'H'}${(currentHealer?.name || userName).split(' ')?.[1]?.[0] || 'P'}`.toUpperCase()
@@ -314,13 +306,13 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="healer-profile-info-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* <div className="healer-profile-info-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <IonIcon icon={callOutline} style={{ color: '#0f766e', fontSize: '18px' }} />
                     <div>
                       <span className="healer-credential-card__label" style={{ fontSize: '10px' }}>ALTERNATE PHONE</span>
                       <strong style={{ fontSize: '13px', color: '#1e293b' }}>{currentHealer?.alternatePhone || '+91 98765 43212'}</strong>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="healer-profile-info-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <IonIcon icon={alertCircleOutline} style={{ color: '#ef4444', fontSize: '18px' }} />
@@ -359,7 +351,7 @@ const ProfilePage: React.FC = () => {
 
             </div>
 
-            {/* Right Column */}
+             {/* Right Column */}
             <div className="healer-profile-right-col">
               
               {/* Top Highlight Metrics Row (Top 3 Recommendations) */}
@@ -382,7 +374,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div className="healer-stat-card__info">
                     <span className="healer-stat-card__label">Active Patients</span>
-                    <strong className="healer-stat-card__value" style={{ fontSize: '20px' }}>{activePatientsCount} patients</strong>
+                    <strong className="healer-stat-card__value" style={{ fontSize: '20px' }}>{loading ? '...' : activePatientsCount} patients</strong>
                   </div>
                 </div>
 
@@ -393,7 +385,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div className="healer-stat-card__info">
                     <span className="healer-stat-card__label">This Month Healing</span>
-                    <strong className="healer-stat-card__value" style={{ fontSize: '20px' }}>{currentHealer?.thisMonthHealingCount || 18} sessions</strong>
+                    <strong className="healer-stat-card__value" style={{ fontSize: '20px' }}>{loading ? '...' : healingStats.thisMonth} sessions</strong>
                   </div>
                 </div>
               </div>
@@ -406,15 +398,15 @@ const ProfilePage: React.FC = () => {
                 
                 <div className="healer-stats-subdeck">
                   <div className="healer-substat-card">
-                    <div className="healer-substat-value">{currentHealer?.cumulativeHealingCount || 142}</div>
+                    <div className="healer-substat-value">{loading ? '...' : healingStats.cumulative}</div>
                     <div className="healer-substat-label">Total Healings</div>
                   </div>
                   <div className="healer-substat-card">
-                    <div className="healer-substat-value">{currentHealer?.thisMonthHealingCount || 18}</div>
+                    <div className="healer-substat-value">{loading ? '...' : healingStats.thisMonth}</div>
                     <div className="healer-substat-label">This Month</div>
                   </div>
                   <div className="healer-substat-card">
-                    <div className="healer-substat-value">{currentHealer?.thisWeekHealingCount || 5}</div>
+                    <div className="healer-substat-value">{loading ? '...' : healingStats.thisWeek}</div>
                     <div className="healer-substat-label">This Week</div>
                   </div>
                 </div>
@@ -465,7 +457,7 @@ const ProfilePage: React.FC = () => {
                   These treatment modalities show the healer's verified areas of therapeutic expertise.
                 </p>
                 <div className="healer-tags-container">
-                  {(currentHealer?.specialization || ['Basic Pranic Healing', 'Advanced Pranic Healing', 'Pranic Psychotherapy', 'Crystal Healing']).map((spec: string, idx: number) => {
+                  {(currentHealer?.specializationArray || ['Basic Pranic Healing', 'Advanced Pranic Healing', 'Pranic Psychotherapy', 'Crystal Healing']).map((spec: string, idx: number) => {
                     const themes = ['teal', 'purple', 'blue', 'pink'];
                     const theme = themes[idx % themes.length];
                     return (

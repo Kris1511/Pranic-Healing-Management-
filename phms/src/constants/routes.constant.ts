@@ -9,6 +9,7 @@ export const ROUTES = {
     SIGNUP: '/auth/signup',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
+    SESSION_EXPIRED: '/auth/session-expired',
   },
 
   // Super Admin Routes

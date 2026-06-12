@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -10,6 +10,7 @@ import {
   IonIcon,
   IonSearchbar,
   IonModal,
+  IonSpinner,
 } from '@ionic/react';
 import {
   peopleOutline,
@@ -23,6 +24,7 @@ import {
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useHistory } from 'react-router-dom';
+import { getPatients } from '../../api/patient.api';
 import './Healers.css';
 
 interface SessionHistory {
@@ -56,141 +58,67 @@ const MyPatientsPage: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 5;
 
-  // Sample assigned patients (BRD 6.11)
-  const [patients] = useState<Patient[]>([
-    {
-      id: '1',
-      patientId: 'PAT-10023',
-      name: 'Rajesh Kumar',
-      gender: 'Male',
-      age: 45,
-      phone: '+91 98765 43210',
-      healerName: user?.name || 'Dr. Aris Varma',
-      condition: 'Chronic Back Pain',
-      status: 'Active',
-      lastSession: '2026-06-05',
-      nextSession: '2026-06-12',
-      medicalHistory: 'Diagnosed with Chronic Lower Back Pain (L4-L5 disc bulge) 2 years ago. Suffers from mild hypertension and occasional fatigue.',
-      followUpNotes: 'Focus on cleaning the basic and solar plexus chakras in next session. Energize using light whitish-red and light whitish-orange.',
-      sessions: [
-        {
-          date: '2026-06-05',
-          protocol: 'Basic & Advanced Aura Cleansing',
-          notes: 'Scanned and cleaned the aura. Focused healing on lower back area. Relieved pain score from 8/10 to 4/10.'
-        },
-        {
-          date: '2026-06-01',
-          protocol: 'Chakra Scanning & Balancing',
-          notes: 'Identified congestion in solar plexus and depletion in basic chakra. Cleaned congestion and stabilized energization.'
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getPatients();
+        const apiPatients = Array.isArray(response) ? response : (response.data || response);
+
+        if (Array.isArray(apiPatients)) {
+          const formattedPatients: Patient[] = apiPatients.map((p: any) => {
+            const completedSessions = p.sessions ? p.sessions.filter((s: any) => s.status === 'completed') : [];
+            const scheduledSessions = p.sessions ? p.sessions.filter((s: any) => s.status === 'scheduled') : [];
+            
+            const lastSessionDate = completedSessions.length > 0 
+              ? new Date(Math.max(...completedSessions.map((s: any) => new Date(s.sessionDate).getTime()))).toISOString().split('T')[0]
+              : 'None';
+
+            const nextSessionDate = scheduledSessions.length > 0
+              ? new Date(Math.min(...scheduledSessions.map((s: any) => new Date(s.sessionDate).getTime()))).toISOString().split('T')[0]
+              : 'TBD';
+
+            return {
+              id: p.id,
+              patientId: p.patientId || 'N/A',
+              name: p.name,
+              gender: p.gender || 'Unknown',
+              age: p.age || 0,
+              phone: p.phone || '',
+              healerName: p.healer?.name || 'Unassigned',
+              condition: p.treatmentType || 'General Treatment',
+              status: p.status ? (p.status.charAt(0).toUpperCase() + p.status.slice(1).toLowerCase()) as any : 'Active',
+              lastSession: lastSessionDate,
+              nextSession: nextSessionDate,
+              medicalHistory: p.medicalHistory || 'No medical history recorded.',
+              followUpNotes: p.medicalHistory || 'No follow-up notes.',
+              sessions: p.sessions ? p.sessions.map((s: any) => ({
+                date: s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : 'N/A',
+                protocol: s.treatments && s.treatments.length > 0 
+                  ? s.treatments.map((t: any) => t.treatmentName).join(', ') 
+                  : 'Pranic Restoration',
+                notes: s.notes || 'No session notes.'
+              })) : []
+            };
+          });
+          setPatients(formattedPatients);
         }
-      ]
-    },
-    {
-      id: '2',
-      patientId: 'PAT-10045',
-      name: 'Priya Sharma',
-      gender: 'Female',
-      age: 32,
-      phone: '+91 87654 32109',
-      healerName: user?.name || 'Dr. Aris Varma',
-      condition: 'Anxiety & Migraine',
-      status: 'Active',
-      lastSession: '2026-06-06',
-      nextSession: '2026-06-10',
-      medicalHistory: 'Suffering from generalized anxiety disorder and migraine for 6 months. High stress due to work environment.',
-      followUpNotes: 'Clean Ajna and solar plexus chakras to alleviate stress. Gentle scanning of crown chakra.',
-      sessions: [
-        {
-          date: '2026-06-06',
-          protocol: 'Stress & Anxiety Relief Therapy',
-          notes: 'Cleaned and stabilized Ajna, solar plexus, and throat chakras. Disintegrated stress energies. Patient reported feeling deeply relaxed.'
-        },
-        {
-          date: '2026-06-02',
-          protocol: 'Migraine Pain Management',
-          notes: 'Applied local sweeping to the back of the head. Cleaned temple and forehead chakras. Migraine intensity reduced significantly.'
-        }
-      ]
-    },
-    {
-      id: '3',
-      patientId: 'PAT-10088',
-      name: 'Amit Patel',
-      gender: 'Male',
-      age: 58,
-      phone: '+91 76543 21098',
-      healerName: user?.name || 'Dr. Aris Varma',
-      condition: 'Post-stroke Rehabilitation',
-      status: 'Active',
-      lastSession: '2026-05-28',
-      nextSession: '2026-06-09',
-      medicalHistory: 'Post-stroke rehabilitation. Left side weakness. Undergoing physical therapy alongside pranic healing.',
-      followUpNotes: 'Energize left arm and leg meridians. Strengthen basic and spleen chakras.',
-      sessions: [
-        {
-          date: '2026-05-28',
-          protocol: 'Motor Function Restoration',
-          notes: 'Cleaned and energized the brain and spine. Energized depleted left side chakras. Minor improvements in toe movement observed.'
-        },
-        {
-          date: '2026-05-21',
-          protocol: 'Nerve and Muscle Revitalizing',
-          notes: 'Sweeping of spine and limb chakras. Energized with light whitish-green and blue.'
-        }
-      ]
-    },
-    {
-      id: '4',
-      patientId: 'PAT-10112',
-      name: 'Neha Gupta',
-      gender: 'Female',
-      age: 27,
-      phone: '+91 65432 10987',
-      healerName: user?.name || 'Dr. Aris Varma',
-      condition: 'Insomnia & Stress Management',
-      status: 'On Hold',
-      lastSession: '2026-05-15',
-      nextSession: 'TBD',
-      medicalHistory: 'Insomnia for over a year. Severe stress management issues. Prone to panic attacks.',
-      followUpNotes: 'Ensure session is conducted in late afternoon to aid nighttime sleep. Clean solar plexus chakra.',
-      sessions: [
-        {
-          date: '2026-05-15',
-          protocol: 'Sleep Alignment & Calming',
-          notes: 'Cleaned solar plexus and heart chakras. Energized with calming light whitish-blue. Patient reported 3 consecutive nights of restful sleep.'
-        }
-      ]
-    },
-    {
-      id: '5',
-      patientId: 'PAT-10156',
-      name: 'Vikram Singh',
-      gender: 'Male',
-      age: 39,
-      phone: '+91 54321 09876',
-      healerName: user?.name || 'Dr. Aris Varma',
-      condition: 'Frozen Shoulder',
-      status: 'Completed',
-      lastSession: '2026-05-30',
-      nextSession: 'None',
-      medicalHistory: 'Frozen Shoulder (adhesive capsulitis) on the right side. Limited range of motion.',
-      followUpNotes: 'Treatment completed. Patient advised to practice light stretching and basic breathing exercises.',
-      sessions: [
-        {
-          date: '2026-05-30',
-          protocol: 'Shoulder Joint Mobilization',
-          notes: 'Thorough sweeping of right shoulder joint. Energized with light green and orange. Range of motion restored to 95%.'
-        },
-        {
-          date: '2026-05-25',
-          protocol: 'Pain and Inflammation Control',
-          notes: 'Sweeping of right shoulder chakra. Applied blue light to cool down inflammation, followed by green and orange for regeneration.'
-        }
-      ]
-    },
-  ]);
+      } catch (err: any) {
+        console.error('Failed to load assigned patients:', err);
+        setError('Failed to retrieve assigned patients.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatients();
+  }, []);
 
   const filteredPatients = patients.filter(
     (patient) =>
@@ -269,7 +197,20 @@ const MyPatientsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedPatients.length > 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '3rem' }}>
+                      <IonSpinner name="crescent" />
+                      <p style={{ margin: '0.5rem 0 0 0', fontWeight: 500, color: 'var(--ion-color-medium)' }}>Loading assigned patients...</p>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--ion-color-danger)' }}>
+                      <p style={{ margin: 0, fontWeight: 500 }}>{error}</p>
+                    </td>
+                  </tr>
+                ) : paginatedPatients.length > 0 ? (
                   paginatedPatients.map((patient) => (
                     <tr key={patient.id}>
                       <td style={{ paddingLeft: '24px' }}>
@@ -319,14 +260,6 @@ const MyPatientsPage: React.FC = () => {
                           >
                             <IonIcon icon={documentTextOutline} /> Notes
                           </button>
-                          {/* <button
-                            className="healer-btn healer-btn--secondary"
-                            onClick={() => history.push(`/healer/documents?patientId=${patient.id}`)}
-                            title="View Patient Documents"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                          >
-                            <IonIcon icon={folderOpenOutline} /> Docs
-                          </button> */}
                         </div>
                       </td>
                     </tr>

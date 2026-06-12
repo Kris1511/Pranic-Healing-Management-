@@ -56,7 +56,8 @@ interface PatientLog {
   healer: string;
   treatment: string;
   regDate: string;
-  status: 'Active' | 'Inactive' | 'On Hold' | 'Completed';
+  status: 'Active' | 'Inactive' | 'On Hold' | 'Completed' | 'active';
+  createdAt?: string;
 }
 
 interface Payment {
