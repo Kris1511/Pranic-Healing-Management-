@@ -75,13 +75,21 @@ const DashboardPage: React.FC = () => {
     { label: 'Total Patients', value: patientsCount.toString(), detail: 'Organization-wide', icon: peopleOutline, route: ROUTES.SUPER_ADMIN.PATIENTS },
     { label: 'Healer Count', value: healersCount.toString(), detail: 'Certified practitioners', icon: medkitOutline, route: ROUTES.SUPER_ADMIN.HEALERS },
     { label: 'Daily Visitors', value: visitorsCount.toString(), detail: "Today's footfall", icon: eyeOutline, route: ROUTES.SUPER_ADMIN.VISITOR_LOG },
+    { label: 'Active Sessions', value: '142', detail: 'Live now', icon: flashOutline, route: '#', accentColor: '#ff9f00', trendColor: '#ff9f00' },
   ];
 
-  const chartBars = [
-    { h: 80, h2: 30 }, { h: 120, h2: 50 }, { h: 100, h2: 45 },
-    { h: 60, h2: 70 }, { h: 140, h2: 35 }, { h: 90, h2: 60 },
-    { h: 40, h2: 80 },
+  const weeklyFinanceData = [
+    { day: 'Mon', current: { income: 12000, expense: 4500 }, previous: { income: 10500, expense: 5000 } },
+    { day: 'Tue', current: { income: 15500, expense: 6200 }, previous: { income: 14000, expense: 5500 } },
+    { day: 'Wed', current: { income: 10800, expense: 7100 }, previous: { income: 12000, expense: 6800 } },
+    { day: 'Thu', current: { income: 14200, expense: 5800 }, previous: { income: 13500, expense: 6000 } },
+    { day: 'Fri', current: { income: 18000, expense: 4900 }, previous: { income: 16000, expense: 5200 } },
+    { day: 'Sat', current: { income: 16500, expense: 3200 }, previous: { income: 15000, expense: 3500 } },
+    { day: 'Sun', current: { income: 9500, expense: 2100 }, previous: { income: 8000, expense: 2500 } },
   ];
+
+  const maxVal = 20000;
+  const scale = 180 / maxVal;
 
   return (
     <IonPage className="sa-page">
@@ -110,19 +118,25 @@ const DashboardPage: React.FC = () => {
           </p>
 
           {/* Stat Cards */}
-          <div className="sa-stats">
+          <div className="sa-stats sa-stats--4">
             {stats.map((stat, i) => (
               <div 
                 className="sa-stat-card" 
                 key={i}
-                onClick={() => history.push(stat.route)}
-                style={{ cursor: 'pointer' }}
+                onClick={() => stat.route !== '#' && history.push(stat.route)}
+                style={{ 
+                  cursor: stat.route !== '#' ? 'pointer' : 'default',
+                  '--stat-card-accent': (stat as any).accentColor || 'var(--color-primary)'
+                } as React.CSSProperties}
               >
                 <div>
                   <div className="sa-stat-card__label">{stat.label}</div>
                   <div className="sa-stat-card__value">{stat.value}</div>
                   <div className="sa-stat-card__detail">
-                    <IonIcon icon={trendingUpOutline} /> {stat.detail}
+                    <IonIcon 
+                      icon={trendingUpOutline} 
+                      style={{ color: (stat as any).trendColor || 'var(--color-primary)' }} 
+                    /> {stat.detail}
                   </div>
                 </div>
                 <div className="sa-stat-card__icon">
@@ -151,18 +165,84 @@ const DashboardPage: React.FC = () => {
                 </div>
                 <div className="sa-finance-card">
                   <div className="sa-finance-card__label">Total Daily Expenses</div>
-                  <div className="sa-finance-card__value">₹3,700</div>
+                  <div className="sa-finance-card__value" style={{ color: '#dc2626' }}>₹3,700</div>
                 </div>
               </div>
 
-              {/* Chart Placeholder */}
-              <div className="sa-chart-placeholder">
-                {chartBars.map((bar, i) => (
-                  <React.Fragment key={i}>
-                    <div className="sa-chart-bar" style={{ height: bar.h }} />
-                    <div className="sa-chart-bar sa-chart-bar--secondary" style={{ height: bar.h2 }} />
-                  </React.Fragment>
-                ))}
+              {/* Weekly Comparison Chart */}
+              <div className="sa-chart-container">
+                <div className="sa-chart-plot-area">
+                  {weeklyFinanceData.map((data, i) => (
+                    <div className="sa-chart-day-group sa-chart-group" key={i}>
+                      <div className="sa-chart-bars-row">
+                        {/* Income Pair */}
+                        <div className="sa-chart-bar-pair">
+                          <div 
+                            className="sa-chart-bar sa-chart-bar--income-prev" 
+                            style={{ height: `${data.previous.income * scale}px` }} 
+                            title="Prev Week Income"
+                          />
+                          <div 
+                            className="sa-chart-bar sa-chart-bar--income-current" 
+                            style={{ height: `${data.current.income * scale}px` }} 
+                            title="This Week Income"
+                          />
+                        </div>
+                        {/* Expense Pair */}
+                        <div className="sa-chart-bar-pair">
+                          <div 
+                            className="sa-chart-bar sa-chart-bar--expense-prev" 
+                            style={{ height: `${data.previous.expense * scale}px` }} 
+                            title="Prev Week Expense"
+                          />
+                          <div 
+                            className="sa-chart-bar sa-chart-bar--expense-current" 
+                            style={{ height: `${data.current.expense * scale}px` }} 
+                            title="This Week Expense"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Comparison Tooltip */}
+                      <div className="sa-chart-tooltip">
+                        <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px' }}>
+                          {data.day} Comparison
+                        </div>
+                        <div className="sa-chart-tooltip-grid">
+                          <div className="sa-chart-tooltip-section">
+                            <div className="sa-chart-tooltip-title">This Week</div>
+                            <div className="sa-chart-tooltip-item">
+                              <div className="sa-chart-tooltip-dot" style={{ background: '#10b981' }} />
+                              <span>₹{data.current.income.toLocaleString()}</span>
+                            </div>
+                            <div className="sa-chart-tooltip-item">
+                              <div className="sa-chart-tooltip-dot" style={{ background: '#ef4444' }} />
+                              <span>₹{data.current.expense.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className="sa-chart-tooltip-section">
+                            <div className="sa-chart-tooltip-title">Prev Week</div>
+                            <div className="sa-chart-tooltip-item">
+                              <div className="sa-chart-tooltip-dot" style={{ background: '#a7f3d0' }} />
+                              <span>₹{data.previous.income.toLocaleString()}</span>
+                            </div>
+                            <div className="sa-chart-tooltip-item">
+                              <div className="sa-chart-tooltip-dot" style={{ background: '#fecaca' }} />
+                              <span>₹{data.previous.expense.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="sa-chart-x-axis">
+                  {weeklyFinanceData.map((data, i) => (
+                    <div key={i} className="sa-chart-day-group">
+                      <span className="sa-chart-label">{data.day}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

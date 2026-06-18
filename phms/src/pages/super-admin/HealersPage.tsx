@@ -21,7 +21,8 @@ import {
   ribbonOutline,
   peopleOutline,
 } from 'ionicons/icons';
-import { getHealers } from '../../api/healer.api';
+import { getHealers, updateHealer, deleteHealer, createHealer } from '../../api/healer.api';
+import { getBranches } from '../../api/branch.api';
 import './super-admin.css';
 
 const HealersPage: React.FC = () => {
@@ -33,6 +34,7 @@ const HealersPage: React.FC = () => {
   const [healerToDelete, setHealerToDelete] = useState<any>(null);
   
   const [healers, setHealers] = useState<any[]>([]);
+  const [availableBranches, setAvailableBranches] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchHealers = async () => {
@@ -41,11 +43,12 @@ const HealersPage: React.FC = () => {
         const apiHealers = Array.isArray(response) ? response : (response.data || response);
         if (Array.isArray(apiHealers)) {
           const formattedHealers = apiHealers.map((h: any) => ({
-            id: h.healerId || h.id,
+            id: h.id,
             name: h.name,
             email: h.email || '',
             specialty: h.specialization || 'General',
             branch: h.branch?.name || 'Unassigned',
+            branchId: h.branchId || '',
             experience: h.experience || 0,
             load: h.completedSessions || 0,
             status: h.status?.toLowerCase() || 'active',
@@ -56,30 +59,64 @@ const HealersPage: React.FC = () => {
         console.error('Error fetching healers:', error);
       }
     };
+
+    const fetchBranches = async () => {
+      try {
+        const response = await getBranches();
+        setAvailableBranches(response.data || []);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
+
     fetchHealers();
+    fetchBranches();
   }, []);
 
   const [newHealer, setNewHealer] = useState({
     name: '',
     email: '',
     specialty: 'Advanced Pranic Healing',
-    branch: 'Uptown Sanctuary',
+    branchId: '',
     experience: 0,
   });
 
-  const handleAddHealer = () => {
-    if (!newHealer.name || !newHealer.email) return;
+  const handleAddHealer = async () => {
+    if (!newHealer.name || !newHealer.email || !newHealer.branchId) {
+      alert('Please fill in all required fields.');
+      return;
+    }
     
-    const healerObj = {
-      id: healers.length + 1,
-      ...newHealer,
-      load: 0,
-      status: 'active'
-    };
+    try {
+      const response = await createHealer({
+        name: newHealer.name,
+        email: newHealer.email,
+        specialization: newHealer.specialty,
+        branchId: newHealer.branchId,
+        experience: newHealer.experience,
+        status: 'active'
+      });
+      
+      const created = response.data || response;
+      const formatted = {
+        id: created.id,
+        name: created.name,
+        email: created.email || '',
+        specialty: created.specialization || 'General',
+        branch: availableBranches.find(b => b.id === created.branchId)?.name || 'Unassigned',
+        branchId: created.branchId || '',
+        experience: created.experience || 0,
+        load: 0,
+        status: created.status?.toLowerCase() || 'active',
+      };
 
-    setHealers([...healers, healerObj]);
-    setNewHealer({ name: '', email: '', specialty: 'Advanced Pranic Healing', branch: 'Uptown Sanctuary', experience: 0 });
-    setShowAddModal(false);
+      setHealers([...healers, formatted]);
+      setNewHealer({ name: '', email: '', specialty: 'Advanced Pranic Healing', branchId: '', experience: 0 });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error creating healer:', error);
+      alert('Failed to create healer. Please check the fields and try again.');
+    }
   };
 
   const handleEditClick = (healer: any) => {
@@ -87,10 +124,33 @@ const HealersPage: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleUpdateHealer = () => {
+  const handleUpdateHealer = async () => {
     if (!selectedHealer) return;
-    setHealers(healers.map(h => h.id === selectedHealer.id ? selectedHealer : h));
-    setShowEditModal(false);
+    try {
+      if (typeof selectedHealer.id === 'string') {
+        const payload: any = {
+          name: selectedHealer.name,
+          specialization: selectedHealer.specialty,
+          status: selectedHealer.status
+        };
+        if (selectedHealer.branchId) {
+          payload.branchId = selectedHealer.branchId;
+        }
+        await updateHealer(selectedHealer.id, payload);
+      }
+      
+      const branchName = availableBranches.find(b => b.id === selectedHealer.branchId)?.name || 'Unassigned';
+      const updatedHealer = {
+        ...selectedHealer,
+        branch: branchName
+      };
+
+      setHealers(healers.map(h => h.id === selectedHealer.id ? updatedHealer : h));
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Error updating healer:', error);
+      alert('Failed to update healer');
+    }
   };
 
   const handleDeleteClick = (healer: any) => {
@@ -98,11 +158,36 @@ const HealersPage: React.FC = () => {
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (healerToDelete) {
-      setHealers(healers.filter(h => h.id !== healerToDelete.id));
-      setShowDeleteModal(false);
-      setHealerToDelete(null);
+      try {
+        if (typeof healerToDelete.id === 'string') {
+          await deleteHealer(healerToDelete.id);
+        }
+        setHealers(healers.filter(h => h.id !== healerToDelete.id));
+        setShowDeleteModal(false);
+        setHealerToDelete(null);
+      } catch (error) {
+        console.error('Error deleting healer:', error);
+        alert('Failed to delete healer');
+      }
+    }
+  };
+
+  const handleToggleStatus = async (healer: any) => {
+    const newStatus = healer.status === 'active' ? 'inactive' : 'active';
+    try {
+      if (typeof healer.id === 'string') {
+        await updateHealer(healer.id, {
+          status: newStatus
+        });
+      }
+      setHealers(prevHealers =>
+        prevHealers.map(h => (h.id === healer.id ? { ...h, status: newStatus } : h))
+      );
+    } catch (error) {
+      console.error('Error toggling healer status:', error);
+      alert('Failed to update status');
     }
   };
 
@@ -148,40 +233,29 @@ const HealersPage: React.FC = () => {
                 <h1 className="sa-page__title">Practitioner Management</h1>
                 <p className="sa-page__subtitle">Monitor and manage healers across all branch locations</p>
               </div>
-              <button className="sa-btn sa-btn--primary" onClick={() => setShowAddModal(true)}>
+              {/* <button className="sa-btn sa-btn--primary" onClick={() => setShowAddModal(true)}>
                 <IonIcon icon={personAddOutline} /> Add New Healer
-              </button>
+              </button> */}
             </div>
           </div>
 
           <div className="sa-stats sa-stats--3">
-            <div className="sa-stat-card">
-              <div className="sa-stat-card__icon sa-stat-card__icon--primary">
-                <IonIcon icon={peopleOutline} />
-              </div>
+            <div className="sa-stat-card" style={{ '--stat-card-accent': '#0f766e' } as React.CSSProperties}>
               <div>
                 <div className="sa-stat-card__label">Total Healers</div>
-                <div className="sa-stat-card__value">{healers.length}</div>
+                <div className="sa-stat-card__value" style={{ fontSize: '32px', marginTop: '4px' }}>{healers.length}</div>
               </div>
             </div>
-            <div className="sa-stat-card">
-              <div className="sa-stat-card__icon sa-stat-card__icon--success">
-                <IonIcon icon={ribbonOutline} />
-              </div>
+            <div className="sa-stat-card" style={{ '--stat-card-accent': '#0f766e' } as React.CSSProperties}>
               <div>
-                <div className="sa-stat-card__label">Active Now</div>
-                <div className="sa-stat-card__value">{healers.filter(h => h.status === 'active').length}</div>
+                <div className="sa-stat-card__label">Active</div>
+                <div className="sa-stat-card__value" style={{ fontSize: '32px', marginTop: '4px' }}>{healers.filter(h => h.status === 'active').length}</div>
               </div>
             </div>
-            <div className="sa-stat-card">
-              <div className="sa-stat-card__icon sa-stat-card__icon--warning">
-                <IonIcon icon={medkitOutline} />
-              </div>
+            <div className="sa-stat-card" style={{ '--stat-card-accent': '#0f766e' } as React.CSSProperties}>
               <div>
-                <div className="sa-stat-card__label">Avg. Patient Load</div>
-                <div className="sa-stat-card__value">
-                  {Math.round(healers.reduce((acc, h) => acc + h.load, 0) / healers.length)}
-                </div>
+                <div className="sa-stat-card__label">Inactive</div>
+                <div className="sa-stat-card__value" style={{ fontSize: '32px', marginTop: '4px' }}>{healers.filter(h => h.status === 'inactive').length}</div>
               </div>
             </div>
           </div>
@@ -242,7 +316,12 @@ const HealersPage: React.FC = () => {
                       </div>
                     </td>
                     <td>
-                      <span className={`sa-badge sa-badge--${healer.status}`}>
+                      <span 
+                        className={`sa-badge sa-badge--${healer.status}`}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to toggle status"
+                        onClick={() => handleToggleStatus(healer)}
+                      >
                         {healer.status}
                       </span>
                     </td>
@@ -341,13 +420,13 @@ const HealersPage: React.FC = () => {
                 <label className="sa-settings__label">Assigned Branch</label>
                 <select 
                   className="sa-settings__input"
-                  value={newHealer.branch}
-                  onChange={(e) => setNewHealer({ ...newHealer, branch: e.target.value })}
+                  value={newHealer.branchId}
+                  onChange={(e) => setNewHealer({ ...newHealer, branchId: e.target.value })}
                 >
-                  <option>Uptown Sanctuary</option>
-                  <option>Coastal Healing Center</option>
-                  <option>Green Valley Branch</option>
-                  <option>Downtown Sanctuary</option>
+                  <option value="">Select a branch</option>
+                  {availableBranches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="sa-settings__form-group">
@@ -410,6 +489,19 @@ const HealersPage: React.FC = () => {
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
+              </div>
+              <div className="sa-settings__form-group">
+                <label className="sa-settings__label">Assigned Branch</label>
+                <select 
+                  className="sa-settings__input"
+                  value={selectedHealer.branchId || ''}
+                  onChange={(e) => setSelectedHealer({ ...selectedHealer, branchId: e.target.value })}
+                >
+                  <option value="">Select a branch</option>
+                  {availableBranches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
           )}

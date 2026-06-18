@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   IonPage,
   IonContent,
@@ -10,7 +10,10 @@ import {
   IonIcon,
   IonSearchbar,
   IonSpinner,
+  useIonViewWillEnter,
+  useIonViewWillLeave,
 } from '@ionic/react';
+import { useQuery } from '@tanstack/react-query';
 import {
   timeOutline,
   checkmarkCircleOutline,
@@ -41,54 +44,66 @@ const SessionLogPage: React.FC = () => {
   const history = useHistory();
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
   const [searchText, setSearchText] = useState('');
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isPageActive, setIsPageActive] = useState(true);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
 
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await getSessions();
-        const apiSessions = Array.isArray(response) ? response : (response.data || response);
+  const { data: apiSessionsRes, isLoading, error, refetch } = useQuery({
+    queryKey: ['sessions'],
+    queryFn: getSessions,
+    refetchInterval: isPageActive ? 3000 : false, // Poll every 3 seconds for real-time live synchronization
+  });
 
-        if (Array.isArray(apiSessions)) {
-          const mapStatus = (status: string): Session['status'] => {
-            const s = status ? status.toLowerCase() : '';
-            if (s === 'completed') return 'Completed';
-            if (s === 'cancelled') return 'Cancelled';
-            if (s === 'ongoing' || s === 'in progress') return 'In Progress';
-            return 'Scheduled';
-          };
+  useIonViewWillEnter(() => {
+    setIsPageActive(true);
+    refetch();
+  });
 
-          const formattedSessions: Session[] = apiSessions.map((s: any) => ({
-            id: s.id,
-            sessionId: s.id ? 'SES-' + s.id.substring(0, 5).toUpperCase() : 'SES-N/A',
-            patientName: s.patient?.name || 'Unknown Patient',
-            patientId: s.patient?.patientId || 'N/A',
-            date: s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : 'N/A',
-            time: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-            status: mapStatus(s.status),
-            protocol: s.treatments && s.treatments.length > 0 
-              ? s.treatments.map((t: any) => t.treatmentName).join(', ') 
-              : 'Pranic Restoration',
-            notesAdded: !!s.notes,
-          }));
-          setSessions(formattedSessions);
-        }
-      } catch (err: any) {
-        console.error('Failed to load sessions log:', err);
-        setError('Failed to retrieve sessions log.');
-      } finally {
-        setLoading(false);
-      }
+  useIonViewWillLeave(() => {
+    setIsPageActive(false);
+  });
+
+  const sessions = useMemo<Session[]>(() => {
+    if (!apiSessionsRes) return [];
+    const apiSessions = Array.isArray(apiSessionsRes)
+      ? apiSessionsRes
+      : (apiSessionsRes.data || apiSessionsRes);
+
+    if (!Array.isArray(apiSessions)) return [];
+
+    const mapStatus = (status: string): Session['status'] => {
+      const s = status ? status.toLowerCase() : '';
+      if (s === 'completed') return 'Completed';
+      if (s === 'cancelled') return 'Cancelled';
+      if (s === 'ongoing' || s === 'in progress') return 'In Progress';
+      return 'Scheduled';
     };
 
-    fetchSessions();
-  }, []);
+    return apiSessions.map((s: any) => ({
+      id: s.id,
+      sessionId: s.id ? 'SES-' + s.id.substring(0, 5).toUpperCase() : 'SES-N/A',
+      patientName: s.patient?.name || 'Unknown Patient',
+      patientId: s.patient?.patientId || 'N/A',
+      date: s.sessionDate 
+        ? (() => {
+            const d = new Date(s.sessionDate);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          })()
+        : 'N/A',
+      time: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      status: mapStatus(s.status),
+      protocol: s.treatments && s.treatments.length > 0 
+        ? s.treatments.map((t: any) => t.treatmentName).join(', ') 
+        : 'Pranic Restoration',
+      notesAdded: !!s.notes,
+    }));
+  }, [apiSessionsRes]);
+
+  const loading = isLoading;
+  const errorMsg = error ? 'Failed to retrieve sessions log.' : null;
 
   const filteredSessions = sessions.filter((session) => {
     const matchesSearch =
@@ -186,10 +201,10 @@ const SessionLogPage: React.FC = () => {
                       <p style={{ margin: '0.5rem 0 0 0', fontWeight: 500, color: 'var(--ion-color-medium)' }}>Loading sessions...</p>
                     </td>
                   </tr>
-                ) : error ? (
+                ) : errorMsg ? (
                   <tr>
                     <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--ion-color-danger)' }}>
-                      <p style={{ margin: 0, fontWeight: 500 }}>{error}</p>
+                      <p style={{ margin: 0, fontWeight: 500 }}>{errorMsg}</p>
                     </td>
                   </tr>
                 ) : filteredSessions.length > 0 ? (

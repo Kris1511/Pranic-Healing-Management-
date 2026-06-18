@@ -19,3 +19,8 @@ export const updateSession = async (id: string, sessionData: any) => {
   const response = await axiosInstance.put(`/sessions/${id}`, sessionData);
   return response.data;
 };
+
+export const deleteSession = async (id: string) => {
+  const response = await axiosInstance.delete(`/sessions/${id}`);
+  return response.data;
+};

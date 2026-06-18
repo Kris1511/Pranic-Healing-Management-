@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   IonPage,
   IonContent,
@@ -36,8 +38,12 @@ import {
   checkmarkCircleOutline,
   pieChartOutline,
   printOutline,
+  eyeOutline,
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
+import { ROUTES } from '../../constants/routes.constant';
+import { getPayments, processPayment } from '../../api/payment.api';
+import { getPatients } from '../../api/patient.api';
 import './branch-admin.css';
 
 interface Transaction {
@@ -56,6 +62,7 @@ interface Transaction {
 
 interface PatientPayment {
   id: string;
+  patientId: string;
   patientName: string;
   sessionNo: string;
   totalBilled: number;
@@ -72,10 +79,33 @@ interface PatientPayment {
   }>;
 }
 
+const mapPaymentRes = (item: any): PatientPayment => {
+  return {
+    id: item.id || `INV-?`,
+    patientId: item.patientId || '',
+    patientName: item.patientName || 'Unknown Patient',
+    sessionNo: item.sessionNo || '—',
+    totalBilled: parseFloat(item.totalBilled) || 0,
+    paid: parseFloat(item.paid) || 0,
+    outstanding: parseFloat(item.outstanding) || 0,
+    status: item.paymentStatus || 'Pending',
+    assignedHealer: item.healer || 'Unknown Healer',
+    caseId: item.sessionId || '',
+    history: item.paymentDate ? [{
+      date: item.paymentDate.split('T')[0],
+      amount: parseFloat(item.paid) || 0,
+      mode: item.paymentMethod || 'UPI',
+      status: 'Paid'
+    }] : []
+  };
+};
+
 const FinancePage: React.FC = () => {
   const { user } = useAuthStore();
   const [present] = useIonToast();
-  
+  const history = useHistory();
+  const [isPageActive, setIsPageActive] = useState(true);
+
   // Branch is fixed to current branch admin's branch (not selectable)
   const BRANCH_NAME = (user as any)?.branchName || user?.name?.includes('Mumbai') ? 'Mumbai Branch' : 'Mumbai Branch';
   const BRANCH_BASELINE = { rev: 240000, exp: 33800, cash: 80000, online: 126000 };
@@ -118,101 +148,41 @@ const FinancePage: React.FC = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptTx, setReceiptTx] = useState<Transaction | null>(null);
 
-  // Patient Payments States — seeded from localStorage, then reconciled from sessions
-  const [patientPayments, setPatientPayments] = useState<PatientPayment[]>(() => {
-    const feeMap: Record<string, number> = {
-      'Pranic Psychotherapy': 2500,
-      'Crystal Healing': 3000,
-      'Advanced Pranic Healing': 2000,
-    };
-    const getFee = (type: string) => feeMap[type] || 1200;
-
-    let base: PatientPayment[];
-    const saved = localStorage.getItem('phms_patient_payments');
-    if (saved) {
-      base = JSON.parse(saved);
-    } else {
-      base = [
-        {
-          id: 'P-1092',
-          patientName: 'Ravi Kumar',
-          sessionNo: 'S-0012',
-          totalBilled: 5000,
-          paid: 3000,
-          outstanding: 2000,
-          status: 'Partial',
-          assignedHealer: 'Dr. Aris Varma',
-          caseId: 'C-4091',
-          history: [{ date: '2026-05-12', amount: 3000, mode: 'UPI', status: 'Paid' }]
-        },
-        {
-          id: 'P-1093',
-          patientName: 'Meena Devi',
-          sessionNo: 'S-0013',
-          totalBilled: 4000,
-          paid: 4000,
-          outstanding: 0,
-          status: 'Paid',
-          assignedHealer: 'Dr. Maya Rose',
-          caseId: 'C-4092',
-          history: [{ date: '2026-05-18', amount: 4000, mode: 'Cash', status: 'Paid' }]
-        },
-        {
-          id: 'P-1094',
-          patientName: 'Arjun',
-          sessionNo: 'S-0014',
-          totalBilled: 2500,
-          paid: 0,
-          outstanding: 2500,
-          status: 'Pending',
-          assignedHealer: 'Dr. Julian Mars',
-          caseId: 'C-4093',
-          history: []
-        }
-      ];
-    }
-
-    // Reconcile: scan sessions and inject any Paid sessions missing from the list
-    const rawSessions: any[] = JSON.parse(localStorage.getItem('phms_sessions') || '[]');
-    let changed = false;
-    rawSessions.forEach((s: any) => {
-      if (s.paymentStatus !== 'Paid') return;
-      const exists = base.some(p => p.sessionNo === s.sessionNo);
-      if (!exists) {
-        const fee = getFee(s.type);
-        base = [{
-          id: `P-${Math.floor(1000 + Math.random() * 9000)}`,
-          patientName: s.patient,
-          sessionNo: s.sessionNo,
-          totalBilled: fee,
-          paid: fee,
-          outstanding: 0,
-          status: 'Paid',
-          assignedHealer: s.healer,
-          caseId: `C-${Math.floor(1000 + Math.random() * 9000)}`,
-          history: [{
-            date: s.date || new Date().toISOString().split('T')[0],
-            amount: fee,
-            mode: (s.paymentMethod || 'UPI') as 'Cash' | 'UPI' | 'Bank Transfer',
-            status: 'Paid' as const,
-          }],
-        }, ...base];
-        changed = true;
-      }
-    });
-    if (changed) localStorage.setItem('phms_patient_payments', JSON.stringify(base));
-    return base;
+  // Live query for branch payments
+  const { data: paymentsData, refetch: refetchPayments } = useQuery({
+    queryKey: ['branch-payments'],
+    queryFn: async () => {
+      const res = await getPayments();
+      const raw = Array.isArray(res?.data) ? res.data : [];
+      return raw.map(mapPaymentRes);
+    },
+    enabled: !!user,
+    refetchInterval: isPageActive ? 3000 : false,
+    staleTime: 0,
   });
 
-  // NOTE: patientPayments is refreshed via useIonViewWillEnter on every navigation.
-  // It is written to localStorage explicitly in action handlers only.
+  const patientPayments: PatientPayment[] = paymentsData || [];
+
+  // Live query for patients
+  const { data: patientsData } = useQuery({
+    queryKey: ['branch-patients'],
+    queryFn: async () => {
+      const res = await getPatients();
+      return Array.isArray(res?.data) ? res.data : [];
+    },
+    enabled: !!user,
+  });
+
+  const activePatients = patientsData || [];
 
   // Record Payment Modal & Form State
   const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     patientId: '',
+    sessionId: '',
     sessionNo: '',
     amountBilled: 0,
+    outstanding: 0,
     amountPaid: '',
     paymentMode: 'UPI' as 'UPI' | 'Cash' | 'Bank Transfer',
     remarks: ''
@@ -230,21 +200,6 @@ const FinancePage: React.FC = () => {
   const [payStartDate, setPayStartDate] = useState('');
   const [payEndDate, setPayEndDate] = useState('');
 
-  // Active Patients & Sessions loaded from localStorage
-  const [activePatients] = useState<any[]>(() => {
-    const saved = localStorage.getItem('phms_patients');
-    return saved ? JSON.parse(saved) : [
-      { id: 'P-101', name: 'Ravi Kumar', assignedHealerId: 'H-2091', status: 'Active', caseType: 'Crystal Healing' },
-      { id: 'P-102', name: 'Meena Devi', assignedHealerId: 'H-1822', status: 'Active', caseType: 'Basic Pranic Healing' },
-      { id: 'P-103', name: 'Arjun', assignedHealerId: 'H-2104', status: 'Active', caseType: 'Pranic Psychotherapy' },
-    ];
-  });
-
-  const [activeSessions] = useState<any[]>(() => {
-    const saved = localStorage.getItem('phms_sessions');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   // Pre-fill modal from URL parameters (Session Integration)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -252,22 +207,21 @@ const FinancePage: React.FC = () => {
     const patientName = params.get('patientName');
     const sessionNo = params.get('sessionNo');
     
-    if (openRecordPay === 'true') {
+    if (openRecordPay === 'true' && paymentsData) {
       setActiveTab('payments');
       setShowRecordPaymentModal(true);
       
       let sessionType = 'Basic Pranic Healing';
-      const patientSessions = activeSessions.filter(s => s.patient.toLowerCase().trim() === (patientName || '').toLowerCase().trim());
-      if (patientSessions.length > 0) {
-        sessionType = patientSessions[0].type;
-      }
-      const billed = sessionType === 'Pranic Psychotherapy' ? 2500 : sessionType === 'Crystal Healing' ? 3000 : sessionType === 'Advanced Pranic Healing' ? 2000 : 1200;
+      const billed = 1200;
       
+      const liveSession = (paymentsData || []).find((s: any) => s.sessionNo === sessionNo || s.caseId === sessionNo);
       setPaymentForm({
-        patientId: patientName || '',
-        sessionNo: sessionNo || '',
-        amountBilled: billed,
-        amountPaid: '',
+        patientId: liveSession ? (liveSession.patientId || '') : (patientName || ''),
+        sessionId: liveSession ? liveSession.caseId : '',
+        sessionNo: liveSession ? liveSession.sessionNo : (sessionNo || ''),
+        amountBilled: liveSession ? liveSession.totalBilled : billed,
+        outstanding: liveSession ? liveSession.outstanding : billed,
+        amountPaid: liveSession ? String(liveSession.outstanding) : '',
         paymentMode: 'UPI',
         remarks: `Recorded via Session Manager (${sessionNo || ''})`
       });
@@ -275,7 +229,7 @@ const FinancePage: React.FC = () => {
       // Clear search params to prevent reopening on reload
       window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
     }
-  }, [activeSessions]);
+  }, [paymentsData]);
 
   // Helper to generate sequential Finance IDs based on existing list
   const genFinId = (existing: Transaction[]) => {
@@ -356,6 +310,9 @@ const FinancePage: React.FC = () => {
 
   // Full reconciliation on every page activation
   useIonViewWillEnter(() => {
+    setIsPageActive(true);
+    refetchPayments();
+
     const feeMap: Record<string, number> = {
       'Pranic Psychotherapy': 2500,
       'Crystal Healing': 3000,
@@ -364,7 +321,6 @@ const FinancePage: React.FC = () => {
     const getFee = (type: string) => feeMap[type] || 1200;
 
     const rawSessions: any[] = JSON.parse(localStorage.getItem('phms_sessions') || '[]');
-    let payments: PatientPayment[] = JSON.parse(localStorage.getItem('phms_patient_payments') || '[]');
     let txList: Transaction[] = JSON.parse(localStorage.getItem('phms_finance_transactions') || '[]');
 
     // Back-fill IDs on existing records that don't have them
@@ -374,35 +330,11 @@ const FinancePage: React.FC = () => {
       receiptId: t.receiptId || `TXN-${new Date().getFullYear()}-${String(i + 1).padStart(4, '0')}`,
     }));
 
-    let paymentsChanged = false;
     let txChanged = false;
 
     rawSessions.forEach((s: any) => {
       if (s.paymentStatus !== 'Paid') return;
       const fee = getFee(s.type);
-
-      const alreadyInPayments = payments.some(p => p.sessionNo === s.sessionNo);
-      if (!alreadyInPayments) {
-        const newP: PatientPayment = {
-          id: `P-${Math.floor(1000 + Math.random() * 9000)}`,
-          patientName: s.patient,
-          sessionNo: s.sessionNo,
-          totalBilled: fee,
-          paid: fee,
-          outstanding: 0,
-          status: 'Paid',
-          assignedHealer: s.healer,
-          caseId: `C-${Math.floor(1000 + Math.random() * 9000)}`,
-          history: [{
-            date: s.date || new Date().toISOString().split('T')[0],
-            amount: fee,
-            mode: (s.paymentMethod || 'UPI') as 'Cash' | 'UPI' | 'Bank Transfer',
-            status: 'Paid' as const,
-          }],
-        };
-        payments = [newP, ...payments];
-        paymentsChanged = true;
-      }
 
       const alreadyInTx = txList.some(tx => tx.description?.includes(s.sessionNo));
       if (!alreadyInTx) {
@@ -424,11 +356,9 @@ const FinancePage: React.FC = () => {
       }
     });
 
-    if (paymentsChanged) localStorage.setItem('phms_patient_payments', JSON.stringify(payments));
     if (txChanged || true) localStorage.setItem('phms_finance_transactions', JSON.stringify(txList));
 
-    // 5. Update React state
-    setPatientPayments(payments);
+    // Update React state
     setTransactions(txList);
   });
 
@@ -712,111 +642,99 @@ const FinancePage: React.FC = () => {
   });
 
   // Handle patient autocomplete / billing defaults inside modal
-  const handlePaymentFormPatientChange = (patientName: string) => {
-    const patientSessions = activeSessions.filter(s => s.patient.toLowerCase().trim() === patientName.toLowerCase().trim());
-    const nextSessionNo = patientSessions.length > 0 ? patientSessions[0].sessionNo : `S-${String(10 + Math.floor(Math.random() * 900)).padStart(4, '0')}`;
-    const sessionType = patientSessions.length > 0 ? patientSessions[0].type : 'Basic Pranic Healing';
-    const billed = sessionType === 'Pranic Psychotherapy' ? 2500 : sessionType === 'Crystal Healing' ? 3000 : sessionType === 'Advanced Pranic Healing' ? 2000 : 1200;
-
+  const handlePaymentFormPatientChange = (patientId: string) => {
+    // Find all sessions for this patient from live payments/sessions list
+    const patientSessions = (paymentsData || []).filter((s: any) => s.patientId === patientId || (s.patient && s.patient.id === patientId) || s.patient_id === patientId);
+    
+    // Choose the first session by default
+    const firstSession = patientSessions[0];
+    
     setPaymentForm(prev => ({
       ...prev,
-      patientId: patientName,
-      sessionNo: nextSessionNo,
-      amountBilled: billed,
-      amountPaid: ''
+      patientId,
+      sessionId: firstSession ? firstSession.caseId : '',
+      sessionNo: firstSession ? firstSession.sessionNo : '',
+      amountBilled: firstSession ? firstSession.totalBilled : 0,
+      outstanding: firstSession ? firstSession.outstanding : 0,
+      amountPaid: firstSession ? String(firstSession.outstanding) : '',
+    }));
+  };
+
+  const handlePaymentFormSessionChange = (sessionId: string) => {
+    const session = (paymentsData || []).find((s: any) => s.caseId === sessionId);
+    setPaymentForm(prev => ({
+      ...prev,
+      sessionId,
+      sessionNo: session ? session.sessionNo : '',
+      amountBilled: session ? session.totalBilled : 0,
+      outstanding: session ? session.outstanding : 0,
+      amountPaid: session ? String(session.outstanding) : '',
     }));
   };
 
   // Submit recorded patient payment
-  const handleRecordPaymentSubmit = (e: React.FormEvent) => {
+  const handleRecordPaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const paidVal = parseFloat(paymentForm.amountPaid);
     if (isNaN(paidVal) || paidVal < 0) {
       alert('Error: Please enter a valid non-negative payment amount.');
       return;
     }
-    if (paidVal > paymentForm.amountBilled) {
-      alert(`Error: Amount paid (₹${paidVal}) cannot exceed amount billed (₹${paymentForm.amountBilled}).`);
+    if (paidVal > paymentForm.outstanding) {
+      alert(`Error: Amount paid (₹${paidVal}) cannot exceed outstanding amount (₹${paymentForm.outstanding}).`);
+      return;
+    }
+    if (!paymentForm.sessionId) {
+      alert('Error: Please select a valid session.');
       return;
     }
 
-    const autoStatus = paidVal === paymentForm.amountBilled ? 'Paid' : paidVal === 0 ? 'Pending' : 'Partial';
-    const outstanding = paymentForm.amountBilled - paidVal;
-
-    const historyItem = paidVal > 0 ? [{
-      date: new Date().toISOString().split('T')[0],
-      amount: paidVal,
-      mode: paymentForm.paymentMode,
-      status: 'Paid' as const
-    }] : [];
-
-    const existingIndex = patientPayments.findIndex(p => p.sessionNo === paymentForm.sessionNo);
-    let updatedPayments = [...patientPayments];
-    
-    if (existingIndex > -1) {
-      const existing = patientPayments[existingIndex];
-      const newPaid = existing.paid + paidVal;
-      const newOutstanding = Math.max(0, existing.totalBilled - newPaid);
-      const newStatus = newPaid >= existing.totalBilled ? 'Paid' : newPaid === 0 ? 'Pending' : 'Partial';
-
-      updatedPayments[existingIndex] = {
-        ...existing,
-        paid: newPaid,
-        outstanding: newOutstanding,
-        status: newStatus,
-        history: [...existing.history, ...historyItem]
-      };
-    } else {
-      const newPayment: PatientPayment = {
-        id: `P-${Math.floor(1000 + Math.random() * 9000)}`,
-        patientName: paymentForm.patientId,
-        sessionNo: paymentForm.sessionNo,
-        totalBilled: paymentForm.amountBilled,
-        paid: paidVal,
-        outstanding: outstanding,
-        status: autoStatus,
-        assignedHealer: 'Dr. Aris Varma',
-        caseId: `C-${Math.floor(1000 + Math.random() * 9000)}`,
-        history: historyItem
-      };
-      updatedPayments = [newPayment, ...updatedPayments];
-    }
-
-    setPatientPayments(updatedPayments);
-    localStorage.setItem('phms_patient_payments', JSON.stringify(updatedPayments));
-
-    if (paidVal > 0) {
-      const newTx: Transaction = {
-        id: Date.now(),
-        transactionId: genFinId(transactions),
-        receiptId: genRcptId(transactions),
-        timestamp: `${new Date().toISOString().split('T')[0]}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-        category: 'Session Fee',
-        type: 'income',
+    try {
+      await processPayment({
+        sessionId: paymentForm.sessionId,
         amount: paidVal,
-        mode: paymentForm.paymentMode,
-        recordedBy: user?.name || 'Admin - Anjali Rao',
-        description: `${paymentForm.patientId} - Dynamic payment recorded for ${paymentForm.sessionNo} (${paymentForm.remarks || 'No remarks'})`,
-        dateStr: new Date().toISOString().split('T')[0]
-      };
-      const updatedTxAfterPayment = [newTx, ...transactions];
-      setTransactions(updatedTxAfterPayment);
-      localStorage.setItem('phms_finance_transactions', JSON.stringify(updatedTxAfterPayment));
-    }
+        paymentMethod: paymentForm.paymentMode,
+        branchId: (user as any)?.branchId
+      });
 
-    setShowRecordPaymentModal(false);
-    triggerToast(`Payment of ₹${paidVal} successfully recorded for ${paymentForm.patientId}.`);
+      // Refetch live payments list from DB
+      refetchPayments();
+
+      if (paidVal > 0) {
+        const patientObj = activePatients.find((p: any) => p.id === paymentForm.patientId);
+        const patientName = patientObj ? patientObj.name : 'Unknown Patient';
+
+        const newTx: Transaction = {
+          id: Date.now(),
+          transactionId: genFinId(transactions),
+          receiptId: genRcptId(transactions),
+          timestamp: `${new Date().toISOString().split('T')[0]}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          category: 'Session Fee',
+          type: 'income',
+          amount: paidVal,
+          mode: paymentForm.paymentMode,
+          recordedBy: user?.name || 'Admin - Anjali Rao',
+          description: `${patientName} - Dynamic payment recorded for ${paymentForm.sessionNo} (${paymentForm.remarks || 'No remarks'})`,
+          dateStr: new Date().toISOString().split('T')[0]
+        };
+        const updatedTxAfterPayment = [newTx, ...transactions];
+        setTransactions(updatedTxAfterPayment);
+        localStorage.setItem('phms_finance_transactions', JSON.stringify(updatedTxAfterPayment));
+      }
+
+      setShowRecordPaymentModal(false);
+      triggerToast(`Payment of ₹${paidVal} successfully recorded for session ${paymentForm.sessionNo}.`);
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to record payment: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   // Patient Payments Billed & Paid aggregates calculation
-  const dynamicBilled = patientPayments.reduce((sum, p) => sum + p.totalBilled, 0);
-  const dynamicPaid = patientPayments.reduce((sum, p) => sum + p.paid, 0);
-  const totalPatientBilled = 438500 + dynamicBilled;
-  const totalPatientPaid = 378000 + dynamicPaid;
+  const totalPatientBilled = patientPayments.reduce((sum, p) => sum + p.totalBilled, 0);
+  const totalPatientPaid = patientPayments.reduce((sum, p) => sum + p.paid, 0);
   const totalPatientOutstanding = totalPatientBilled - totalPatientPaid;
-
-  const dynamicPendingCount = patientPayments.filter(p => p.status !== 'Paid' && p.patientName !== 'Ravi Kumar' && p.patientName !== 'Arjun').length;
-  const totalPendingCases = 24 + dynamicPendingCount;
+  const totalPendingCases = patientPayments.filter(p => p.status !== 'Paid').length;
 
   return (
     <IonPage className="sa-page">
@@ -1410,8 +1328,8 @@ const FinancePage: React.FC = () => {
                       className="bf-btn-add-income"
                       style={{ background: '#0D5C46', borderColor: '#0D5C46', color: 'white' }}
                       onClick={() => {
-                        const defaultPatient = activePatients[0]?.name || '';
-                        handlePaymentFormPatientChange(defaultPatient);
+                        const defaultPatientId = activePatients[0]?.id || '';
+                        handlePaymentFormPatientChange(defaultPatientId);
                         setShowRecordPaymentModal(true);
                       }}
                     >
@@ -1419,7 +1337,7 @@ const FinancePage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-
+ 
                 {/* Ledger Table */}
                 <div className="sa-table-responsive" style={{ border: 'none', overflowX: 'auto' }}>
                   <table className="bf-table" style={{ width: '100%', minWidth: '700px' }}>
@@ -1460,16 +1378,36 @@ const FinancePage: React.FC = () => {
                               </span>
                             </td>
                             <td>
-                              <button
-                                className="sa-btn sa-btn--primary"
-                                style={{ fontSize: '11px', padding: '4px 12px', background: '#0D5C46', border: 'none', justifyContent: 'center' }}
-                                onClick={() => {
-                                  setDrawerPayment(p);
-                                  setShowDrawer(true);
-                                }}
-                              >
-                                View
-                              </button>
+                              <div className="sa-table__actions" style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  className="sa-table__action-btn"
+                                  title="View Session Details"
+                                  onClick={() => {
+                                    history.push(ROUTES.BRANCH_ADMIN.SESSION_DETAILS.replace(':id', p.caseId));
+                                  }}
+                                >
+                                  <IonIcon icon={eyeOutline} />
+                                </button>
+                                <button
+                                  className="sa-table__action-btn"
+                                  title="Edit Session"
+                                  onClick={() => {
+                                    history.push(ROUTES.BRANCH_ADMIN.EDIT_SESSION.replace(':id', p.caseId));
+                                  }}
+                                >
+                                  <IonIcon icon={pencilOutline} style={{ color: '#6366f1' }} />
+                                </button>
+                                <button
+                                  className="sa-table__action-btn"
+                                  title="View Payment Drawer"
+                                  onClick={() => {
+                                    setDrawerPayment(p);
+                                    setShowDrawer(true);
+                                  }}
+                                >
+                                  <IonIcon icon={receiptOutline} style={{ color: '#0D5C46' }} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1792,25 +1730,38 @@ const FinancePage: React.FC = () => {
                 onChange={(e) => handlePaymentFormPatientChange(e.target.value)}
               >
                 <option value="">-- Choose Patient --</option>
-                {activePatients.map(p => (
-                  <option key={p.id} value={p.name}>{p.name} ({p.id})</option>
+                {activePatients.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.patientId || p.id.substring(0, 8)})</option>
                 ))}
               </select>
             </div>
-
+ 
             {/* Session No selector */}
             <div className="sa-settings__form-group">
               <label className="sa-settings__label">Session Number *</label>
-              <input
-                type="text"
+              <select
                 className="sa-input"
                 required
-                placeholder="e.g. S-0012"
-                value={paymentForm.sessionNo}
-                onChange={(e) => setPaymentForm({ ...paymentForm, sessionNo: e.target.value })}
-              />
+                value={paymentForm.sessionId}
+                onChange={(e) => handlePaymentFormSessionChange(e.target.value)}
+              >
+                <option value="">-- Select Session --</option>
+                {(paymentsData || [])
+                  .filter((s: any) => s.patientId === paymentForm.patientId || (s.patient && s.patient.id === paymentForm.patientId) || s.patient_id === paymentForm.patientId)
+                  .map((s: any) => (
+                    <option key={s.caseId} value={s.caseId}>
+                      {s.sessionNo} ({s.treatmentType || 'Pranic Healing'} - Outstanding: ₹{s.outstanding})
+                    </option>
+                  ))
+                }
+              </select>
+              {paymentForm.patientId && (paymentsData || []).filter((s: any) => s.patientId === paymentForm.patientId || (s.patient && s.patient.id === paymentForm.patientId) || s.patient_id === paymentForm.patientId).length === 0 && (
+                <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 600 }}>
+                  This patient has no recorded sessions.
+                </div>
+              )}
             </div>
-
+ 
             {/* Billing calculations grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="sa-settings__form-group">
@@ -1823,7 +1774,7 @@ const FinancePage: React.FC = () => {
                   value={`₹${paymentForm.amountBilled}`}
                 />
               </div>
-
+ 
               <div className="sa-settings__form-group">
                 <label className="sa-settings__label">Amount Paid *</label>
                 <input
@@ -1836,7 +1787,7 @@ const FinancePage: React.FC = () => {
                 />
               </div>
             </div>
-
+ 
             {/* Payment Mode Selector */}
             <div className="sa-settings__form-group">
               <label className="sa-settings__label">Payment Mode *</label>
@@ -1851,8 +1802,8 @@ const FinancePage: React.FC = () => {
                 <option value="Bank Transfer">Bank NetBanking</option>
               </select>
             </div>
-
-            {/* Remarks Textarea */}
+ 
+            {/* Remarks Textarea
             <div className="sa-settings__form-group">
               <label className="sa-settings__label">Remarks / Notes</label>
               <textarea
@@ -1862,8 +1813,8 @@ const FinancePage: React.FC = () => {
                 value={paymentForm.remarks}
                 onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
               />
-            </div>
-
+            </div> */}
+ 
           </div>
 
           <div className="sa-modal__footer">
@@ -2020,12 +1971,14 @@ const FinancePage: React.FC = () => {
                       style={{ fontSize: '10px', padding: '3px 8px', background: '#7c2d12', border: 'none', minHeight: 'auto', height: '24px' }}
                       onClick={() => {
                         setShowDuesListModal(false);
-                        handlePaymentFormPatientChange(p.patientName);
+                        handlePaymentFormPatientChange(p.patientId);
                         setPaymentForm({
-                          patientId: p.patientName,
+                          patientId: p.patientId,
+                          sessionId: p.caseId,
                           sessionNo: p.sessionNo,
                           amountBilled: p.totalBilled,
-                          amountPaid: '',
+                          outstanding: p.outstanding,
+                          amountPaid: String(p.outstanding),
                           paymentMode: 'UPI',
                           remarks: `Clearing outstanding dues for ${p.sessionNo}`
                         });
@@ -2084,12 +2037,12 @@ const FinancePage: React.FC = () => {
                 value={invoiceForm.patientName}
                 onChange={(e) => {
                   const name = e.target.value;
-                  const patSessions = activeSessions.filter(s => s.patient === name);
+                  const patSessions = (paymentsData || []).filter((s: any) => s.patientName === name);
                   const firstSess = patSessions[0]?.sessionNo || 'S-0001';
                   setInvoiceForm({ ...invoiceForm, patientName: name, sessionNo: firstSess });
                 }}
               >
-                {activePatients.map((p) => (
+                {activePatients.map((p: any) => (
                   <option key={p.id} value={p.name}>{p.name}</option>
                 ))}
               </select>
@@ -2103,9 +2056,9 @@ const FinancePage: React.FC = () => {
                 value={invoiceForm.sessionNo}
                 onChange={(e) => setInvoiceForm({ ...invoiceForm, sessionNo: e.target.value })}
               >
-                {activeSessions.filter(s => s.patient === invoiceForm.patientName).length > 0 ? (
-                  activeSessions.filter(s => s.patient === invoiceForm.patientName).map((s) => (
-                    <option key={s.id} value={s.sessionNo}>{s.sessionNo} ({s.type})</option>
+                {(paymentsData || []).filter((s: any) => s.patientName === invoiceForm.patientName).length > 0 ? (
+                  (paymentsData || []).filter((s: any) => s.patientName === invoiceForm.patientName).map((s: any) => (
+                    <option key={s.caseId} value={s.sessionNo}>{s.sessionNo} ({s.treatmentType})</option>
                   ))
                 ) : (
                   <option value="S-0001">S-0001 (General Consultation)</option>

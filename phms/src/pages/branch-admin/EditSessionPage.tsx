@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   IonPage,
   IonContent,
@@ -41,7 +41,7 @@ interface Healer {
 }
 
 interface HealingSession {
-  id: number;
+  id: string | number;
   sessionNo: string;
   date: string;
   startTime: string;
@@ -67,6 +67,120 @@ interface HealingSession {
     comment: string;
   };
 }
+
+const timeSlots = [
+  '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM',
+  '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
+  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
+  '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
+  '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM'
+];
+
+const CustomTimeSelect = ({ 
+  label, 
+  value, 
+  onChange, 
+  options,
+  customStyles
+}: { 
+  label: string; 
+  value: string; 
+  onChange: (val: string) => void; 
+  options: string[];
+  customStyles: any;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="st-form-group" ref={containerRef} style={{ position: 'relative' }}>
+      <label style={customStyles.label}>{label}</label>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          ...customStyles.grayInput,
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'relative',
+          paddingRight: '36px'
+        }}
+      >
+        <span>{value}</span>
+        <span style={{
+          position: 'absolute',
+          right: '16px',
+          top: '50%',
+          transform: `translateY(-50%) rotate(${isOpen ? '180deg' : '0deg'})`,
+          transition: 'transform 0.2s ease',
+          fontSize: '10px',
+          color: '#64748b',
+          pointerEvents: 'none'
+        }}>
+          ▼
+        </span>
+      </div>
+      
+      {isOpen && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            width: '100%',
+            maxHeight: '180px',
+            overflowY: 'auto',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            zIndex: 9999,
+          }}
+        >
+          {options.map((opt) => (
+            <div 
+              key={opt}
+              onClick={() => {
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              style={{
+                padding: '10px 16px',
+                fontSize: '14px',
+                color: opt === value ? '#0D5C46' : '#1e293b',
+                fontWeight: opt === value ? 700 : 400,
+                background: opt === value ? '#f0fdf4' : 'transparent',
+                cursor: 'pointer',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (opt !== value) e.currentTarget.style.background = '#f8fafc';
+              }}
+              onMouseLeave={(e) => {
+                if (opt !== value) e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              {opt}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function EditSessionsPages() {
   const history = useHistory();
@@ -107,6 +221,7 @@ export default function EditSessionsPages() {
     status: 'Scheduled' as 'Completed' | 'Scheduled' | 'Cancelled',
     followUpRequired: false,
     followUpUrgency: 'None' as 'Urgent' | 'Pending' | 'None',
+    followUpDate: '',
     observations: '',
     detailedNotes: '',
     recommendation: '',
@@ -140,18 +255,21 @@ export default function EditSessionsPages() {
 
           setFormData(prev => ({
             ...prev,
-            patientName: s.patient?.name || 'Unknown Patient',
-            sessionNo: `S-${s.id.substring(0, 4)}`,
-            healer: s.healer?.name || '',
-            date: s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : '',
-            startTime: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '',
-            endTime: '',
-            type: s.treatments?.[0]?.type || 'Basic Pranic Healing',
+            patientName: s.patient_name || 'Unknown Patient',
+            sessionNo: `S-${String(s.id).substring(0, 4)}`,
+            healer: s.healer_name || '',
+            date: s.session_date ? s.session_date.split('T')[0] : '',
+            startTime: s.start_time || '',
+            endTime: s.end_time || '',
+            type: s.treatment_type || 'Basic Pranic Healing',
             status: mappedMockSession.status,
             observations: s.notes || '',
-            paymentStatus: mappedMockSession.paymentStatus,
-            paymentMethod: s.paymentMethod || 'UPI',
-            sessionFee: s.totalAmount || 1200,
+            paymentStatus: s.payment_status || 'Pending',
+            paymentMethod: s.payment_method || 'Cash',
+            sessionFee: s.session_fee !== undefined && s.session_fee !== null ? s.session_fee : (s.total_amount || 1200),
+            followUpRequired: !!s.followup_required,
+            followUpUrgency: s.followup_priority ? (s.followup_priority === 'NONE' ? 'None' : s.followup_priority === 'PENDING' ? 'Pending' : 'Urgent') : 'None',
+            followUpDate: s.followup_date || '',
           }));
           return;
         }
@@ -180,6 +298,7 @@ export default function EditSessionsPages() {
           status: found.status,
           followUpRequired: found.followUp?.required || false,
           followUpUrgency: found.followUp?.urgency || 'None',
+          followUpDate: '',
           observations: found.notes?.observations || '',
           detailedNotes: found.notes?.detailedNotes || '',
           recommendation: found.notes?.recommendation || '',
@@ -246,13 +365,20 @@ export default function EditSessionsPages() {
       // Backend update
       try {
         const payload = {
-          healerId: healerId || targetSessionBackend.healerId,
-          sessionDate: new Date(`${formData.date}T00:00:00`).toISOString(),
+          healer_id: healerId || targetSessionBackend.healer_id,
+          session_date: `${formData.date}T00:00:00.000Z`,
           notes: formData.observations || formData.detailedNotes || targetSessionBackend.notes,
           status: formData.status.toLowerCase(),
-          paymentStatus: formData.paymentStatus,
-          paymentMethod: formData.paymentMethod,
-          totalAmount: formData.sessionFee
+          payment_status: formData.paymentStatus,
+          payment_method: formData.paymentMethod,
+          total_amount: formData.sessionFee,
+          session_fee: formData.sessionFee,
+          treatment_type: formData.type,
+          start_time: formData.startTime,
+          end_time: formData.endTime,
+          followup_required: formData.followUpRequired,
+          followup_priority: formData.followUpRequired ? formData.followUpUrgency : 'None',
+          followup_date: formData.followUpRequired ? formData.followUpDate : null
         };
         await updateSession(id, payload);
       } catch (error) {
@@ -607,29 +733,20 @@ export default function EditSessionsPages() {
 
                           {/* Time Slots Grid */}
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div className="st-form-group">
-                              <label style={customStyles.label}>Start Time</label>
-                              <input 
-                                type="text" 
-                                required
-                                style={customStyles.grayInput}
-                                placeholder="e.g. 09:00 AM"
-                                value={formData.startTime}
-                                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="st-form-group">
-                              <label style={customStyles.label}>End Time</label>
-                              <input 
-                                type="text" 
-                                required
-                                style={customStyles.grayInput}
-                                placeholder="e.g. 10:00 AM"
-                                value={formData.endTime}
-                                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                              />
-                            </div>
+                            <CustomTimeSelect
+                              label="Start Time"
+                              value={formData.startTime}
+                              onChange={(val) => setFormData({ ...formData, startTime: val })}
+                              options={timeSlots}
+                              customStyles={customStyles}
+                            />
+                            <CustomTimeSelect
+                              label="End Time"
+                              value={formData.endTime}
+                              onChange={(val) => setFormData({ ...formData, endTime: val })}
+                              options={timeSlots}
+                              customStyles={customStyles}
+                            />
                           </div>
 
                           {/* Session Status & Payment Status */}
@@ -678,18 +795,31 @@ export default function EditSessionsPages() {
                             </div>
 
                             {formData.followUpRequired && (
-                              <div className="st-form-group">
-                                <label style={customStyles.label}>Urgency Priority</label>
-                                <select 
-                                  className="st-input"
-                                  style={customStyles.grayInput}
-                                  value={formData.followUpUrgency}
-                                  onChange={(e) => setFormData({ ...formData, followUpUrgency: e.target.value as any })}
-                                >
-                                  <option value="None">None</option>
-                                  <option value="Pending">Pending (Orange)</option>
-                                  <option value="Urgent">Urgent (Red)</option>
-                                </select>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div className="st-form-group">
+                                  <label style={customStyles.label}>Urgency Priority</label>
+                                  <select 
+                                    className="st-input"
+                                    style={customStyles.grayInput}
+                                    value={formData.followUpUrgency}
+                                    onChange={(e) => setFormData({ ...formData, followUpUrgency: e.target.value as any })}
+                                  >
+                                    <option value="None">None</option>
+                                    <option value="Pending">Pending (Orange)</option>
+                                    <option value="Urgent">Urgent (Red)</option>
+                                  </select>
+                                </div>
+                                <div className="st-form-group">
+                                  <label style={customStyles.label}>Follow-up Date</label>
+                                  <input 
+                                    type="date"
+                                    required
+                                    className="st-input"
+                                    style={customStyles.grayInput}
+                                    value={formData.followUpDate}
+                                    onChange={(e) => setFormData({ ...formData, followUpDate: e.target.value })}
+                                  />
+                                </div>
                               </div>
                             )}
                           </div>

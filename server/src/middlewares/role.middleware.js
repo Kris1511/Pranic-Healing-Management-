@@ -5,8 +5,12 @@ const ApiError = require('../helpers/error.helper');
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
-    // Note: Assuming role is in custom claims or added to req.user during token verification
-    if (!req.user || !roles.includes(req.user.role)) {
+    console.log("User:", req.user);
+    console.log("Role:", req.user?.role);
+    const userRole = req.user && req.user.role ? req.user.role.toUpperCase() : '';
+    const upperRoles = roles.map(r => r.toUpperCase());
+
+    if (!req.user || !upperRoles.includes(userRole)) {
       return next(
         new ApiError(
           403,

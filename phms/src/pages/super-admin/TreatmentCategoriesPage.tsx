@@ -15,7 +15,7 @@ import {
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
-import { getTreatmentCategories, deleteTreatmentCategory } from '../../api/treatmentCategory.api';
+import { getTreatmentCategories, deleteTreatmentCategory, updateTreatmentCategory } from '../../api/treatmentCategory.api';
 import {
   gridOutline,
   addOutline,
@@ -75,6 +75,25 @@ const TreatmentCategoriesPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to delete category', error);
       setToastMessage('Failed to delete category');
+      setShowToast(true);
+    }
+  };
+
+  const handleToggleStatus = async (category: any) => {
+    const newStatus = category.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      await updateTreatmentCategory(category.id, {
+        ...category,
+        status: newStatus
+      });
+      setCategories(prevCategories =>
+        prevCategories.map(c => (c.id === category.id ? { ...c, status: newStatus } : c))
+      );
+      setToastMessage(`Category status updated to ${newStatus}`);
+      setShowToast(true);
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      setToastMessage('Failed to update status');
       setShowToast(true);
     }
   };
@@ -186,7 +205,12 @@ const TreatmentCategoriesPage: React.FC = () => {
                           {new Date(cat.createdAt || Date.now()).toLocaleDateString('en-GB')}
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          <span className={`sa-badge sa-badge--${cat.status.toLowerCase()}`}>
+                          <span 
+                            className={`sa-badge sa-badge--${cat.status.toLowerCase()}`}
+                            style={{ cursor: 'pointer' }}
+                            title="Click to toggle status"
+                            onClick={() => handleToggleStatus(cat)}
+                          >
                             {cat.status}
                           </span>
                         </td>

@@ -1,6 +1,6 @@
-const userRepository = require('../repositories/user.repository');
-const ApiError = require('../helpers/error.helper');
-const { admin } = require('../config/firebase.config');
+const userRepository = require("../repositories/user.repository");
+const ApiError = require("../helpers/error.helper");
+const { admin } = require("../config/firebase.config");
 
 class AuthService {
   /**
@@ -12,21 +12,35 @@ class AuthService {
       const { uid, email } = decodedToken;
 
       let user = await userRepository.findByFirebaseUid(uid);
+      console.log("User Found:", user?.email);
+      console.log("Role:", user?.role);
+      console.log("Status:", user?.status);
 
       if (!user) {
         // Return dummy user for frontend development if no user exists in DB
         // But in production, we should throw error or create user
-        throw new ApiError(401, 'User not found in system. Please contact administrator.');
+        throw new ApiError(
+          401,
+          "User not found in system. Please contact administrator.",
+        );
       }
 
-      if (user.status !== 'active') {
-        throw new ApiError(403, 'Your account is deactivated.');
+      if (user.status !== "active") {
+        throw new ApiError(403, "Your account is deactivated.");
       }
 
       return user;
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw new ApiError(401, 'Invalid or expired token.');
+      console.error("FULL REGISTER ERROR:");
+      console.error(error);
+      console.error(error.message);
+      console.error(error.stack);
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw error;
     }
   }
 
@@ -35,32 +49,50 @@ class AuthService {
    */
   async register(data) {
     const { token, name, role, phoneNumber, branchId } = data;
-    
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      const { uid, email } = decodedToken;
 
+    try {
+      console.log("TOKEN RECEIVED:", token);
+
+      const decodedToken = await admin.auth().verifyIdToken(token);
+
+      console.log("TOKEN VERIFIED:", decodedToken);
+
+      const { uid, email } = decodedToken;
       // Check if user already exists
       let existingUser = await userRepository.findByFirebaseUid(uid);
       if (existingUser) {
-        throw new ApiError(400, 'User already exists.');
+        throw new ApiError(400, "User already exists.");
       }
 
       // Create new user in local DB
+      console.log("CREATING USER:", {
+        firebaseUid: uid,
+        email,
+        name,
+        role,
+        phoneNumber,
+        branchId,
+      });
       const newUser = await userRepository.create({
         firebaseUid: uid,
         email,
         name,
-        role: role || 'user',
+        role: role || "user",
         phoneNumber,
         branchId,
-        status: 'active'
+        status: "active",
       });
 
       return newUser;
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw new ApiError(401, 'Invalid or expired token.');
+      console.log("REGISTER ERROR:");
+      console.log(error);
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw error;
     }
   }
 
@@ -71,23 +103,47 @@ class AuthService {
     // 1. Find user in MySQL database
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      throw new ApiError(404, 'No account found with this email address.');
+      throw new ApiError(404, "No account found with this email address.");
     }
 
-    // 2. Update password in Firebase
+    // 2. Update password in database
+    await user.update({ password: newPassword });
+
+    // 3. Update password in role tables
+    try {
+      if (user.role === 'BRANCH_ADMIN') {
+        const { BranchAdmin } = require('../models');
+        const profile = await BranchAdmin.findOne({ where: { userId: user.id } });
+        if (profile) await profile.update({ password: newPassword });
+      } else if (user.role === 'HEALER') {
+        const { Healer } = require('../models');
+        const profile = await Healer.findOne({ where: { email: email } });
+        if (profile) await profile.update({ password: newPassword });
+      } else if (user.role === 'PATIENT') {
+        const { Patient } = require('../models');
+        const profile = await Patient.findOne({ where: { email: email } });
+        if (profile) await profile.update({ password: newPassword });
+      }
+    } catch (dbError) {
+      console.error("Failed to sync database passwords during reset:", dbError);
+    }
+
+    // 4. Update password in Firebase
     try {
       if (admin && admin.apps && admin.apps.length > 0) {
         await admin.auth().updateUser(user.firebaseUid, {
           password: newPassword,
         });
       } else {
-        console.warn('Firebase Admin is not initialized. Skipping Firebase password update (simulated for dev).');
+        console.warn(
+          "Firebase Admin is not initialized. Skipping Firebase password update (simulated for dev).",
+        );
       }
     } catch (error) {
       throw new ApiError(500, `Authentication service error: ${error.message}`);
     }
 
-    return { message: 'Password updated successfully' };
+    return { message: "Password updated successfully" };
   }
 
   /**
@@ -96,7 +152,7 @@ class AuthService {
   async getProfile(userId) {
     const user = await userRepository.findById(userId);
     if (!user) {
-      throw new ApiError(404, 'User not found.');
+      throw new ApiError(404, "User not found.");
     }
     return user;
   }

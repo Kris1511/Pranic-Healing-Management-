@@ -3,6 +3,21 @@
   --ba-color-primary: #1f7a6a;
 }
 
+/* ── Delete Modal Animations ──────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .pa-table-container {
   padding: 0 !important;
   overflow: hidden !important;
@@ -2199,4 +2214,11 @@
   opacity: 0.5;
   cursor: not-allowed;
   background-color: #f8fafc;
+}
+
+.db-corp-card {
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }

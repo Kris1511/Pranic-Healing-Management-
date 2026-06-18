@@ -22,6 +22,9 @@ export const useAuth = () => {
         }
         return response;
       } catch (err: any) {
+        if (err.response) {
+          console.error("Full Login Error Response:", err.response.data);
+        }
         const errorMessage = err.response?.data?.message || 'Login failed';
         setError(errorMessage);
         throw err;

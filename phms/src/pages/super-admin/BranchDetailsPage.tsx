@@ -21,9 +21,11 @@ import {
   barChartOutline,
   flashOutline,
   informationCircleOutline,
+  closeCircleOutline,
+  checkmarkCircleOutline,
 } from 'ionicons/icons';
 import { useParams } from 'react-router-dom';
-import { getBranchById } from '../../api/branch.api';
+import { getBranchById, updateBranch } from '../../api/branch.api';
 import { getPatients } from '../../api/patient.api';
 import { getHealers } from '../../api/healer.api';
 import './super-admin.css';
@@ -39,6 +41,24 @@ const BranchDetailsPage: React.FC = () => {
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [patientsList, setPatientsList] = useState<any[]>([]);
   const [showPatientsModal, setShowPatientsModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const handleStatusToggle = async () => {
+    if (!branchData || updatingStatus) return;
+    setUpdatingStatus(true);
+    try {
+      const currentStatus = (branchData.status || 'active').toLowerCase();
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      
+      const res = await updateBranch(id, { status: newStatus });
+      setBranchData(res.data || res);
+    } catch (error) {
+      console.error("Failed to toggle branch status:", error);
+      alert("Failed to update branch status. Please try again.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   useIonViewWillEnter(() => {
     const fetchBranchData = async () => {
@@ -157,9 +177,40 @@ const BranchDetailsPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <span className={`sa-badge sa-badge--${branchData.status}`} style={{ padding: '6px 16px', fontSize: '13px' }}>
-                {branchData.status}
-              </span>
+              <button 
+                className={`sa-badge sa-badge--${branchData.status?.toLowerCase() === 'active' ? 'active' : 'inactive'}`} 
+                onClick={handleStatusToggle}
+                style={{ 
+                  padding: '8px 20px', 
+                  fontSize: '14px', 
+                  cursor: 'pointer',
+                  border: 'none',
+                  outline: 'none',
+                  borderRadius: '9999px',
+                  fontWeight: 700,
+                  transition: 'all 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  color: '#ffffff',
+                  backgroundColor: branchData.status?.toLowerCase() === 'active' ? '#10b981' : '#ef4444',
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? (
+                  <IonSpinner name="dots" style={{ height: '14px', width: '24px', margin: 0, '--color': '#ffffff' }} />
+                ) : (
+                  <>
+                    <IonIcon 
+                      icon={branchData.status?.toLowerCase() === 'active' ? checkmarkCircleOutline : closeCircleOutline} 
+                      style={{ fontSize: '18px', color: '#ffffff' }} 
+                    />
+                    <span>{branchData.status?.toLowerCase() === 'active' ? 'Active' : 'Inactive'}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
@@ -238,7 +289,7 @@ const BranchDetailsPage: React.FC = () => {
                 <div className="sa-branch-card__admin" style={{ cursor: 'default' }}>
                   <div>
                     <div className="sa-branch-card__admin-label">Primary Branch Admin</div>
-                    <div className="sa-branch-card__admin-name" style={{ fontSize: '16px' }}>{branchData.name || 'N/A'}</div>
+                    <div className="sa-branch-card__admin-name" style={{ fontSize: '16px' }}>{adminName}</div>
                   </div>
                   <div className="sa-page__toolbar-avatar" style={{ background: 'var(--color-primary-dark)' }}>
                     {adminName.split(' ').map((n: string) => n[0]).join('').substring(0,2).toUpperCase()}

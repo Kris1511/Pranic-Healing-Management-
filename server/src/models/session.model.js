@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     sessionDate: {
-      type: DataTypes.DATE,
+      type: DataTypes.DATEONLY,
       allowNull: false,
     },
     notes: {
@@ -43,6 +43,36 @@ module.exports = (sequelize, DataTypes) => {
     },
     paymentMethod: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    treatmentType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    startTime: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    endTime: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    followupRequired: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    followupPriority: {
+      type: DataTypes.ENUM('NONE', 'PENDING', 'URGENT'),
+      allowNull: true,
+      defaultValue: 'NONE',
+    },
+    followupDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    sessionFee: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
     },
   }, {

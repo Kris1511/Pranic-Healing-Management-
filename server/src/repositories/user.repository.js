@@ -39,8 +39,14 @@ class UserRepository {
     return await user.update(data);
   }
 
-  async delete(id) {
-    const user = await User.findByPk(id);
+  async delete(id, options = {}) {
+    const user = await User.findByPk(id, options);
+    if (!user) return null;
+    return await user.destroy(options);
+  }
+
+  async deleteByEmail(email) {
+    const user = await User.findOne({ where: { email } });
     if (!user) return null;
     return await user.destroy();
   }

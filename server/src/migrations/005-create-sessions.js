@@ -38,6 +38,41 @@ module.exports = {
         type: Sequelize.DECIMAL(10, 2),
         allowNull: true,
       },
+      payment_status: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: 'pending',
+      },
+      payment_method: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      treatment_type: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      start_time: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      end_time: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      followup_required: {
+        type: Sequelize.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
+      },
+      followup_priority: {
+        type: Sequelize.ENUM('NONE', 'PENDING', 'URGENT'),
+        allowNull: true,
+        defaultValue: 'NONE',
+      },
+      followup_date: {
+        type: Sequelize.DATEONLY,
+        allowNull: true,
+      },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,

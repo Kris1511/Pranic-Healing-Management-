@@ -83,10 +83,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
 
-      username: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
+
 
       password: {
         type: DataTypes.STRING,
@@ -130,6 +127,10 @@ module.exports = (sequelize, DataTypes) => {
     Patient.hasMany(models.Document, {
       foreignKey: "patientId",
       as: "documents",
+    });
+    Patient.hasMany(models.Feedback, {
+      foreignKey: "patientId",
+      as: "feedbacks",
     });
   };
 

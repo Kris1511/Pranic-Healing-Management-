@@ -24,7 +24,7 @@ import {
 import { useHistory, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
-import { Healer } from './HealersPage';
+import { getHealerById, updateHealer } from '../../api/healer.api';
 import './branch-admin.css';
 
 export default function BAEditHealerPage() {
@@ -41,13 +41,17 @@ export default function BAEditHealerPage() {
     day: 'numeric',
   });
 
-  // Load healers database
-  const [healers, setHealers] = useState<Healer[]>(() => {
-    const saved = localStorage.getItem('phms_healers');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const getPhotoUrl = (path: string | null) => {
+    if (!path) return null;
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL 
+      ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '') 
+      : 'http://localhost:3000';
+    return `${baseUrl}/${path}`;
+  };
 
-  const healer = healers.find((h) => h.id === id);
+  const [healer, setHealer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   // Form states pre-filled with loaded healer data
   const [formData, setFormData] = useState({
@@ -65,28 +69,66 @@ export default function BAEditHealerPage() {
   });
 
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+
+  const [idProofFile, setIdProofFile] = useState<File | null>(null);
+  const [existingIdProof, setExistingIdProof] = useState<string | null>(null);
+  const [uploadedIdProofMeta, setUploadedIdProofMeta] = useState<{ name: string; size: string } | null>(null);
+
+  const [certificationFile, setCertificationFile] = useState<File | null>(null);
+  const [existingCertification, setExistingCertification] = useState<string | null>(null);
+  const [uploadedCertificationMeta, setUploadedCertificationMeta] = useState<{ name: string; size: string } | null>(null);
+
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
+  // Refs for file inputs
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
+  const idProofInputRef = React.useRef<HTMLInputElement>(null);
+  const certificationInputRef = React.useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (healer) {
-      setFormData({
-        name: healer.name,
-        gender: healer.gender || 'Female',
-        dob: healer.dob || '',
-        phone: healer.phone,
-        email: healer.email,
-        address: healer.address || '',
-        status: healer.status,
-        certificationLevel: healer.certificationLevel,
-        specialization: healer.specialization[0] || 'Stress Healing',
-        experience: healer.experience || 0,
-        bio: healer.bio || '',
-      });
-      if (healer.profilePhoto) {
-        setProfilePhoto(healer.profilePhoto);
+    const fetchHealer = async () => {
+      try {
+        setLoading(true);
+        const response = await getHealerById(id);
+        const h = response.data || response;
+        if (h) {
+          setHealer(h);
+          setFormData({
+            name: h.name || '',
+            gender: h.gender || 'Female',
+            dob: h.dob || '',
+            phone: h.mobile || h.phone || '',
+            email: h.email || '',
+            address: h.address || '',
+            status: h.status?.toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+            certificationLevel: h.certLevel || 'Associate Healer',
+            specialization: typeof h.specialization === 'string' 
+              ? h.specialization 
+              : (Array.isArray(h.specialization) && h.specialization.length > 0 ? h.specialization[0] : 'Stress Healing'),
+            experience: h.experience || 0,
+            bio: h.bio || '',
+          });
+          if (h.profilePhoto) {
+            setProfilePhoto(h.profilePhoto);
+          }
+          if (h.idProof) {
+            setExistingIdProof(h.idProof);
+          }
+          if (h.certification) {
+            setExistingCertification(h.certification);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching healer details for edit:', error);
+      } finally {
+        setLoading(false);
       }
+    };
+    if (id && isBranchAdmin) {
+      fetchHealer();
     }
-  }, [healer]);
+  }, [id, isBranchAdmin]);
 
   if (!isBranchAdmin) {
     return (
@@ -104,6 +146,21 @@ export default function BAEditHealerPage() {
                 </p>
               </div>
             </div>
+          </div>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  if (loading) {
+    return (
+      <IonPage className="sa-page">
+        <IonContent className="sa-page__content" style={{ '--background': '#f8fafc' }} fullscreen>
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b' }}>Loading Healer Profile...</h3>
+            <p style={{ color: '#64748b', fontSize: '14px' }}>
+              Fetching professional records from the branch registry database.
+            </p>
           </div>
         </IonContent>
       </IonPage>
@@ -138,10 +195,11 @@ export default function BAEditHealerPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Simulate Photo Upload
+  // Photo Upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      setProfilePhotoFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         setProfilePhoto(reader.result as string);
@@ -150,8 +208,45 @@ export default function BAEditHealerPage() {
     }
   };
 
+  // File Upload
+  const handleFileChange = (
+    field: "idProof" | "certification",
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      if (field === "idProof") {
+        setIdProofFile(file);
+        setUploadedIdProofMeta({ name: file.name, size: `${sizeMB} MB` });
+      } else {
+        setCertificationFile(file);
+        setUploadedCertificationMeta({ name: file.name, size: `${sizeMB} MB` });
+      }
+    }
+  };
+
+  // Clear Uploaded File
+  const handleClearFile = (
+    field: "idProof" | "certification",
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation();
+    if (field === "idProof") {
+      setIdProofFile(null);
+      setExistingIdProof(null);
+      setUploadedIdProofMeta(null);
+      if (idProofInputRef.current) idProofInputRef.current.value = "";
+    } else {
+      setCertificationFile(null);
+      setExistingCertification(null);
+      setUploadedCertificationMeta(null);
+      if (certificationInputRef.current) certificationInputRef.current.value = "";
+    }
+  };
+
   // Handle Save
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       alert('Healer Full Name is required.');
@@ -166,30 +261,85 @@ export default function BAEditHealerPage() {
       return;
     }
 
-    // Merge modifications back into local storage
-    const updatedHealers = healers.map((h) => {
-      if (h.id === id) {
-        return {
-          ...h,
-          name: formData.name,
-          gender: formData.gender as any,
-          dob: formData.dob,
-          phone: formData.phone,
-          email: formData.email,
-          address: formData.address,
-          status: formData.status,
-          certificationLevel: formData.certificationLevel,
-          specialization: [formData.specialization],
-          experience: Number(formData.experience),
-          bio: formData.bio,
-          profilePhoto: profilePhoto || undefined,
-        };
-      }
-      return h;
-    });
+    // DEBUG LOGS
+    console.log("[DEBUG] Updating Healer Profile. ID:", id);
+    console.log("[DEBUG] Frontend Form Data state:", formData);
 
-    localStorage.setItem('phms_healers', JSON.stringify(updatedHealers));
-    setShowSuccessToast(true);
+    try {
+      const data = new FormData();
+      Object.keys(formData).forEach((key) => {
+        if (key === 'bio') {
+          console.log("[DEBUG] Skipping key 'bio' from payload as it is not allowed in Joi schema.");
+          return;
+        }
+
+        let val = (formData as any)[key];
+        if (val !== undefined && val !== null) {
+          if (key === 'certificationLevel') {
+            console.log("[DEBUG] Mapping certificationLevel -> certLevel:", val);
+            data.append('certLevel', val);
+          } else if (key === 'phone') {
+            console.log("[DEBUG] Mapping phone -> mobile:", val);
+            data.append('mobile', val);
+          } else if (key === 'status') {
+            // Convert status case for backend Joi validation
+            const statusVal = val === 'ACTIVE' ? 'Active' : (val === 'INACTIVE' ? 'Inactive' : val);
+            console.log("[DEBUG] Mapping status ->", statusVal);
+            data.append('status', statusVal);
+          } else {
+            console.log(`[DEBUG] Appending field ${key} ->`, val);
+            data.append(key, val);
+          }
+        }
+      });
+
+      // Handle profile photo
+      if (profilePhotoFile) {
+        console.log("[DEBUG] Appending new profilePhoto file:", profilePhotoFile.name);
+        data.append("profilePhoto", profilePhotoFile);
+      } else if (!profilePhoto) {
+        console.log("[DEBUG] Cleared profilePhoto");
+        data.append("profilePhoto", "");
+      }
+
+      // Handle ID Proof
+      if (idProofFile) {
+        console.log("[DEBUG] Appending new idProof file:", idProofFile.name);
+        data.append("idProof", idProofFile);
+      } else if (!existingIdProof) {
+        console.log("[DEBUG] Cleared idProof");
+        data.append("idProof", "");
+      }
+
+      // Handle Certification
+      if (certificationFile) {
+        console.log("[DEBUG] Appending new certification file:", certificationFile.name);
+        data.append("certification", certificationFile);
+      } else if (!existingCertification) {
+        console.log("[DEBUG] Cleared certification");
+        data.append("certification", "");
+      }
+
+      // Log exact keys and values of FormData
+      const formDataObj: any = {};
+      data.forEach((value, key) => {
+        formDataObj[key] = value instanceof File ? `File: ${value.name}` : value;
+      });
+      console.log("[DEBUG] Exact FormData payload being sent:", formDataObj);
+      console.log("[DEBUG] Request headers: Content-Type: multipart/form-data");
+
+      await updateHealer(id, data);
+      setShowSuccessToast(true);
+    } catch (error: any) {
+      console.error('[DEBUG] Error updating healer profile (Full Error):', error);
+      if (error.response) {
+        console.error('[DEBUG] Backend response status:', error.response.status);
+        console.error('[DEBUG] Backend error details (error.response.data):', error.response.data);
+        alert(`Failed to update healer profile. Error: ${error.response.data?.message || 'Bad Request (400)'}`);
+      } else {
+        alert('Failed to update healer profile. Please check your network connection.');
+      }
+    }
   };
 
   const closeAndRedirect = () => {
@@ -254,6 +404,30 @@ export default function BAEditHealerPage() {
       lineHeight: 1.5,
       transition: 'all 0.2s ease',
     },
+    dashedUpload: {
+      background: '#f8fafc',
+      border: '1px dashed #cbd5e1',
+      borderRadius: '8px',
+      height: '38px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      width: '100%',
+      transition: 'all 0.2s ease',
+    },
+    dashedUploadActive: {
+      background: '#f0fdf4',
+      border: '1px solid #a7f3d0',
+      borderRadius: '8px',
+      height: '38px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 12px',
+      cursor: 'pointer',
+      width: '100%',
+    },
   };
 
   return (
@@ -295,7 +469,7 @@ export default function BAEditHealerPage() {
               
               <div className="db-corp-navbar-right" style={{ display: 'flex', alignItems: 'center' }}>
                 <div className="db-corp-badge-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', position: 'relative', marginRight: '6px' }} />
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Editing Healer Profile: {healer.id}</span>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Editing Healer Profile: {healer?.healerId || healer?.id || id}</span>
               </div>
             </header>
 
@@ -324,15 +498,15 @@ export default function BAEditHealerPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                             <div style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #cbd5e1' }}>
                               {profilePhoto ? (
-                                <img src={profilePhoto} alt="Healer avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={getPhotoUrl(profilePhoto) || ''} alt="Healer avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
-                                <span style={{ fontSize: '24px', fontWeight: 700, color: '#475569' }}>{healer.initials}</span>
+                                <span style={{ fontSize: '24px', fontWeight: 700, color: '#475569' }}>{healer?.initials || 'HE'}</span>
                               )}
                             </div>
                             <label className="sa-btn sa-btn--outline sa-btn--sm" style={{ cursor: 'pointer', margin: 0, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
                               <IonIcon icon={cameraOutline} />
                               Change Photo
-                              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+                              <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
                             </label>
                           </div>
 
@@ -527,7 +701,7 @@ export default function BAEditHealerPage() {
                       </div>
                     </div>
 
-                    {/* Card 4: Verification Documents (Display Mode) */}
+                    {/* Card 4: Verification Documents */}
                     <div style={customStyles.formCard}>
                       <div>
                         <div style={customStyles.subHeader}>
@@ -536,20 +710,84 @@ export default function BAEditHealerPage() {
                         </div>
                         
                         <div className="st-form" style={{ gap: '18px' }}>
+                          {/* 1. ID Proof */}
                           <div className="st-form-group">
                             <label style={customStyles.label}>ID PROOF FILE</label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                              <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981' }} />
-                              <span style={{ fontSize: '12px', color: '#334155', fontWeight: 600 }}>National_ID_Proof.pdf</span>
-                            </div>
+                            {uploadedIdProofMeta ? (
+                              <div style={customStyles.dashedUploadActive}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981' }} />
+                                  <span style={{ fontSize: '12px', color: '#065f46', fontWeight: 600 }}>{uploadedIdProofMeta.name} (New)</span>
+                                </div>
+                                <IonIcon icon={trashOutline} onClick={(e) => handleClearFile("idProof", e)} style={{ color: '#ef4444', fontSize: '14px', cursor: 'pointer' }} />
+                              </div>
+                            ) : existingIdProof ? (
+                              <div style={{ ...customStyles.dashedUploadActive, background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <IonIcon icon={checkmarkCircleOutline} style={{ color: '#0d5c46' }} />
+                                  <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: 600 }}>{existingIdProof.split('/').pop()}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                  <IonIcon 
+                                    icon={documentTextOutline} 
+                                    style={{ color: '#0d5c46', fontSize: '16px', cursor: 'pointer' }} 
+                                    onClick={() => {
+                                      const url = getPhotoUrl(existingIdProof);
+                                      if (url) window.open(url, '_blank');
+                                    }}
+                                  />
+                                  <IonIcon icon={trashOutline} onClick={(e) => handleClearFile("idProof", e)} style={{ color: '#ef4444', fontSize: '14px', cursor: 'pointer' }} />
+                                </div>
+                              </div>
+                            ) : (
+                              <label style={customStyles.dashedUpload}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <IonIcon icon={cloudUploadOutline} style={{ color: '#94a3b8', fontSize: '16px' }} />
+                                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Upload ID Proof</span>
+                                </div>
+                                <input ref={idProofInputRef} type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange("idProof", e)} />
+                              </label>
+                            )}
                           </div>
 
+                          {/* 2. Certification */}
                           <div className="st-form-group">
                             <label style={customStyles.label}>CERTIFICATION FILE</label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                              <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981' }} />
-                              <span style={{ fontSize: '12px', color: '#334155', fontWeight: 600 }}>Pranic_Healing_Licence.pdf</span>
-                            </div>
+                            {uploadedCertificationMeta ? (
+                              <div style={customStyles.dashedUploadActive}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981' }} />
+                                  <span style={{ fontSize: '12px', color: '#065f46', fontWeight: 600 }}>{uploadedCertificationMeta.name} (New)</span>
+                                </div>
+                                <IonIcon icon={trashOutline} onClick={(e) => handleClearFile("certification", e)} style={{ color: '#ef4444', fontSize: '14px', cursor: 'pointer' }} />
+                              </div>
+                            ) : existingCertification ? (
+                              <div style={{ ...customStyles.dashedUploadActive, background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <IonIcon icon={checkmarkCircleOutline} style={{ color: '#0d5c46' }} />
+                                  <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: 600 }}>{existingCertification.split('/').pop()}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                  <IonIcon 
+                                    icon={documentTextOutline} 
+                                    style={{ color: '#0d5c46', fontSize: '16px', cursor: 'pointer' }} 
+                                    onClick={() => {
+                                      const url = getPhotoUrl(existingCertification);
+                                      if (url) window.open(url, '_blank');
+                                    }}
+                                  />
+                                  <IonIcon icon={trashOutline} onClick={(e) => handleClearFile("certification", e)} style={{ color: '#ef4444', fontSize: '14px', cursor: 'pointer' }} />
+                                </div>
+                              </div>
+                            ) : (
+                              <label style={customStyles.dashedUpload}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <IonIcon icon={cloudUploadOutline} style={{ color: '#94a3b8', fontSize: '16px' }} />
+                                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Upload Certification</span>
+                                </div>
+                                <input ref={certificationInputRef} type="file" style={{ display: 'none' }} onChange={(e) => handleFileChange("certification", e)} />
+                              </label>
+                            )}
                           </div>
                         </div>
                       </div>

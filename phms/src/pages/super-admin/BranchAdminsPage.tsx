@@ -9,6 +9,8 @@ import {
   IonIcon,
   IonMenuButton,
   IonModal,
+  useIonViewWillEnter,
+  IonAlert,
 } from '@ionic/react';
 import {
   notificationsOutline,
@@ -19,11 +21,12 @@ import {
   eyeOutline,
   chevronBackOutline,
   chevronForwardOutline,
+  closeOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
-import { getUsers, updateUser, deleteUser } from '../../api/user.api';
 import { getBranches } from '../../api/branch.api';
+import { deleteBranchAdmin, getBranchAdmins, updateBranchAdmin } from '../../api/branchAdmin.api';
 import './super-admin.css';
 
 const BranchAdminsPage: React.FC = () => {
@@ -31,7 +34,7 @@ const BranchAdminsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
   const [adminToDelete, setAdminToDelete] = useState<any>(null);
   
@@ -39,15 +42,15 @@ const BranchAdminsPage: React.FC = () => {
   const [availableBranches, setAvailableBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useIonViewWillEnter(() => {
     fetchAdmins();
     fetchBranches();
-  }, []);
+  });
 
   const fetchAdmins = async () => {
     setLoading(true);
     try {
-      const response = await getUsers({ role: 'BRANCH_ADMIN' });
+      const response = await getBranchAdmins();
       setAdmins(response.data || []);
     } catch (error) {
       console.error('Error fetching admins:', error);
@@ -78,15 +81,15 @@ const BranchAdminsPage: React.FC = () => {
 
   const handleDeleteClick = (admin: any) => {
     setAdminToDelete(admin);
-    setShowDeleteModal(true);
+    setShowDeleteAlert(true);
   };
 
   const handleConfirmDelete = async () => {
     if (adminToDelete) {
       try {
-        await deleteUser(adminToDelete.id);
+        await deleteBranchAdmin(adminToDelete.id);
         setAdmins(admins.filter(a => a.id !== adminToDelete.id));
-        setShowDeleteModal(false);
+        setShowDeleteAlert(false);
         setAdminToDelete(null);
       } catch (error) {
         console.error('Error deleting admin:', error);
@@ -95,21 +98,32 @@ const BranchAdminsPage: React.FC = () => {
     }
   };
 
-  const handleEditClick = (admin: any) => {
-    setSelectedAdmin({ ...admin });
-    setShowEditModal(true);
+  const handleToggleStatus = async (admin: any) => {
+    const newStatus = admin.status === 'active' ? 'inactive' : 'active';
+    try {
+      const data = new FormData();
+      data.append('status', newStatus);
+      await updateBranchAdmin(admin.id, data);
+      setAdmins(prevAdmins =>
+        prevAdmins.map(a => (a.id === admin.id ? { ...a, status: newStatus } : a))
+      );
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      alert('Failed to update status');
+    }
   };
 
   const handleUpdateAdmin = async () => {
     if (!selectedAdmin) return;
     try {
-      const response = await updateUser(selectedAdmin.id, {
-        name: selectedAdmin.name,
-        email: selectedAdmin.email,
-        phone: selectedAdmin.phone || selectedAdmin.phoneNumber,
-        status: selectedAdmin.status,
-        branchId: selectedAdmin.branchId || null
-      });
+      const data = new FormData();
+      data.append('name', selectedAdmin.name);
+      data.append('email', selectedAdmin.email);
+      data.append('phone', selectedAdmin.phone || selectedAdmin.phoneNumber);
+      data.append('status', selectedAdmin.status);
+      data.append('branchId', selectedAdmin.branchId || '');
+
+      await updateBranchAdmin(selectedAdmin.id, data);
       
       // Re-fetch admins to ensure relations and formatting are perfectly refreshed
       fetchAdmins();
@@ -168,9 +182,9 @@ const BranchAdminsPage: React.FC = () => {
                 <h1 className="sa-page__title">Staff Management</h1>
                 <p className="sa-page__subtitle">Overview of administrators assigned to sanctuary branches</p>
               </div>
-              {/* <button className="sa-btn sa-btn--primary" onClick={() => setShowAssignModal(true)}>
-                <IonIcon icon={personAddOutline} /> Assign New Admin
-              </button> */}
+              <button className="sa-btn sa-btn--primary" onClick={() => history.push(ROUTES.SUPER_ADMIN.CREATE_BRANCH_ADMIN)}>
+                <IonIcon icon={personAddOutline} style={{ marginRight: '6px' }} /> Create Branch Admin
+              </button>
             </div>
           </div>
 
@@ -269,14 +283,22 @@ const BranchAdminsPage: React.FC = () => {
                       </td>
                       <td>{admin.phone || admin.phoneNumber || 'Not Set'}</td>
                       <td>
-                        <span className={`sa-badge sa-badge--${admin.status === 'active' ? 'active' : 'inactive'}`}>
+                        <span 
+                          className={`sa-badge sa-badge--${admin.status === 'active' ? 'active' : 'inactive'}`}
+                          style={{ cursor: 'pointer' }}
+                          title="Click to toggle status"
+                          onClick={() => handleToggleStatus(admin)}
+                        >
                           {admin.status}
                         </span>
                       </td>
                       <td>{admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : admin.joined || 'N/A'}</td>
                       <td>
                         <div className="sa-table__actions">
-                          <button className="sa-table__action-btn" title="Edit Permissions" onClick={() => handleEditClick(admin)}>
+                          <button className="sa-table__action-btn" title="View Details" onClick={() => history.push(ROUTES.SUPER_ADMIN.BRANCH_ADMIN_DETAILS.replace(':id', admin.id))}>
+                            <IonIcon icon={eyeOutline} />
+                          </button>
+                          <button className="sa-table__action-btn" title="Edit Profile" onClick={() => history.push(ROUTES.SUPER_ADMIN.EDIT_BRANCH_ADMIN.replace(':id', admin.id))}>
                             <IonIcon icon={createOutline} />
                           </button>
                           <button className="sa-table__action-btn" title="Remove Assignment" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteClick(admin)}>
@@ -372,86 +394,46 @@ const BranchAdminsPage: React.FC = () => {
         </div>
       </IonModal>
 
-      {/* 2. Edit Admin Modal */}
-      <IonModal isOpen={showEditModal} onDidDismiss={() => setShowEditModal(false)} className="sa-modal">
-        <div className="sa-modal__content">
-          <div className="sa-modal__header">
-            <h2>Edit Administrator</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowEditModal(false)}>×</button>
+
+      {/* 3. Delete Confirmation Modal (Custom Styled Dialog) */}
+      <IonModal
+        isOpen={showDeleteAlert}
+        onDidDismiss={() => setShowDeleteAlert(false)}
+        className="sa-modal sa-modal--sm"
+        style={{ '--height': 'auto', '--width': '450px', '--border-radius': '16px' }}
+      >
+        <div className="sa-modal__container" style={{ padding: '32px' }}>
+          <div className="sa-modal__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', padding: 0, border: 'none' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#164e63', margin: 0 }}>Confirm Removal</h2>
+            <button
+              onClick={() => setShowDeleteAlert(false)}
+              style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: '#94a3b8' }}
+            >
+              <IonIcon icon={closeOutline} style={{ fontSize: '24px' }} />
+            </button>
           </div>
-          {selectedAdmin && (
-            <div className="sa-modal__body">
-              <div className="sa-settings__form-group">
-                <label className="sa-settings__label">Full Name</label>
-                <input 
-                  className="sa-settings__input" 
-                  value={selectedAdmin.name}
-                  onChange={(e) => setSelectedAdmin({ ...selectedAdmin, name: e.target.value })}
-                />
-              </div>
-              <div className="sa-settings__form-group">
-                <label className="sa-settings__label">Email Address</label>
-                <input 
-                  className="sa-settings__input" 
-                  value={selectedAdmin.email}
-                  onChange={(e) => setSelectedAdmin({ ...selectedAdmin, email: e.target.value })}
-                />
-              </div>
-              <div className="sa-settings__form-group">
-                <label className="sa-settings__label">Contact Phone</label>
-                <input 
-                  className="sa-settings__input" 
-                  value={selectedAdmin.phone}
-                  onChange={(e) => setSelectedAdmin({ ...selectedAdmin, phone: e.target.value })}
-                />
-              </div>
-              <div className="sa-settings__form-group">
-                <label className="sa-settings__label">Branch Assignment</label>
-                <select 
-                  className="sa-settings__input"
-                  value={selectedAdmin.branchId || ''}
-                  onChange={(e) => setSelectedAdmin({ ...selectedAdmin, branchId: e.target.value })}
-                >
-                  <option value="">Unassigned</option>
-                  {availableBranches.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="sa-settings__form-group">
-                <label className="sa-settings__label">Status</label>
-                <select 
-                  className="sa-settings__input"
-                  value={selectedAdmin.status}
-                  onChange={(e) => setSelectedAdmin({ ...selectedAdmin, status: e.target.value })}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-          )}
-          <div className="sa-modal__footer">
-            <button className="sa-btn sa-btn--outline" onClick={() => setShowEditModal(false)}>Cancel</button>
-            <button className="sa-btn sa-btn--primary" onClick={handleUpdateAdmin}>Save Changes</button>
-          </div>
-        </div>
-      </IonModal>
-      {/* 3. Delete Confirmation Modal */}
-      <IonModal isOpen={showDeleteModal} onDidDismiss={() => setShowDeleteModal(false)} className="sa-modal sa-modal--sm">
-        <div className="sa-modal__content">
-          <div className="sa-modal__header">
-            <h2>Confirm Removal</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowDeleteModal(false)}>×</button>
-          </div>
-          <div className="sa-modal__body">
-            <p className="sa-modal__desc">
-              Are you sure you want to remove <strong>{adminToDelete?.name}</strong> from their assignment at <strong>{adminToDelete?.branch}</strong>? This action cannot be undone.
+
+          <div className="sa-modal__body" style={{ marginBottom: '32px', padding: 0 }}>
+            <p style={{ fontSize: '15px', color: '#64748b', lineHeight: '1.6', margin: 0 }}>
+              Are you sure you want to remove <strong style={{ color: '#1e293b' }}>{adminToDelete?.name}</strong> from their assignment? This action cannot be undone.
             </p>
           </div>
-          <div className="sa-modal__footer" style={{ justifyContent: 'center', gap: '12px' }}>
-            <button className="sa-btn sa-btn--outline" style={{ flex: 1 }} onClick={() => setShowDeleteModal(false)}>Cancel</button>
-            <button className="sa-btn" style={{ flex: 1, backgroundColor: 'var(--color-danger)', color: 'white' }} onClick={handleConfirmDelete}>Confirm Delete</button>
+
+          <div className="sa-modal__footer" style={{ display: 'flex', gap: '16px', padding: 0, border: 'none', background: 'transparent' }}>
+            <button
+              className="sa-btn sa-btn--outline"
+              onClick={() => setShowDeleteAlert(false)}
+              style={{ flex: 1, height: '48px', borderRadius: '10px', fontSize: '15px' }}
+            >
+              Cancel
+            </button>
+            <button
+              className="sa-btn"
+              onClick={handleConfirmDelete}
+              style={{ flex: 1.2, height: '48px', borderRadius: '10px', fontSize: '15px', fontWeight: 700, backgroundColor: 'var(--color-danger)', color: 'white' }}
+            >
+              Confirm Delete
+            </button>
           </div>
         </div>
       </IonModal>

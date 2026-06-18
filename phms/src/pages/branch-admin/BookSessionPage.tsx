@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   IonPage,
   IonContent,
@@ -62,6 +62,120 @@ interface HealingSession {
     recommendation: string;
   };
 }
+
+const timeSlots = [
+  '07:00 AM', '07:30 AM', '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM',
+  '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
+  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM',
+  '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
+  '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM', '09:00 PM'
+];
+
+const CustomTimeSelect = ({ 
+  label, 
+  value, 
+  onChange, 
+  options,
+  customStyles
+}: { 
+  label: string; 
+  value: string; 
+  onChange: (val: string) => void; 
+  options: string[];
+  customStyles: any;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="st-form-group" ref={containerRef} style={{ position: 'relative' }}>
+      <label style={customStyles.label}>{label}</label>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          ...customStyles.grayInput,
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'relative',
+          paddingRight: '36px'
+        }}
+      >
+        <span>{value}</span>
+        <span style={{
+          position: 'absolute',
+          right: '16px',
+          top: '50%',
+          transform: `translateY(-50%) rotate(${isOpen ? '180deg' : '0deg'})`,
+          transition: 'transform 0.2s ease',
+          fontSize: '10px',
+          color: '#64748b',
+          pointerEvents: 'none'
+        }}>
+          ▼
+        </span>
+      </div>
+      
+      {isOpen && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            width: '100%',
+            maxHeight: '180px',
+            overflowY: 'auto',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            zIndex: 9999,
+          }}
+        >
+          {options.map((opt) => (
+            <div 
+              key={opt}
+              onClick={() => {
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              style={{
+                padding: '10px 16px',
+                fontSize: '14px',
+                color: opt === value ? '#0D5C46' : '#1e293b',
+                fontWeight: opt === value ? 700 : 400,
+                background: opt === value ? '#f0fdf4' : 'transparent',
+                cursor: 'pointer',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (opt !== value) e.currentTarget.style.background = '#f8fafc';
+              }}
+              onMouseLeave={(e) => {
+                if (opt !== value) e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              {opt}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function CreateBookSession() {
   const history = useHistory();
@@ -131,7 +245,7 @@ export default function CreateBookSession() {
     followUpRequired: false,
     followUpUrgency: 'None' as 'Urgent' | 'Pending' | 'None',
     followUpDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0], // Default to 7 days from now
-    sessionFee: 1200,
+    sessionFee: 0,
     paymentStatus: 'Pending' as 'Paid' | 'Pending',
     paymentMethod: 'UPI' as 'UPI' | 'Cash',
   });
@@ -151,14 +265,6 @@ export default function CreateBookSession() {
     }
   }, [sessions]);
 
-  // Auto-update session fee based on session type
-  useEffect(() => {
-    let fee = 1200;
-    if (formData.type === 'Pranic Psychotherapy') fee = 2500;
-    else if (formData.type === 'Crystal Healing') fee = 3000;
-    else if (formData.type === 'Advanced Pranic Healing') fee = 2000;
-    setFormData(prev => ({ ...prev, sessionFee: fee }));
-  }, [formData.type]);
 
   // Ensure selected healer is valid when healer list loads
   useEffect(() => {
@@ -236,21 +342,38 @@ export default function CreateBookSession() {
           : (user as any)?.branchId || undefined;
 
     const payload = {
-      patientId: formData.selectedPatientId,
-      healerId: healerId,
-      branchId: branchId,
-      sessionDate: new Date(`${formData.date}T00:00:00`).toISOString(),
+      patient_id: formData.selectedPatientId,
+      healer_id: healerId,
+      branch_id: branchId,
+      treatment_type: formData.type,
+      session_date: `${formData.date}T00:00:00.000Z`,
+      start_time: formData.startTime,
+      end_time: formData.endTime,
       notes: `Treatment: ${formData.type}`,
       status: 'scheduled',
-      totalAmount: formData.sessionFee,
-      paymentStatus: formData.paymentStatus,
-      paymentMethod: formData.paymentMethod
+      total_amount: formData.sessionFee,
+      session_fee: formData.sessionFee,
+      payment_status: formData.paymentStatus,
+      payment_method: formData.paymentMethod,
+      followup_required: formData.followUpRequired,
+      followup_priority: formData.followUpRequired ? formData.followUpUrgency : 'None',
+      followup_date: formData.followUpRequired ? formData.followUpDate : null
     };
 
     try {
+      console.log("Complete request payload:", JSON.stringify(payload, null, 2));
+      console.log("Request headers:", {
+        "Content-Type": "application/json",
+      });
       await createSession(payload);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("Session booking failure:");
+      if (error.response) {
+        console.error("Full error.response.data:", JSON.stringify(error.response.data, null, 2));
+        console.error("Response headers:", error.response.headers);
+      } else {
+        console.error("Error details:", error.message);
+      }
       triggerToast('Failed to book session on server.', 'danger');
       return;
     }
@@ -553,29 +676,20 @@ export default function CreateBookSession() {
 
                           {/* Time Slots Grid */}
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div className="st-form-group">
-                              <label style={customStyles.label}>Start Time</label>
-                              <input 
-                                type="text" 
-                                required
-                                style={customStyles.grayInput}
-                                placeholder="e.g. 09:00 AM"
-                                value={formData.startTime}
-                                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="st-form-group">
-                              <label style={customStyles.label}>End Time</label>
-                              <input 
-                                type="text" 
-                                required
-                                style={customStyles.grayInput}
-                                placeholder="e.g. 10:00 AM"
-                                value={formData.endTime}
-                                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                              />
-                            </div>
+                            <CustomTimeSelect
+                              label="Start Time"
+                              value={formData.startTime}
+                              onChange={(val) => setFormData({ ...formData, startTime: val })}
+                              options={timeSlots}
+                              customStyles={customStyles}
+                            />
+                            <CustomTimeSelect
+                              label="End Time"
+                              value={formData.endTime}
+                              onChange={(val) => setFormData({ ...formData, endTime: val })}
+                              options={timeSlots}
+                              customStyles={customStyles}
+                            />
                           </div>
 
                           {/* Follow-up Required Toggle */}
@@ -643,14 +757,19 @@ export default function CreateBookSession() {
                           
                           <div className="st-form-group">
                             <label style={customStyles.label}>Session Fee (₹) *</label>
-                            <input 
+                            <input
                               type="number"
                               required
+                              min="0"
+                              step="any"
                               className="st-input"
                               style={customStyles.grayInput}
-                              placeholder="e.g. 1200"
-                              value={formData.sessionFee}
-                              onChange={(e) => setFormData({ ...formData, sessionFee: parseFloat(e.target.value) || 0 })}
+                              placeholder="Enter session fee amount"
+                              value={formData.sessionFee === 0 ? '' : formData.sessionFee}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData({ ...formData, sessionFee: val === '' ? 0 : parseFloat(val) });
+                              }}
                             />
                           </div>
 

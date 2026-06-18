@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   IonPage,
   IonContent,
@@ -10,6 +10,7 @@ import {
   IonModal,
   IonTitle,
   IonButton,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   notificationsOutline,
@@ -53,14 +54,15 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
-import { getPatients } from '../../api/patient.api';
+import { getPatients, deletePatient } from '../../api/patient.api';
 import { getHealers } from '../../api/healer.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
 
 // Highly comprehensive Patient structure matching all requirements
 export interface Patient {
-  id: string; // Patient ID
+  id: string; // Patient ID (DB UUID)
+  patientId: string; // Display ID (e.g. PAT-xxxx)
   name: string; // Patient Name
   photoUrl?: string; // Profile Photo Mock
   initials: string;
@@ -261,15 +263,99 @@ const PatientsPage: React.FC = () => {
   // Primary State
   const [patients, setPatients] = useState<Patient[]>([]);
   const [healersList, setHealersList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [deleteConfirmPatient, setDeleteConfirmPatient] = useState<any | null>(null);
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const response = await getPatients();
-        const apiPatients = Array.isArray(response) ? response : (response.data || response);
-        if (Array.isArray(apiPatients)) {
-          const formattedPatients = apiPatients.map((p: any) => ({
-            id: p.patientId || p.id,
+  // ── Fetch patients from DB ───────────────────────────────────────────────
+  const fetchPatients = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await getPatients();
+      const apiPatients = Array.isArray(response) ? response : (response.data || response);
+      if (Array.isArray(apiPatients)) {
+        const formattedPatients = apiPatients.map((p: any) => {
+          // Dynamic Documents
+          const documentsList = [];
+          if (p.medicalReport) {
+            documentsList.push({
+              id: 'med-rep',
+              name: p.medicalReport,
+              category: 'Doctor Report' as const,
+              size: 'N/A',
+              date: p.updatedAt ? p.updatedAt.split('T')[0] : 'N/A',
+              type: p.medicalReport.endsWith('.pdf') ? 'pdf' as const : 'image' as const,
+              uploadedBy: 'System',
+            });
+          }
+          if (p.labReport) {
+            documentsList.push({
+              id: 'lab-rep',
+              name: p.labReport,
+              category: 'Lab Report' as const,
+              size: 'N/A',
+              date: p.updatedAt ? p.updatedAt.split('T')[0] : 'N/A',
+              type: p.labReport.endsWith('.pdf') ? 'pdf' as const : 'image' as const,
+              uploadedBy: 'System',
+            });
+          }
+          if (p.prescription) {
+            documentsList.push({
+              id: 'prescription',
+              name: p.prescription,
+              category: 'Other' as const,
+              size: 'N/A',
+              date: p.updatedAt ? p.updatedAt.split('T')[0] : 'N/A',
+              type: p.prescription.endsWith('.pdf') ? 'pdf' as const : 'image' as const,
+              uploadedBy: 'System',
+            });
+          }
+          if (p.idProof) {
+            documentsList.push({
+              id: 'id-proof',
+              name: p.idProof,
+              category: 'Other' as const,
+              size: 'N/A',
+              date: p.updatedAt ? p.updatedAt.split('T')[0] : 'N/A',
+              type: p.idProof.endsWith('.pdf') ? 'pdf' as const : 'image' as const,
+              uploadedBy: 'System',
+            });
+          }
+
+          // Dynamic Sessions
+          const sessionsList = p.sessions || [];
+          const mappedSessions = sessionsList.map((s: any) => ({
+            id: s.id,
+            healer: s.healer?.name || p.healer?.name || 'None',
+            status: s.status ? (s.status.charAt(0).toUpperCase() + s.status.slice(1)) as any : 'Scheduled',
+            notes: s.notes || 'No notes entered.',
+            followUpDate: s.updatedAt ? s.updatedAt.split('T')[0] : undefined,
+          }));
+
+          // Dynamic Invoices & financials
+          const invoices = sessionsList.map((s: any) => ({
+            id: s.id,
+            date: s.sessionDate ? s.sessionDate.split('T')[0] : 'N/A',
+            amount: Number(s.totalAmount || 0),
+            status: s.paymentStatus === 'paid' ? 'Paid' as const : s.paymentStatus === 'partial' ? 'Partial' as const : 'Unpaid' as const,
+            method: s.paymentMethod === 'cash' ? 'Cash' as const : s.paymentMethod === 'upi' ? 'UPI' as const : s.paymentMethod === 'card' ? 'Card' as const : s.paymentMethod === 'bank_transfer' ? 'Bank Transfer' as const : undefined,
+          }));
+
+          const balanceDue = invoices
+            .filter((inv: any) => inv.status !== 'Paid')
+            .reduce((sum: number, inv: any) => sum + inv.amount, 0);
+
+          // Feedbacks
+          const feedbacks = p.feedbacks || [];
+          const mappedFeedback = feedbacks.map((f: any) => ({
+            sessionRef: f.id,
+            rating: f.rating || 5,
+            comment: f.comment || '',
+            date: f.createdAt ? f.createdAt.split('T')[0] : 'N/A',
+          }));
+
+          return {
+            id: p.id,
+            patientId: p.patientId || p.id,
             name: p.name,
             initials: p.name ? p.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'PT',
             avatarColor: ['#0f5b4b', '#1e3a8a', '#b45309', '#7c3aed', '#db2777'][Math.floor(Math.random() * 5)],
@@ -281,15 +367,15 @@ const PatientsPage: React.FC = () => {
             dateOfBirth: p.dob || p.dateOfBirth || '',
             occupation: p.occupation || '',
             assignedHealer: p.healer?.name || p.assignedHealer || 'None',
-            regDate: p.createdAt || new Date().toISOString(),
-            lastVisitDate: p.updatedAt || new Date().toISOString(),
-            status: p.status?.charAt(0).toUpperCase() + p.status?.slice(1) || 'Active',
+            regDate: p.createdAt ? p.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+            lastVisitDate: p.updatedAt ? p.updatedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+            status: p.status ? (p.status.charAt(0).toUpperCase() + p.status.slice(1)) as any : 'Active',
             address: p.address || '',
             treatmentType: p.treatmentType || '',
             emergencyContact: {
-              name: p.emergencyContact || 'Emergency Name',
+              name: p.emergencyContact || 'Emergency Contact',
               relation: 'Family',
-              mobile: '9876543210',
+              mobile: '',
             },
             medicalInfo: {
               conditions: p.medicalHistory ? p.medicalHistory.split(',').map((c: string) => c.trim()) : ['None recorded'],
@@ -298,24 +384,36 @@ const PatientsPage: React.FC = () => {
               notes: 'No specialized clinical notes entered.',
             },
             appointments: [],
-            sessions: [],
-            financials: { balanceDue: 0, invoices: [] },
-            documents: [],
-            activityLogs: [],
+            sessions: mappedSessions,
+            financials: { balanceDue, invoices },
+            documents: documentsList,
+            activityLogs: [
+              { action: 'Profile loaded from database node', timestamp: 'Just now', category: 'login' as const }
+            ],
             statusHistory: [],
             healerHistory: [],
-            feedback: [],
+            feedback: mappedFeedback,
             branchId: p.branchId || '',
-          }));
-          setPatients(formattedPatients);
-          if (formattedPatients.length > 0) {
-            setSelectedPatientId(formattedPatients[0].id);
-          }
+          };
+        });
+        setPatients(formattedPatients);
+        if (formattedPatients.length > 0) {
+          setSelectedPatientId(prev => {
+            const exists = formattedPatients.some(pt => pt.id === prev);
+            return exists ? prev : formattedPatients[0].id;
+          });
         }
-      } catch (error) {
-        console.error('Error fetching patients:', error);
       }
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
+  // ── Fetch healers (one-time on mount) ────────────────────────────────────
+  useEffect(() => {
+    const fetchHealers = async () => {
       try {
         const response = await getHealers();
         const apiHealers = Array.isArray(response) ? response : (response.data || response);
@@ -326,11 +424,18 @@ const PatientsPage: React.FC = () => {
         console.error('Error fetching healers:', error);
       }
     };
-    fetchInitialData();
-  }, []);
+    fetchPatients();
+    fetchHealers();
+  }, [fetchPatients]);
+
+  // ── Re-fetch patients every time this page becomes active ────────────────
+  // This ensures the list is always up-to-date after registration / edits.
+  useIonViewWillEnter(() => {
+    fetchPatients();
+  });
 
   // Selected Patient Workspace
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('#P-8921');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'detail' | 'edit'>('list');
   const [profileTab, setProfileTab] = useState<'basic' | 'sessions' | 'financials' | 'documents' | 'feedback' | 'logs'>('basic');
 
@@ -504,6 +609,7 @@ const PatientsPage: React.FC = () => {
 
     const added: Patient = {
       id: patientId,
+      patientId: patientId,
       name: newPatient.name,
       initials: newPatient.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase(),
       avatarColor: ['#0f5b4b', '#1e3a8a', '#b45309', '#7c3aed', '#db2777'][Math.floor(Math.random() * 5)],
@@ -1083,7 +1189,7 @@ const PatientsPage: React.FC = () => {
                               // onClick={() => { setSelectedPatientId(patient.id); setViewMode('detail'); }}
                               style={{ cursor: 'pointer', borderLeft: isSelected ? '4px solid #1f7a6a' : 'none' }}
                             >
-                              <td style={{ fontWeight: '700', color: '#1f7a6a' }}>{patient.id}</td>
+                              <td style={{ fontWeight: '700', color: '#1f7a6a' }}>{patient.patientId}</td>
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                   <div
@@ -1123,7 +1229,7 @@ const PatientsPage: React.FC = () => {
                                   <button title="Edit Profile" onClick={() => { setSelectedPatientId(patient.id); history.push(ROUTES.BRANCH_ADMIN.EDIT_PATIENT.replace(':id', encodeURIComponent(patient.id))); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b', padding: 0 }}>
                                     <IonIcon icon={pencilOutline} />
                                   </button>
-                                  <button title="Delete Patient" onClick={(e) => { e.stopPropagation(); if(window.confirm('Are you sure you want to delete this patient?')) { setPatients(patients.filter(p => p.id !== patient.id)); } }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#ef4444', padding: 0 }}>
+                                  <button title="Delete Patient" onClick={(e) => { e.stopPropagation(); setDeleteConfirmPatient(patient); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#ef4444', padding: 0 }}>
                                     <IonIcon icon={trashOutline} />
                                   </button>
                                 </div>
@@ -1159,7 +1265,7 @@ const PatientsPage: React.FC = () => {
             </>
           )}
 
-          {viewMode === 'detail' && (
+          {viewMode === 'detail' && selectedPatient && (
             <div className="sa-profile-workspace" style={{ padding: 0, background: 'transparent', boxShadow: 'none', border: 'none' }}>
               {/* Floating Back Button */}
               <div style={{ marginBottom: '16px' }}>
@@ -1211,7 +1317,7 @@ const PatientsPage: React.FC = () => {
                       {selectedPatient.name}
                     </h2>
                     <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: 500 }}>
-                      Patient ID: <strong style={{ color: '#ffffff' }}>{selectedPatient.id}</strong> • Gender: <strong style={{ color: '#ffffff' }}>{selectedPatient.gender}</strong> • Age: <strong style={{ color: '#ffffff' }}>{selectedPatient.age}</strong>
+                      Patient ID: <strong style={{ color: '#ffffff' }}>{selectedPatient.patientId || selectedPatient.id}</strong> • Gender: <strong style={{ color: '#ffffff' }}>{selectedPatient.gender}</strong> • Age: <strong style={{ color: '#ffffff' }}>{selectedPatient.age}</strong>
                     </span>
                   </div>
                 </div>
@@ -2562,6 +2668,135 @@ const PatientsPage: React.FC = () => {
           </div>
         </div>
       </IonModal>
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteConfirmPatient && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(15, 23, 42, 0.6)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              maxWidth: '400px',
+              width: '90%',
+              padding: '24px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+            }}
+          >
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <IonIcon
+                icon={trashOutline}
+                style={{ color: '#ef4444', fontSize: '28px' }}
+              />
+            </div>
+            <div>
+              <h3
+                style={{
+                  fontSize: '18px',
+                  fontWeight: '800',
+                  color: '#1f2937',
+                  margin: '0 0 8px 0',
+                }}
+              >
+                Confirm Deletion
+              </h3>
+              <p
+                style={{
+                  fontSize: '14px',
+                  color: '#4b5563',
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}
+              >
+                Are you sure you want to delete patient <strong>{deleteConfirmPatient.name}</strong>?
+                This action will remove their record from both the patients and users databases and cannot be undone.
+              </p>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                width: '100%',
+                marginTop: '8px',
+              }}
+            >
+              <button
+                onClick={() => setDeleteConfirmPatient(null)}
+                style={{
+                  flex: 1,
+                  background: '#ffffff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#374151',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const patientToDelete = deleteConfirmPatient;
+                  setDeleteConfirmPatient(null);
+                  try {
+                    await deletePatient(patientToDelete.id);
+                    setPatients(prev => prev.filter(p => p.id !== patientToDelete.id));
+                  } catch (err: any) {
+                    console.error('Failed to delete patient:', err);
+                    alert(err.response?.data?.message || 'Failed to delete patient. Please try again.');
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  background: '#ef4444',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                }}
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </IonPage>
   );
 };

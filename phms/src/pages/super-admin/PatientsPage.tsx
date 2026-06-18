@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   IonPage,
   IonContent,
@@ -9,6 +10,8 @@ import {
   IonIcon,
   IonMenuButton,
   IonModal,
+  useIonViewWillEnter,
+  useIonViewWillLeave,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -25,7 +28,7 @@ import {
   calendarOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import { getPatients } from '../../api/patient.api';
+import { getPatients, updatePatient, deletePatient, createPatient } from '../../api/patient.api';
 import '../branch-admin/branch-admin.css';
 import './super-admin.css';
 
@@ -37,33 +40,34 @@ const PatientsPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [patientToDelete, setPatientToDelete] = useState<any>(null);
-  
-  const [patients, setPatients] = useState<any[]>([]);
+  const [isPageActive, setIsPageActive] = useState(true);
 
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await getPatients();
-        const apiPatients = Array.isArray(response) ? response : (response.data || response);
-        if (Array.isArray(apiPatients)) {
-          const formattedPatients = apiPatients.map((p: any) => ({
-            id: p.patientId || p.id,
-            name: p.name,
-            email: p.email || '',
-            phone: p.phone || p.mobile || '',
-            branch: p.branch?.name || 'Unassigned',
-            healer: p.healer?.name || p.assignedHealer || 'Unassigned',
-            lastVisit: p.updatedAt ? p.updatedAt.split('T')[0] : (p.createdAt ? p.createdAt.split('T')[0] : 'N/A'),
-            status: p.status?.toLowerCase() || 'active',
-          }));
-          setPatients(formattedPatients);
-        }
-      } catch (error) {
-        console.error('Error fetching patients:', error);
-      }
-    };
-    fetchPatients();
-  }, []);
+  useIonViewWillEnter(() => setIsPageActive(true));
+  useIonViewWillLeave(() => setIsPageActive(false));
+
+  const { data: patientsRes, refetch } = useQuery({
+    queryKey: ['super-admin-patients'],
+    queryFn: async () => {
+      const response = await getPatients();
+      const raw = Array.isArray(response) ? response : (response?.data || []);
+      return raw.map((p: any) => ({
+        id: p.id,
+        patientId: p.patientId || '—',
+        name: p.name,
+        email: p.email || '',
+        phone: p.phone || '',
+        branch: p.branch?.name || 'Unassigned',
+        healer: p.healer?.name || 'Unassigned',
+        lastVisit: p.lastVisit || '—',
+        status: p.status?.toLowerCase() || 'active',
+      }));
+    },
+    enabled: true,
+    refetchInterval: isPageActive ? 3000 : false,
+    staleTime: 0,
+  });
+
+  const patients = patientsRes || [];
 
   const [newPatient, setNewPatient] = useState({
     name: '',
@@ -73,19 +77,21 @@ const PatientsPage: React.FC = () => {
     healer: 'Dr. Aris Varma',
   });
 
-  const handleAddPatient = () => {
+  const handleAddPatient = async () => {
     if (!newPatient.name || !newPatient.email) return;
-    
-    const patientObj = {
-      id: patients.length + 1,
-      ...newPatient,
-      lastVisit: new Date().toISOString().split('T')[0],
-      status: 'active'
-    };
-
-    setPatients([...patients, patientObj]);
-    setNewPatient({ name: '', email: '', phone: '', branch: 'Uptown Sanctuary', healer: 'Dr. Aris Varma' });
-    setShowAddModal(false);
+    try {
+      await createPatient({
+        name: newPatient.name,
+        email: newPatient.email,
+        phone: newPatient.phone,
+      });
+      refetch();
+      setNewPatient({ name: '', email: '', phone: '', branch: 'Uptown Sanctuary', healer: 'Dr. Aris Varma' });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error creating patient:', error);
+      alert('Failed to create patient');
+    }
   };
 
   const handleEditClick = (patient: any) => {
@@ -93,10 +99,23 @@ const PatientsPage: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleUpdatePatient = () => {
+  const handleUpdatePatient = async () => {
     if (!selectedPatient) return;
-    setPatients(patients.map(p => p.id === selectedPatient.id ? selectedPatient : p));
-    setShowEditModal(false);
+    try {
+      if (selectedPatient.id) {
+        await updatePatient(String(selectedPatient.id), {
+          name: selectedPatient.name,
+          email: selectedPatient.email,
+          phone: selectedPatient.phone,
+          status: selectedPatient.status
+        });
+      }
+      refetch();
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Error updating patient:', error);
+      alert('Failed to update patient');
+    }
   };
 
   const handleDeleteClick = (patient: any) => {
@@ -104,18 +123,41 @@ const PatientsPage: React.FC = () => {
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (patientToDelete) {
-      setPatients(patients.filter(p => p.id !== patientToDelete.id));
-      setShowDeleteModal(false);
-      setPatientToDelete(null);
+      try {
+        if (patientToDelete.id) {
+          await deletePatient(String(patientToDelete.id));
+        }
+        refetch();
+        setShowDeleteModal(false);
+        setPatientToDelete(null);
+      } catch (error) {
+        console.error('Failed to delete patient:', error);
+        alert('Failed to delete patient. Please try again.');
+      }
+    }
+  };
+
+  const handleToggleStatus = async (patient: any) => {
+    const newStatus = patient.status === 'active' ? 'inactive' : 'active';
+    try {
+      if (patient.id) {
+        await updatePatient(String(patient.id), {
+          status: newStatus
+        });
+      }
+      refetch();
+    } catch (error) {
+      console.error('Error toggling patient status:', error);
+      alert('Failed to update status');
     }
   };
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
-  const filteredPatients = patients.filter(patient => 
+  const filteredPatients = patients.filter((patient: any) => 
     patient.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     patient.branch.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -155,9 +197,9 @@ const PatientsPage: React.FC = () => {
                 <h1 className="sa-page__title">Patient Management</h1>
                 <p className="sa-page__subtitle">Track and manage patient records across all branches</p>
               </div>
-              <button className="sa-btn sa-btn--primary" onClick={() => setShowAddModal(true)}>
+              {/* <button className="sa-btn sa-btn--primary" onClick={() => setShowAddModal(true)}>
                 <IonIcon icon={personAddOutline} /> Add New Patient
-              </button>
+              </button> */}
             </div>
           </div>
 
@@ -177,7 +219,7 @@ const PatientsPage: React.FC = () => {
               </div>
               <div>
                 <div className="sa-stat-card__label">Active Treatments</div>
-                <div className="sa-stat-card__value">{patients.filter(p => p.status === 'active').length}</div>
+                <div className="sa-stat-card__value">{patients.filter((p: any) => p.status === 'active').length}</div>
               </div>
             </div>
             <div className="sa-stat-card">
@@ -186,7 +228,7 @@ const PatientsPage: React.FC = () => {
               </div>
               <div>
                 <div className="sa-stat-card__label">Fully Recovered</div>
-                <div className="sa-stat-card__value">{patients.filter(p => p.status === 'recovered').length}</div>
+                <div className="sa-stat-card__value">{patients.filter((p: any) => p.status === 'recovered').length}</div>
               </div>
             </div>
           </div>
@@ -216,7 +258,7 @@ const PatientsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedPatients.map((patient) => (
+                {paginatedPatients.map((patient: any) => (
                   <tr key={patient.id}>
                     <td>
                       <div className="sa-table__user">
@@ -225,7 +267,7 @@ const PatientsPage: React.FC = () => {
                         </div>
                         <div className="sa-table__user-info">
                           <span className="sa-table__user-name">{patient.name}</span>
-                          <span className="sa-table__user-id">ID: #PT-{1000 + patient.id}</span>
+                          <span className="sa-table__user-id">ID: #{patient.patientId}</span>
                         </div>
                       </div>
                     </td>
@@ -248,7 +290,12 @@ const PatientsPage: React.FC = () => {
                       </div>
                     </td>
                     <td>
-                      <span className={`sa-badge sa-badge--${patient.status}`}>
+                      <span 
+                        className={`sa-badge sa-badge--${patient.status}`}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to toggle status"
+                        onClick={() => handleToggleStatus(patient)}
+                      >
                         {patient.status.replace('-', ' ')}
                       </span>
                     </td>

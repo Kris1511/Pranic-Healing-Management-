@@ -26,6 +26,7 @@ import {
   documentTextOutline,
   chevronDownOutline,
   chevronForwardOutline,
+  chatboxOutline,
 } from 'ionicons/icons';
 import { ROUTES } from '../constants/routes.constant';
 import { useAuthStore } from '../store/auth.store';
@@ -91,9 +92,10 @@ const branchAdminNav: NavItem[] = [
 
 const healerNav: NavItem[] = [
   { title: 'Dashboard', url: ROUTES.HEALER.DASHBOARD, icon: gridOutline, section: 'Main' },
-  { title: 'My Patients', url: ROUTES.HEALER.PATIENTS, icon: peopleOutline },
+  { title: 'Assigned Patients', url: ROUTES.HEALER.PATIENTS, icon: peopleOutline },
   { title: 'Sessions', url: ROUTES.HEALER.SESSIONS, icon: timeOutline },
   { title: 'Session Notes', url: ROUTES.HEALER.SESSION_NOTES, icon: documentTextOutline },
+  { title: 'Documents', url: ROUTES.HEALER.DOCUMENTS, icon: listOutline },
   // { title: 'Schedule', url: ROUTES.HEALER.SCHEDULE, icon: calendarOutline },
   // { title: 'Availability', url: ROUTES.HEALER.AVAILABILITY, icon: listOutline },
   { title: 'Profile', url: ROUTES.HEALER.PROFILE, icon: personOutline },
@@ -102,9 +104,10 @@ const healerNav: NavItem[] = [
 const patientNav: NavItem[] = [
   { title: 'Dashboard', url: ROUTES.PATIENT.DASHBOARD, icon: gridOutline, section: 'Main' },
   { title: 'Session History', url: ROUTES.PATIENT.SESSION_HISTORY, icon: timeOutline },
-  { title: 'Payment History', url: ROUTES.PATIENT.PAYMENT_HISTORY, icon: cashOutline },
-  // { title: 'Health Records', url: ROUTES.PATIENT.HEALTH_RECORDS, icon: documentTextOutline },
-  { title: 'My Profile', url: ROUTES.PATIENT.PROFILE, icon: personOutline},   // , section: 'Settings' 
+  { title: 'Health Records', url: ROUTES.PATIENT.HEALTH_RECORDS, icon: documentTextOutline },
+  { title: 'Payments', url: ROUTES.PATIENT.PAYMENT_HISTORY, icon: cashOutline },
+  { title: 'Feedback', url: ROUTES.PATIENT.FEEDBACK, icon: chatboxOutline },
+  { title: 'Profile', url: ROUTES.PATIENT.PROFILE, icon: personOutline},   // , section: 'Settings' 
 ];
 
 const Menu: React.FC = () => {

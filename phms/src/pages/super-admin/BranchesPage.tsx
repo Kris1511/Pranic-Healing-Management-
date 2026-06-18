@@ -112,6 +112,22 @@ const BranchesPage: React.FC = () => {
     }
   };
 
+  const handleToggleStatus = async (branch: any) => {
+    const newStatus = branch.status === 'active' ? 'inactive' : 'active';
+    try {
+      await updateBranch(branch.id, {
+        ...branch,
+        status: newStatus
+      });
+      setBranches(prevBranches =>
+        prevBranches.map(b => (b.id === branch.id ? { ...b, status: newStatus } : b))
+      );
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      alert('Failed to update status');
+    }
+  };
+
   const totalBranches = branches.length;
   const activeBranches = branches.filter((b) => b.status === "active").length;
   const inactiveBranches = branches.filter(
@@ -251,7 +267,12 @@ const BranchesPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <span className={`sa-badge sa-badge--${branch.status}`}>
+                    <span 
+                      className={`sa-badge sa-badge--${branch.status}`}
+                      style={{ cursor: 'pointer' }}
+                      title="Click to toggle status"
+                      onClick={() => handleToggleStatus(branch)}
+                    >
                       {branch.status}
                     </span>
                   </div>
@@ -272,7 +293,7 @@ const BranchesPage: React.FC = () => {
                         Branch Admin
                       </div>
                       <div className="sa-branch-card__admin-name">
-                        {branch.name}
+                        {branch.admin || 'Unassigned'}
                       </div>
                     </div>
                     <IonIcon

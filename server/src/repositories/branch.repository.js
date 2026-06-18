@@ -1,4 +1,4 @@
-const { Branch } = require('../models');
+const { Branch, BranchAdmin } = require('../models');
 
 class BranchRepository {
   async create(data) {
@@ -6,12 +6,21 @@ class BranchRepository {
   }
 
   async findById(id) {
-    return await Branch.findByPk(id);
+    return await Branch.findByPk(id, {
+      include: [{
+        model: BranchAdmin,
+        as: 'branchAdmin'
+      }]
+    });
   }
 
   async findAll(filter = {}, options = {}) {
     return await Branch.findAll({
       where: filter,
+      include: [{
+        model: BranchAdmin,
+        as: 'branchAdmin'
+      }],
       ...options
     });
   }

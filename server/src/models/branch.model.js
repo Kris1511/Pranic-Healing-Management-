@@ -70,6 +70,8 @@ module.exports = (sequelize, DataTypes) => {
 
   Branch.associate = (models) => {
     Branch.hasMany(models.User, { foreignKey: 'branchId', as: 'users' });
+    Branch.hasMany(models.BranchAdmin, { foreignKey: 'branchId', as: 'branchAdmins' });
+    Branch.hasOne(models.BranchAdmin, { foreignKey: 'branchId', as: 'branchAdmin' });
   };
 
   return Branch;

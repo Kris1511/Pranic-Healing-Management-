@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -27,7 +27,7 @@ import {
 import { useHistory, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
-import { Healer } from './HealersPage';
+import { getHealerById } from '../../api/healer.api';
 import './branch-admin.css';
 
 export default function BADetailHealerPage() {
@@ -35,6 +35,15 @@ export default function BADetailHealerPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuthStore();
   const isBranchAdmin = user?.role === 'BRANCH_ADMIN';
+
+  const getPhotoUrl = (path: string | null) => {
+    if (!path) return null;
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL 
+      ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '') 
+      : 'http://localhost:3000';
+    return `${baseUrl}/${path}`;
+  };
 
   // Current Date display
   const formattedDate = new Date().toLocaleDateString('en-US', {
@@ -44,13 +53,49 @@ export default function BADetailHealerPage() {
     day: 'numeric',
   });
 
-  // Load Healer data
-  const [healers] = useState<Healer[]>(() => {
-    const saved = localStorage.getItem('phms_healers');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [healer, setHealer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const healer = healers.find((h) => h.id === id);
+  useEffect(() => {
+    const fetchHealerData = async () => {
+      try {
+        setLoading(true);
+        const response = await getHealerById(id);
+        const h = response.data || response;
+        if (h) {
+          const formatted = {
+            id: h.id,
+            healerId: h.healerId,
+            name: h.name,
+            gender: h.gender || 'Not Specified',
+            dob: h.dob || 'Not Specified',
+            email: h.email || '',
+            phone: h.mobile || h.phone || '',
+            address: h.address || '',
+            certificationLevel: h.certLevel || 'Associate Healer',
+            specialization: typeof h.specialization === 'string' ? h.specialization.split(',') : (h.specialization || []),
+            experience: h.experience || 0,
+            status: h.status?.toUpperCase() || 'ACTIVE',
+            branch: h.branch?.name || (typeof user?.branch === 'object' && user?.branch !== null ? (user.branch as any).name : (user?.branch || 'Main')),
+            createdAt: h.createdAt || new Date().toISOString(),
+            profilePhoto: h.profilePhoto || null,
+            idProof: h.idProof || null,
+            certification: h.certification || null,
+            initials: h.name ? h.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase() : 'HE',
+            bio: h.bio || `Certified practitioner specializing in ${typeof h.specialization === 'string' ? h.specialization : 'general healing'}.`,
+          };
+          setHealer(formatted);
+        }
+      } catch (error) {
+        console.error('Error fetching healer detail:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id && isBranchAdmin) {
+      fetchHealerData();
+    }
+  }, [id, isBranchAdmin, user]);
 
   if (!isBranchAdmin) {
     return (
@@ -68,6 +113,21 @@ export default function BADetailHealerPage() {
                 </p>
               </div>
             </div>
+          </div>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  if (loading) {
+    return (
+      <IonPage className="sa-page">
+        <IonContent className="sa-page__content" style={{ '--background': '#f8fafc' }} fullscreen>
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b' }}>Loading Healer Profile...</h3>
+            <p style={{ color: '#64748b', fontSize: '14px' }}>
+              Fetching professional records from the branch registry database.
+            </p>
           </div>
         </IonContent>
       </IonPage>
@@ -232,7 +292,7 @@ export default function BADetailHealerPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                             <div style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #cbd5e1' }}>
                               {healer.profilePhoto ? (
-                                <img src={healer.profilePhoto} alt="Healer avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={getPhotoUrl(healer.profilePhoto) || ''} alt="Healer avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <span style={{ fontSize: '24px', fontWeight: 700, color: '#475569' }}>{healer.initials}</span>
                               )}
@@ -297,7 +357,7 @@ export default function BADetailHealerPage() {
                           <div style={customStyles.detailRow}>
                             <span style={customStyles.label}>SPECIALIZATIONS</span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                              {healer.specialization.map((spec, idx) => (
+                              {healer.specialization.map((spec: string, idx: number) => (
                                 <span key={idx} style={{ padding: '6px 12px', background: '#e6f4f1', color: '#0d5c46', borderRadius: '20px', fontSize: '12px', fontWeight: 700 }}>
                                   {spec}
                                 </span>
@@ -360,29 +420,55 @@ export default function BADetailHealerPage() {
                           {/* 1. ID Proof */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={customStyles.label}>ID PROOF DOCUMENT</span>
-                            <div style={customStyles.documentBadge}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981', fontSize: '18px' }} />
-                                <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 600 }}>
-                                  {healer.idProof ? 'Uploaded_ID_Proof.pdf' : 'National_ID_Proof.pdf'}
-                                </span>
+                            {healer.idProof ? (
+                              <div style={customStyles.documentBadge}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981', fontSize: '18px' }} />
+                                  <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 600 }}>
+                                    {healer.idProof.split('/').pop()}
+                                  </span>
+                                </div>
+                                <IonIcon 
+                                  icon={documentTextOutline} 
+                                  style={{ color: '#0d5c46', fontSize: '18px', cursor: 'pointer' }} 
+                                  onClick={() => {
+                                    const url = getPhotoUrl(healer.idProof);
+                                    if (url) window.open(url, '_blank');
+                                  }}
+                                />
                               </div>
-                              <IonIcon icon={documentTextOutline} style={{ color: '#0d5c46', fontSize: '18px', cursor: 'pointer' }} />
-                            </div>
+                            ) : (
+                              <div style={{ fontSize: '13px', color: '#64748b', fontStyle: 'italic', padding: '4px 0' }}>
+                                No ID proof document uploaded.
+                              </div>
+                            )}
                           </div>
 
                           {/* 2. Certification */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={customStyles.label}>CERTIFICATION FILE</span>
-                            <div style={customStyles.documentBadge}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981', fontSize: '18px' }} />
-                                <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 600 }}>
-                                  Pranic_Healing_Licence.pdf
-                                </span>
+                            {healer.certification ? (
+                              <div style={customStyles.documentBadge}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981', fontSize: '18px' }} />
+                                  <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 600 }}>
+                                    {healer.certification.split('/').pop()}
+                                  </span>
+                                </div>
+                                <IonIcon 
+                                  icon={documentTextOutline} 
+                                  style={{ color: '#0d5c46', fontSize: '18px', cursor: 'pointer' }} 
+                                  onClick={() => {
+                                    const url = getPhotoUrl(healer.certification);
+                                    if (url) window.open(url, '_blank');
+                                  }}
+                                />
                               </div>
-                              <IonIcon icon={documentTextOutline} style={{ color: '#0d5c46', fontSize: '18px', cursor: 'pointer' }} />
-                            </div>
+                            ) : (
+                              <div style={{ fontSize: '13px', color: '#64748b', fontStyle: 'italic', padding: '4px 0' }}>
+                                No certification file uploaded.
+                              </div>
+                            )}
                           </div>
 
                           {/* 3. Verification Status */}

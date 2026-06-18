@@ -29,4 +29,19 @@ const connectDB = async () => {
   }
 };
 
-module.exports = { sequelize, connectDB };
+const cliConfig = {
+  username: config.db.user,
+  password: config.db.password,
+  database: config.db.name,
+  host: config.db.host,
+  dialect: config.db.dialect,
+  logging: (msg) => logger.debug(msg)
+};
+
+module.exports = { 
+  sequelize, 
+  connectDB,
+  development: cliConfig,
+  test: cliConfig,
+  production: cliConfig
+};

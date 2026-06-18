@@ -14,7 +14,10 @@ const attendanceRoutes = require('./attendance.routes');
 const paymentRoutes = require('./payment.routes');
 const reportRoutes = require('./report.routes');
 const treatmentCategoryRoutes = require('./treatmentCategory.routes');
-const treatmentTypeRoutes = require('./treatmentType.routes');// Mount routes
+const treatmentTypeRoutes = require('./treatmentType.routes');
+const branchAdminRoutes = require('./branchAdmin.routes');
+
+// Mount routes
 router.use('/auth', authRoutes);
 router.use('/branches', branchRoutes);
 router.use('/users', userRoutes);
@@ -28,4 +31,6 @@ router.use('/payments', paymentRoutes);
 router.use('/reports', reportRoutes);
 router.use('/treatment-categories', treatmentCategoryRoutes);
 router.use('/treatment-types', treatmentTypeRoutes);
+router.use('/branch-admins', branchAdminRoutes);
+
 module.exports = router;

@@ -6,6 +6,7 @@ class AuthController {
    * @desc    Verify token and login
    */
   login = async (req, res) => {
+    console.log("Login Request:", req.body);
     const { token } = req.body;
     const user = await authService.verifyUser(token);
     

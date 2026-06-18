@@ -1,7 +1,8 @@
 const ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
-  ADMIN: 'ADMIN',
-  USER: 'USER',
+  BRANCH_ADMIN: 'BRANCH_ADMIN',
+  HEALER: 'HEALER',
+  PATIENT: 'PATIENT',
 };
 
 module.exports = ROLES;

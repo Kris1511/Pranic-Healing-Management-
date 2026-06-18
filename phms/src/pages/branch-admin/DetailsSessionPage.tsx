@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   IonPage,
   IonContent,
@@ -7,6 +7,8 @@ import {
   IonTitle,
   IonButtons,
   IonIcon,
+  IonSpinner,
+  useIonViewWillEnter,
 } from "@ionic/react";
 import {
   arrowBackOutline,
@@ -30,7 +32,7 @@ import { getSessionById } from "../../api/session.api";
 import "./branch-admin.css";
 
 export interface HealingSession {
-  id: number;
+  id: string | number;
   sessionNo: string;
   date: string;
   startTime: string;
@@ -41,6 +43,7 @@ export interface HealingSession {
   status: "Completed" | "Scheduled" | "Cancelled";
   paymentStatus: "Paid" | "Pending";
   paymentMethod?: "Cash" | "UPI";
+  sessionFee?: string | number;
   followUp: {
     required: boolean;
     urgency: "Urgent" | "Pending" | "None";
@@ -62,237 +65,89 @@ const DetialsSessionsPages: React.FC = () => {
   const history = useHistory();
   const { user } = useAuthStore();
   const [session, setSession] = useState<HealingSession | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   const rawRole = user?.role || "BRANCH_ADMIN";
-  const todayStr = new Date().toISOString().split("T")[0];
-  const yesterdayStr = new Date(Date.now() - 86400000)
-    .toISOString()
-    .split("T")[0];
 
-  // Identical Mock data for consistent lookups
-  const MOCK_SESSIONS: HealingSession[] = [
-    {
-      id: 1,
-      sessionNo: "S-0001",
-      date: todayStr,
-      startTime: "09:00 AM",
-      endTime: "10:00 AM",
-      patient: "Elena Gilbert",
-      healer: "Dr. Aris Varma",
-      type: "Pranic Psychotherapy",
-      status: "Completed",
-      paymentStatus: "Paid",
-      paymentMethod: "UPI",
-      followUp: { required: true, urgency: "Urgent" },
-      notes: {
-        treatmentType: "Pranic Psychotherapy",
-        observations: "Solar plexus chakra cleared.",
-        detailedNotes:
-          "Patient felt significant mental release from crown sweeps.",
-        recommendation: "Daily meditation logs",
-      },
-      feedback: { rating: 5, comment: "Incredible emotional release!" },
-    },
-    {
-      id: 2,
-      sessionNo: "S-0001",
-      date: todayStr,
-      startTime: "11:30 AM",
-      endTime: "12:30 PM",
-      patient: "Stefan Salvatore",
-      healer: "Julian Mars",
-      type: "Advanced Pranic Healing",
-      status: "Completed",
-      paymentStatus: "Pending",
-      followUp: { required: true, urgency: "Pending" },
-      notes: {
-        treatmentType: "Advanced Pranic Healing",
-        observations: "Congestion around heart chakra.",
-        detailedNotes:
-          "Energy flow stabilizing. Next alignment session strongly recommended.",
-        recommendation: "Salt water baths twice weekly.",
-      },
-    },
-    {
-      id: 3,
-      sessionNo: "S-0001",
-      date: todayStr,
-      startTime: "03:00 PM",
-      endTime: "04:00 PM",
-      patient: "Bonnie Bennett",
-      healer: "Julian Mars",
-      type: "Basic Pranic Healing",
-      status: "Scheduled",
-      paymentStatus: "Pending",
-      followUp: { required: false, urgency: "None" },
-    },
-    {
-      id: 4,
-      sessionNo: "S-0002",
-      date: todayStr,
-      startTime: "04:30 PM",
-      endTime: "05:30 PM",
-      patient: "Elena Gilbert",
-      healer: "Dr. Aris Varma",
-      type: "Crystal Healing",
-      status: "Scheduled",
-      paymentStatus: "Pending",
-      followUp: { required: true, urgency: "Urgent" },
-    },
-    {
-      id: 5,
-      sessionNo: "S-0002",
-      date: yesterdayStr,
-      startTime: "09:30 AM",
-      endTime: "10:30 AM",
-      patient: "Stefan Salvatore",
-      healer: "Dr. Aris Varma",
-      type: "Pranic Psychotherapy",
-      status: "Completed",
-      paymentStatus: "Paid",
-      paymentMethod: "Cash",
-      followUp: { required: false, urgency: "None" },
-      notes: {
-        treatmentType: "Pranic Psychotherapy",
-        observations: "Emotional blockages dissolved.",
-        detailedNotes: "Patient sleeps much better.",
-        recommendation: "Continue weekly psychotherapy.",
-      },
-    },
-    {
-      id: 6,
-      sessionNo: "S-0001",
-      date: yesterdayStr,
-      startTime: "01:00 PM",
-      endTime: "02:00 PM",
-      patient: "Matt Donovan",
-      healer: "Julian Mars",
-      type: "Advanced Pranic Healing",
-      status: "Cancelled",
-      paymentStatus: "Pending",
-      followUp: { required: false, urgency: "None" },
-    },
-    {
-      id: 7,
-      sessionNo: "S-0001",
-      date: "2026-05-20",
-      startTime: "10:30 AM",
-      endTime: "11:30 AM",
-      patient: "Tyler Lockwood",
-      healer: "Dr. Aris Varma",
-      type: "Basic Pranic Healing",
-      status: "Completed",
-      paymentStatus: "Paid",
-      paymentMethod: "UPI",
-      followUp: { required: false, urgency: "None" },
-      notes: {
-        treatmentType: "Basic Pranic Healing",
-        observations: "Root chakra energized.",
-        detailedNotes: "Knee joint inflammation reduced.",
-        recommendation: "Follow-up in two weeks.",
-      },
-    },
-    {
-      id: 8,
-      sessionNo: "S-0001",
-      date: "2026-05-19",
-      startTime: "03:00 PM",
-      endTime: "04:00 PM",
-      patient: "Jeremy Gilbert",
-      healer: "Julian Mars",
-      type: "Crystal Healing",
-      status: "Completed",
-      paymentStatus: "Paid",
-      paymentMethod: "Cash",
-      followUp: { required: false, urgency: "None" },
-      notes: {
-        treatmentType: "Crystal Healing",
-        observations: "Aura sweeping performed.",
-        detailedNotes: "Energy flow maximized.",
-        recommendation: "Meditation weekly",
-      },
-    },
-  ];
+  const fetchSessionDetails = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setNotFound(false);
+    try {
+      const response = await getSessionById(id);
+      console.log("Backend response for session details:", response);
+      if (response.success && response.data) {
+        const s = response.data;
+        const todayStr = new Date().toISOString().split("T")[0];
+        setSession({
+          id: s.id,
+          sessionNo: `S-${String(s.id).padStart(4, "0")}`,
+          date: s.session_date ? s.session_date.split("T")[0] : todayStr,
+          startTime: s.start_time || "10:00 AM",
+          endTime: s.end_time || "11:00 AM",
+          patient: s.patient_name || "Unknown Patient",
+          healer: s.healer_name || "Unknown Healer",
+          type: s.treatment_type || "Pranic Healing",
+          status:
+            s.status === "scheduled"
+              ? "Scheduled"
+              : s.status === "completed"
+                ? "Completed"
+                : s.status === "cancelled"
+                  ? "Cancelled"
+                  : s.status || "Scheduled",
+          paymentStatus: s.payment_status || "Pending",
+          paymentMethod: s.payment_method || "Cash",
+          sessionFee: s.session_fee !== undefined && s.session_fee !== null ? s.session_fee : s.total_amount,
+          followUp: {
+            required: !!s.followup_required,
+            urgency: s.followup_priority || "None",
+          },
+          notes: s.notes
+            ? {
+                detailedNotes: s.notes,
+                treatmentType: s.treatment_type || "",
+                observations: "",
+                recommendation: "",
+              }
+            : undefined,
+        });
+      } else {
+        setNotFound(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch session details from backend:", error);
+      setNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
+  // Fetch once on mount / when id changes
   useEffect(() => {
-    const fetchSessionDetails = async () => {
-      try {
-        const response = await getSessionById(id);
-        console.log("Backend response for session details:", response);
-        if (response.success && response.data) {
-          const s = response.data;
-          setSession({
-            id: s.id,
-            sessionNo: `S-${s.id.substring(0, 4)}`, // Basic mockup since sessionNo isn't returned from getSessionById directly unless it's calculated
-            date: s.sessionDate
-              ? new Date(s.sessionDate).toISOString().split("T")[0]
-              : todayStr,
-            startTime: s.sessionDate
-              ? new Date(s.sessionDate).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "10:00 AM",
-            endTime: "11:00 AM",
-            patient: s.patient?.name || "Unknown Patient",
-            healer: s.healer?.name || "Unknown Healer",
-            type: s.treatments?.[0]?.type || "Pranic Healing",
-            status:
-              s.status === "scheduled"
-                ? "Scheduled"
-                : s.status === "completed"
-                  ? "Completed"
-                  : s.status === "cancelled"
-                    ? "Cancelled"
-                    : s.status || "Scheduled",
-            paymentStatus:
-              s.paymentStatus ||
-              (s.status === "completed" ? "Paid" : "Pending"),
-            paymentMethod: s.paymentMethod || "Cash",
-            followUp: { required: false, urgency: "None" },
-            notes: s.notes
-              ? {
-                  detailedNotes: s.notes,
-                  treatmentType: "",
-                  observations: "",
-                  recommendation: "",
-                }
-              : undefined,
-          });
-          return;
-        }
-      } catch (error) {
-        console.error("Failed to fetch session details from backend:", error);
-      }
-
-      // Attempt to read from local storage if backend fails or doesn't have it (useful for mocks)
-      // Note: local storage IDs are integers in the mock, but string in DB.
-      const sessionIdInt = parseInt(id, 10);
-      const saved = localStorage.getItem("phms_sessions");
-      if (saved) {
-        const sessionsList: HealingSession[] = JSON.parse(saved);
-        const foundSession = sessionsList.find(
-          (s) => s.id.toString() === id || s.id === sessionIdInt,
-        );
-        if (foundSession) {
-          setSession(foundSession);
-          return;
-        }
-      }
-
-      // Fall back to mock data
-      const foundSession = MOCK_SESSIONS.find(
-        (s) => s.id.toString() === id || s.id === sessionIdInt,
-      );
-      if (foundSession) {
-        setSession(foundSession);
-      }
-    };
-
     fetchSessionDetails();
-  }, [id, todayStr]);
+  }, [fetchSessionDetails]);
 
-  if (!session) {
+  // Re-fetch every time this Ionic page becomes visible (e.g. navigating back from edit)
+  useIonViewWillEnter(() => {
+    fetchSessionDetails();
+  });
+
+  if (loading) {
+    return (
+      <IonPage className="sa-page">
+        <IonContent className="sa-page__content">
+          <div style={{ textAlign: "center", padding: "80px 20px" }}>
+            <IonSpinner name="crescent" style={{ width: "48px", height: "48px", color: "#0f5b4b" }} />
+            <p style={{ marginTop: "16px", color: "#64748b", fontSize: "15px" }}>Loading session details...</p>
+          </div>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  if (notFound || !session) {
     return (
       <IonPage className="sa-page">
         <IonContent className="sa-page__content">
@@ -696,6 +551,45 @@ const DetialsSessionsPages: React.FC = () => {
                   {/* <strong style={{ fontSize: '14px', color: '#1e293b' }}>
                     {session.paymentStatus || '—'}
                   </strong> */}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginTop: "4px",
+                }}
+              >
+                <div
+                  className="sa-table__avatar"
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    fontSize: "16px",
+                    borderRadius: "12px",
+                    background: "#ecfdf5",
+                    color: "#047857",
+                  }}
+                >
+                  <IonIcon icon={cashOutline} />
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#64748b",
+                      fontWeight: 500,
+                    }}
+                  >
+                    SESSION FEE
+                  </div>
+                  <strong style={{ fontSize: "14px", color: "#1e293b" }}>
+                    {session.sessionFee !== undefined && session.sessionFee !== null
+                      ? `₹${parseFloat(session.sessionFee.toString()).toLocaleString('en-IN')}`
+                      : "—"}
+                  </strong>
                 </div>
               </div>
 

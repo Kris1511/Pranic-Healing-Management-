@@ -37,11 +37,11 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
-import { getSessions } from '../../api/session.api';
+import { getSessions, deleteSession } from '../../api/session.api';
 import './branch-admin.css';
 
 export interface HealingSession {
-  id: number;
+  id: string | number;
   sessionNo: string; // S-0001 per patient sequential
   date: string;
   startTime: string;
@@ -80,7 +80,7 @@ const SessionsPage: React.FC = () => {
   // Modals & States
   const [selectedSession, setSelectedSession] = useState<HealingSession | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<string | number | null>(null);
   const [present] = useIonToast();
 
   const triggerToast = (msg: string, color: 'success' | 'danger' = 'success') => {
@@ -112,17 +112,20 @@ const SessionsPage: React.FC = () => {
         const mappedSessions: HealingSession[] = res.data.map((s: any, index: number) => ({
           id: s.id || index,
           sessionNo: `S-${String(index + 1).padStart(4, '0')}`,
-          date: s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : todayStr,
-          startTime: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '10:00 AM',
-          endTime: '11:00 AM',
-          patient: s.patient?.name || 'Unknown Patient',
-          healer: s.healer?.name || 'Unknown Healer',
-          type: s.treatments?.[0]?.type || 'Pranic Healing',
+          date: s.session_date ? s.session_date.split('T')[0] : todayStr,
+          startTime: s.start_time || '10:00 AM',
+          endTime: s.end_time || '11:00 AM',
+          patient: s.patient_name || 'Unknown Patient',
+          healer: s.healer_name || 'Unknown Healer',
+          type: s.treatment_type || 'Pranic Healing',
           status: s.status === 'scheduled' ? 'Scheduled' : s.status === 'completed' ? 'Completed' : s.status === 'cancelled' ? 'Cancelled' : s.status || 'Scheduled',
-          paymentStatus: s.paymentStatus || (s.status === 'completed' ? 'Paid' : 'Pending'),
-          paymentMethod: s.paymentMethod || 'Cash',
-          followUp: { required: false, urgency: 'None' },
-          notes: s.notes ? { detailedNotes: s.notes, treatmentType: '', observations: '', recommendation: '' } : undefined,
+          paymentStatus: s.payment_status || 'Pending',
+          paymentMethod: s.payment_method || 'Cash',
+          followUp: {
+            required: !!s.followup_required,
+            urgency: s.followup_priority || 'None'
+          },
+          notes: s.notes ? { detailedNotes: s.notes, treatmentType: s.treatment_type || '', observations: '', recommendation: '' } : undefined,
         }));
         console.log("Full API Response:", res);
     console.log("Response Data:", res.data);
@@ -158,33 +161,42 @@ const SessionsPage: React.FC = () => {
 
 
   // Delete Session Trigger
-  const handleDeleteSession = (id: number) => {
+  const handleDeleteSession = (id: string | number) => {
     setSessionToDelete(id);
     setShowDeleteConfirm(true);
   };
 
   // Confirm Delete Handler
-  const confirmDeleteSession = () => {
+  const confirmDeleteSession = async () => {
     if (sessionToDelete !== null) {
       const session = sessions.find(s => s.id === sessionToDelete);
       if (session) {
-        const updated = sessions.filter(s => s.id !== sessionToDelete);
-        setSessions(updated);
-        localStorage.setItem('phms_sessions', JSON.stringify(updated));
+        try {
+          // Check if it's a UUID (string) or standard ID. If it's a UUID, call backend delete.
+          if (typeof sessionToDelete === 'string' && sessionToDelete.includes('-')) {
+            await deleteSession(sessionToDelete);
+          }
+          const updated = sessions.filter(s => s.id !== sessionToDelete);
+          setSessions(updated);
+          localStorage.setItem('phms_sessions', JSON.stringify(updated));
 
-        // Audit Log recording
-        const savedAudits = localStorage.getItem('phms_audits') || '[]';
-        const audits = JSON.parse(savedAudits);
-        const newAudit = {
-          id: `A-${Math.floor(1000 + Math.random() * 9000)}`,
-          action: 'SESSION_DELETION',
-          details: `Deleted Session record ${session.sessionNo} for Patient ${session.patient} assigned to Healer ${session.healer}.`,
-          changedBy: user?.name || user?.email || 'Aria Seraphina',
-          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        };
-        localStorage.setItem('phms_audits', JSON.stringify([newAudit, ...audits]));
+          // Audit Log recording
+          const savedAudits = localStorage.getItem('phms_audits') || '[]';
+          const audits = JSON.parse(savedAudits);
+          const newAudit = {
+            id: `A-${Math.floor(1000 + Math.random() * 9000)}`,
+            action: 'SESSION_DELETION',
+            details: `Deleted Session record ${session.sessionNo} for Patient ${session.patient} assigned to Healer ${session.healer}.`,
+            changedBy: user?.name || user?.email || 'Aria Seraphina',
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          };
+          localStorage.setItem('phms_audits', JSON.stringify([newAudit, ...audits]));
 
-        triggerToast(`Session record ${session.sessionNo} removed successfully.`);
+          triggerToast(`Session record ${session.sessionNo} removed successfully.`);
+        } catch (error) {
+          console.error(error);
+          triggerToast('Failed to delete session from database', 'danger');
+        }
       }
       setShowDeleteConfirm(false);
       setSessionToDelete(null);
@@ -386,7 +398,7 @@ const SessionsPage: React.FC = () => {
               />
             </div>
 
-            {/* <div className="sa-filter-group" style={{ display: 'flex', gap: '8px', flex: 3.5, flexWrap: 'wrap' }}>
+            <div className="sa-filter-group" style={{ display: 'flex', gap: '8px', flex: 3.5, flexWrap: 'wrap' }}>
               <select
                 className="sa-input"
                 style={{ flex: 1, minWidth: '130px' }}
@@ -433,7 +445,7 @@ const SessionsPage: React.FC = () => {
               >
                 Clear
               </button>
-            </div> */}
+            </div>
           </div>
 
           {/* Directory Ledger Table */}
@@ -519,7 +531,7 @@ const SessionsPage: React.FC = () => {
                             )}
 
                             {/* Record Payment Action Scoped for non-patients */}
-                            {rawRole !== 'PATIENT' && session.paymentStatus === 'Pending' && (
+                            {/* {rawRole !== 'PATIENT' && session.paymentStatus === 'Pending' && (
                               <button
                                 className="sa-table__action-btn"
                                 title="Record Payment"
@@ -530,7 +542,7 @@ const SessionsPage: React.FC = () => {
                               >
                                 <IonIcon icon={cashOutline} style={{ color: '#0d5c46' }} />
                               </button>
-                            )}
+                            )} */}
 
                             {/* Delete Action Scoped for Admins */}
                             {rawRole === 'BRANCH_ADMIN' && (

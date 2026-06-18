@@ -8,7 +8,7 @@ module.exports = {
       firebase_uid: 'SUPER_ADMIN_FIREBASE_UID', // Replace with actual UID
       email: 'superadmin@phms.com',
       name: 'Super Admin',
-      role: 'super_admin',
+      role: 'SUPER_ADMIN',
       status: 'active',
       created_at: new Date(),
       updated_at: new Date(),

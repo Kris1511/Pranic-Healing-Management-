@@ -28,7 +28,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
-import { getTreatmentTypes, deleteTreatmentType } from '../../api/treatmentType.api';
+import { getTreatmentTypes, deleteTreatmentType, updateTreatmentType } from '../../api/treatmentType.api';
 import { getTreatmentCategories } from '../../api/treatmentCategory.api';
 import './super-admin.css';
 
@@ -83,6 +83,23 @@ const TreatmentTypePage: React.FC = () => {
         setShowDeleteModal(false);
         setSelectedTreatment(null);
       }
+    }
+  };
+
+  const handleToggleStatus = async (treatment: any) => {
+    const currentStatus = treatment.status || 'Active';
+    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+    try {
+      await updateTreatmentType(treatment.id, {
+        ...treatment,
+        status: newStatus
+      });
+      setTreatments(prevTreatments =>
+        prevTreatments.map(t => (t.id === treatment.id ? { ...t, status: newStatus } : t))
+      );
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      alert('Failed to update status');
     }
   };
 
@@ -252,7 +269,12 @@ const TreatmentTypePage: React.FC = () => {
                           </div>
                         </td>
                         <td>
-                          <span className={`sa-badge sa-badge--${((treatment as any).status || 'Active').toLowerCase()}`}>
+                          <span 
+                            className={`sa-badge sa-badge--${((treatment as any).status || 'Active').toLowerCase()}`}
+                            style={{ cursor: 'pointer' }}
+                            title="Click to toggle status"
+                            onClick={() => handleToggleStatus(treatment)}
+                          >
                             {(treatment as any).status || 'Active'}
                           </span>
                         </td>

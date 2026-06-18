@@ -15,7 +15,8 @@ class SessionRepository {
     return await Session.findAll({
       where: filter,
       ...options,
-      include: ['patient', 'healer']
+      include: ['patient', 'healer', 'branch', 'treatments'],
+      order: [['sessionDate', 'DESC'], ['createdAt', 'DESC']]
     });
   }
 

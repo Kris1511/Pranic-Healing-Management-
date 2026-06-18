@@ -28,14 +28,13 @@ import {
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
 import { getBranches } from '../../api/branch.api';
-import { createUser } from '../../api/user.api';
+import { createBranchAdmin } from '../../api/branchAdmin.api';
 import './super-admin.css';
 
 const CreateBranchAdminPage: React.FC = () => {
   const history = useHistory();
   const [formData, setFormData] = useState({
     adminName: '',
-    username: '',
     password: '',
     email: '',
     phone: '',
@@ -76,19 +75,29 @@ const CreateBranchAdminPage: React.FC = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const payload = {
-        name: formData.adminName,
-        username: formData.username,
-        password: formData.password,
-        email: formData.email,
-        phone: formData.phone,
-        branchId: formData.assignedBranch || null,
-        role: 'BRANCH_ADMIN'
-      };
+      const data = new FormData();
+      data.append('name', formData.adminName);
+      data.append('password', formData.password);
+      data.append('email', formData.email);
+      data.append('phone', formData.phone);
+      data.append('branchId', formData.assignedBranch);
+      
+      if (formData.dob) data.append('dob', formData.dob);
+      if (formData.gender) data.append('gender', formData.gender);
+      if (formData.addressLine1) data.append('addressLine1', formData.addressLine1);
+      if (formData.addressLine2) data.append('addressLine2', formData.addressLine2);
+      if (formData.city) data.append('city', formData.city);
+      if (formData.district) data.append('district', formData.district);
+      if (formData.state) data.append('state', formData.state);
+      if (formData.pincode) data.append('pincode', formData.pincode);
+      if (formData.idProof) {
+        data.append('idProof', formData.idProof);
+      }
 
-      await createUser(payload);
+      console.log("Branch Admin Payload:", formData);
+      await createBranchAdmin(data);
 
-      console.log('Successfully created Branch Admin:', payload);
+      console.log('Successfully created Branch Admin:', formData.adminName);
       setAlertHeader('Success');
       setAlertMessage('Branch admin created successfully.');
       setAlertButtons([{
@@ -96,7 +105,6 @@ const CreateBranchAdminPage: React.FC = () => {
         handler: () => {
           setFormData({
             adminName: '',
-            username: '',
             password: '',
             email: '',
             phone: '',
@@ -113,11 +121,15 @@ const CreateBranchAdminPage: React.FC = () => {
           });
           const fileInput = document.getElementById('idProofInput') as HTMLInputElement;
           if (fileInput) fileInput.value = '';
+          history.push(ROUTES.SUPER_ADMIN.BRANCH_ADMINS);
         }
       }]);
       setShowAlert(true);
     } catch (error: any) {
       console.error('Error creating branch admin:', error);
+      if (error && error.response) {
+        console.log("error.response.data", error.response.data);
+      }
       const errorMessage = error?.response?.data?.message || 'Failed to create branch admin. Please try again.';
       setAlertHeader('Error');
       setAlertMessage(errorMessage);
@@ -176,16 +188,16 @@ const CreateBranchAdminPage: React.FC = () => {
 
                 <div className="sa-settings__form-group">
                   <label className="sa-settings__label sa-label--required">
-                    <IonIcon icon={personOutline} style={{ marginRight: '8px' }} />
-                    Username
+                    <IonIcon icon={mailOutline} style={{ marginRight: '8px' }} />
+                    Email ID
                   </label>
                   <input
+                    type="email"
                     className="sa-settings__input"
-                    placeholder="Login name"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="Email address"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
-                    autoComplete="off"
                   />
                 </div>
 
@@ -224,21 +236,6 @@ const CreateBranchAdminPage: React.FC = () => {
                       <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} style={{ fontSize: '20px' }} />
                     </button>
                   </div>
-                </div>
-
-                <div className="sa-settings__form-group">
-                  <label className="sa-settings__label sa-label--required">
-                    <IonIcon icon={mailOutline} style={{ marginRight: '8px' }} />
-                    Email ID
-                  </label>
-                  <input
-                    type="email"
-                    className="sa-settings__input"
-                    placeholder="Email address"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
                 </div>
 
                 <div className="sa-settings__form-group">

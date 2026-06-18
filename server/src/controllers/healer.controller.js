@@ -37,6 +37,19 @@ const { sendResponse } = require('../helpers/response.helper');
 class HealerController {
   register = async (req, res) => {
     if (req.branchId) req.body.branchId = req.branchId;
+
+    if (req.files) {
+      if (req.files.profilePhoto && req.files.profilePhoto[0]) {
+        req.body.profilePhoto = `storage/temp/${req.files.profilePhoto[0].filename}`;
+      }
+      if (req.files.idProof && req.files.idProof[0]) {
+        req.body.idProof = `storage/temp/${req.files.idProof[0].filename}`;
+      }
+      if (req.files.certification && req.files.certification[0]) {
+        req.body.certification = `storage/temp/${req.files.certification[0].filename}`;
+      }
+    }
+
     const healer = await healerService.registerHealer(req.body);
 
     return sendResponse(
@@ -72,6 +85,18 @@ class HealerController {
   };
 
   update = async (req, res) => {
+    if (req.files) {
+      if (req.files.profilePhoto && req.files.profilePhoto[0]) {
+        req.body.profilePhoto = `storage/temp/${req.files.profilePhoto[0].filename}`;
+      }
+      if (req.files.idProof && req.files.idProof[0]) {
+        req.body.idProof = `storage/temp/${req.files.idProof[0].filename}`;
+      }
+      if (req.files.certification && req.files.certification[0]) {
+        req.body.certification = `storage/temp/${req.files.certification[0].filename}`;
+      }
+    }
+
     const healer = await healerService.updateHealer(
       req.params.id,
       req.body,

@@ -45,24 +45,26 @@ export default function BACreateHealerPage() {
 
   // Form states with requested healer defaults
   const [formData, setFormData] = useState({
-    name: "Dr. Aris Varma",
-    gender: "Male",
-    dob: "1985-08-22",
-    mobile: "0876543210",
-    email: "aris.v@phms.com",
-    address: "45 Lotus Gardens, OM Road, Chennai",
-    username: "dr._aris varma",
-    password: "PHMS-" + Math.floor(1000 + Math.random() * 9000),
-    status: "Active" as "Active" | "Inactive",
-    certLevel: "Advanced",
-    specialization: "Energy Healing",
-    experience: "8",
-    languages: "English, Tamil",
-    verificationStatus: "Verified Practitioner",
+    name: "",
+    gender: "",
+    dob: "",
+    mobile: "",
+    email: "",
+    address: "",
+    password: "",
+    status: "" as any,
+    certLevel: "",
+    specialization: "",
+    experience: "",
+    languages: "",
+    verificationStatus: "",
   });
 
   // Profile Photo state
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [idProofFile, setIdProofFile] = useState<File | null>(null);
+  const [certificationFile, setCertificationFile] = useState<File | null>(null);
 
   // Uploaded files state
   const [uploadedFiles, setUploadedFiles] = useState<{
@@ -81,6 +83,14 @@ export default function BACreateHealerPage() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Refs for uncontrolled file inputs to clear them on success
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
+  const idProofInputRef = React.useRef<HTMLInputElement>(null);
+  const certificationInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Store healer name of submitted form for the success modal
+  const [submittedName, setSubmittedName] = useState("");
+
   // Handle Input Changes
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -91,10 +101,11 @@ export default function BACreateHealerPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Simulate Photo Upload
+  // Photo Upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      setProfilePhotoFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         setProfilePhoto(reader.result as string);
@@ -114,7 +125,7 @@ export default function BACreateHealerPage() {
     setFormData((prev) => ({ ...prev, password: newPass }));
   };
 
-  // Simulate File Upload
+  // File Upload
   const handleFileChange = (
     field: "idProof" | "certification",
     e: React.ChangeEvent<HTMLInputElement>,
@@ -122,6 +133,11 @@ export default function BACreateHealerPage() {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      if (field === "idProof") {
+        setIdProofFile(file);
+      } else {
+        setCertificationFile(file);
+      }
       setUploadedFiles((prev) => ({
         ...prev,
         [field]: { name: file.name, size: `${sizeMB} MB` },
@@ -135,6 +151,13 @@ export default function BACreateHealerPage() {
     e: React.MouseEvent,
   ) => {
     e.stopPropagation();
+    if (field === "idProof") {
+      setIdProofFile(null);
+      if (idProofInputRef.current) idProofInputRef.current.value = "";
+    } else {
+      setCertificationFile(null);
+      if (certificationInputRef.current) certificationInputRef.current.value = "";
+    }
     setUploadedFiles((prev) => ({
       ...prev,
       [field]: null,
@@ -182,42 +205,66 @@ export default function BACreateHealerPage() {
     }
 
     try {
-      const payload = {
-        ...formData,
-        branchId: typeof user?.branch === 'object' && user?.branch !== null 
-          ? (user.branch as any).id 
-          : (user as any)?.branchId || undefined
-      };
+      const branchId = typeof user?.branch === 'object' && user?.branch !== null 
+        ? (user.branch as any).id 
+        : (user as any)?.branchId || undefined;
 
-      const responseData = await createHealer(payload);
+      const data = new FormData();
+      Object.keys(formData).forEach((key) => {
+        const val = (formData as any)[key];
+        if (val !== undefined && val !== null && val !== "") {
+          data.append(key, val);
+        }
+      });
+      if (branchId) {
+        data.append("branchId", branchId);
+      }
+      if (profilePhotoFile) {
+        data.append("profilePhoto", profilePhotoFile);
+      }
+      if (idProofFile) {
+        data.append("idProof", idProofFile);
+      }
+      if (certificationFile) {
+        data.append("certification", certificationFile);
+      }
+
+      const responseData = await createHealer(data);
 
       console.log("API Response:", responseData);
 
       setNewHealerId(responseData.data.healerId);
+      setSubmittedName(formData.name);
 
       setFormData({
         name: "",
-        gender: "Male",
+        gender: "",
         dob: "",
         mobile: "",
         email: "",
         address: "",
-        username: "",
-        password: "PHMS-" + Math.floor(1000 + Math.random() * 9000),
-        status: "Active",
+        password: "",
+        status: "" as any,
         certLevel: "",
         specialization: "",
         experience: "",
         languages: "",
-        verificationStatus: "Pending Review",
+        verificationStatus: "",
       });
 
       setProfilePhoto(null);
+      setProfilePhotoFile(null);
+      setIdProofFile(null);
+      setCertificationFile(null);
 
       setUploadedFiles({
         idProof: null,
         certification: null,
       });
+
+      if (photoInputRef.current) photoInputRef.current.value = "";
+      if (idProofInputRef.current) idProofInputRef.current.value = "";
+      if (certificationInputRef.current) certificationInputRef.current.value = "";
 
       setShowSuccessToast(true);
     } catch (error: any) {
@@ -528,7 +575,7 @@ export default function BACreateHealerPage() {
                                     color: "#475569",
                                   }}
                                 >
-                                  D
+                                  {formData.name ? formData.name.charAt(0).toUpperCase() : "H"}
                                 </span>
                               )}
                             </div>
@@ -547,6 +594,7 @@ export default function BACreateHealerPage() {
                               <IonIcon icon={cameraOutline} />
                               Change Photo
                               <input
+                                ref={photoInputRef}
                                 type="file"
                                 accept="image/*"
                                 style={{ display: "none" }}
@@ -580,6 +628,7 @@ export default function BACreateHealerPage() {
                                 value={formData.gender}
                                 onChange={handleInputChange}
                               >
+                                <option value="">Select Gender</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                                 <option value="Other">Other</option>
@@ -613,21 +662,6 @@ export default function BACreateHealerPage() {
                                 onChange={handleInputChange}
                                 required
                                 placeholder="0876543210"
-                              />
-                            </div>
-
-                            <div className="st-form-group">
-                              <label style={customStyles.label}>
-                                EMAIL ADDRESS *
-                              </label>
-                              <input
-                                type="email"
-                                name="email"
-                                style={customStyles.grayInput}
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="aris.v@phms.com"
                               />
                             </div>
                           </div>
@@ -671,6 +705,7 @@ export default function BACreateHealerPage() {
                                 value={formData.certLevel}
                                 onChange={handleInputChange}
                               >
+                                <option value="">Select Level</option>
                                 <option value="Advanced">Advanced</option>
                                 <option value="Associate">Associate</option>
                                 <option value="Certified">Certified</option>
@@ -748,16 +783,19 @@ export default function BACreateHealerPage() {
 
                         <div className="st-form" style={{ gap: "18px" }}>
                           <div className="st-form-group">
-                            <label style={customStyles.label}>USERNAME</label>
-                            <input
-                              type="text"
-                              name="username"
-                              style={customStyles.grayInput}
-                              value={formData.username}
-                              onChange={handleInputChange}
-                              placeholder="dr._aris varma"
-                            />
-                          </div>
+                              <label style={customStyles.label}>
+                                EMAIL ADDRESS *
+                              </label>
+                              <input
+                                type="email"
+                                name="email"
+                                style={customStyles.grayInput}
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="aris.v@phms.com"
+                              />
+                            </div>
 
                           <div className="st-form-group">
                             <label style={customStyles.label}>
@@ -964,6 +1002,7 @@ export default function BACreateHealerPage() {
                                   </span>
                                 </div>
                                 <input
+                                  ref={idProofInputRef}
                                   type="file"
                                   style={{ display: "none" }}
                                   onChange={(e) =>
@@ -1040,6 +1079,7 @@ export default function BACreateHealerPage() {
                                   </span>
                                 </div>
                                 <input
+                                  ref={certificationInputRef}
                                   type="file"
                                   style={{ display: "none" }}
                                   onChange={(e) =>
@@ -1062,6 +1102,7 @@ export default function BACreateHealerPage() {
                               value={formData.verificationStatus}
                               onChange={handleInputChange}
                             >
+                              <option value="">Select Status</option>
                               <option value="Verified Practitioner">
                                 Verified Practitioner
                               </option>
@@ -1194,7 +1235,7 @@ export default function BACreateHealerPage() {
                   lineHeight: 1.5,
                 }}
               >
-                Professional records for <strong>{formData.name}</strong> have
+                Professional records for <strong>{submittedName}</strong> have
                 been successfully saved in the branch database.
               </p>
             </div>
@@ -1297,7 +1338,7 @@ export default function BACreateHealerPage() {
               <p
                 style={{
                   fontSize: "13px",
-                  color: "white",
+                  color: "#475569",
                   margin: "0",
                   lineHeight: 1.5,
                 }}

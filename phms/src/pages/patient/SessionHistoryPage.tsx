@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   IonPage,
   IonContent,
@@ -9,6 +9,9 @@ import {
   IonMenuButton,
   IonIcon,
   IonModal,
+  IonSpinner,
+  useIonViewWillEnter,
+  useIonViewWillLeave,
 } from '@ionic/react';
 import {
   timeOutline,
@@ -16,218 +19,132 @@ import {
   personOutline,
   calendarOutline,
   leafOutline,
-  documentTextOutline,
   closeOutline,
+  refreshOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
+import { useQuery } from '@tanstack/react-query';
 import AppCard from '../../components/common/AppCard';
 import { getSessions } from '../../api/session.api';
-import { getPatients } from '../../api/patient.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
+import './Patient.css';
 
-interface HealingSession {
-  id: number;
+/* ─── Types ──────────────────────────────────────────────────────── */
+interface SessionRecord {
+  id: string;
   sessionNo: string;
   date: string;
   startTime: string;
   endTime: string;
-  patient: string;
   healer: string;
   type: string;
   status: 'Completed' | 'Scheduled' | 'Cancelled';
   paymentStatus: 'Paid' | 'Pending';
-  notes?: {
-    treatmentType: string;
-    observations: string;
-    detailedNotes: string;
-    recommendation: string;
-  };
+  notes?: string;
 }
 
+/* ─── Helpers ─────────────────────────────────────────────────────── */
+const toLocalDate = (raw: string | null | undefined): string => {
+  if (!raw) return 'N/A';
+  if (raw.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+  if (raw.includes('T')) {
+    return raw.split('T')[0];
+  }
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return 'N/A';
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+};
+
+const normaliseStatus = (s: string): 'Completed' | 'Scheduled' | 'Cancelled' => {
+  const lower = (s || '').toLowerCase();
+  if (lower === 'completed') return 'Completed';
+  if (lower === 'cancelled') return 'Cancelled';
+  return 'Scheduled';
+};
+
+const normalisePayment = (p: string): 'Paid' | 'Pending' =>
+  (p || '').toLowerCase() === 'paid' ? 'Paid' : 'Pending';
+
+const mapApiSession = (s: any): SessionRecord => ({
+  id: s.id,
+  sessionNo: s.sessionNo || `SES-${String(s.id).substring(0, 6).toUpperCase()}`,
+  date: toLocalDate(s.sessionDate || s.session_date || s.createdAt),
+  startTime: s.startTime || s.start_time || '—',
+  endTime: s.endTime || s.end_time || '—',
+  healer: s.healer?.name
+    ? (s.healer.name.startsWith('Dr.') ? s.healer.name : `Dr. ${s.healer.name}`)
+    : (s.healer_name ? `Dr. ${s.healer_name}` : 'Unknown Healer'),
+  type: s.treatmentType || s.treatment_type || s.type || 'Pranic Healing',
+  status: normaliseStatus(s.status),
+  paymentStatus: normalisePayment(s.paymentStatus || s.payment_status),
+  notes: s.notes || undefined,
+});
+
+/* ─── Component ───────────────────────────────────────────────────── */
 const SessionHistoryPage: React.FC = () => {
   const history = useHistory();
   const { user } = useAuthStore();
+  const [selectedSession, setSelectedSession] = useState<SessionRecord | null>(null);
+  const [isPageActive, setIsPageActive] = useState(true);
 
-  const userName = user?.name || 'Valued Patient';
-  const userEmail = user?.email || 'patient@phms.com';
+  useIonViewWillEnter(() => setIsPageActive(true));
+  useIonViewWillLeave(() => setIsPageActive(false));
 
-  const [sessions, setSessions] = React.useState<HealingSession[]>([]);
-  const [selectedSession, setSelectedSession] = React.useState<HealingSession | null>(null);
+  /* Live polling — re-fetches every 3 s while page is visible */
+  const { data, isLoading, isError, refetch } = useQuery<SessionRecord[]>({
+    queryKey: ['patient-sessions', user?.email],
+    queryFn: async () => {
+      const res = await getSessions();
+      const raw: any[] = Array.isArray(res?.data) ? res.data : [];
+      return raw
+        .map(mapApiSession)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    },
+    enabled: !!user,
+    refetchInterval: isPageActive ? 3000 : false,
+    staleTime: 0,
+  });
 
-  // Load sessions from localStorage & Backend API
-  React.useEffect(() => {
-    const loadData = async () => {
-      // 1. Resolve patient name and healer
-      let patientName = userName;
-      let currentHealer = 'Dr. Arjun';
-      let patientDbId = '';
+  const sessions: SessionRecord[] = data ?? [];
 
-      // 1a. Try to fetch patient details from backend to resolve their exact name and healer
-      try {
-        const patientsRes = await getPatients({ email: userEmail });
-        if (patientsRes && patientsRes.success && Array.isArray(patientsRes.data) && patientsRes.data.length > 0) {
-          const dbPatient = patientsRes.data[0];
-          patientName = dbPatient.name;
-          patientDbId = dbPatient.id;
-          if (dbPatient.healer) {
-            currentHealer = dbPatient.healer.name.startsWith('Dr.') ? dbPatient.healer.name : `Dr. ${dbPatient.healer.name}`;
-          }
-        }
-      } catch (err) {
-        console.warn('Backend patient details fetch failed, using offline patient name resolution:', err);
-      }
-
-      // 1b. Fallback to localStorage patients resolution
-      const savedPatients = localStorage.getItem('phms_patients');
-      if (savedPatients && patientName === userName) {
-        try {
-          const parsed = JSON.parse(savedPatients);
-          const found = parsed.find((p: any) => p.email?.toLowerCase() === userEmail.toLowerCase());
-          if (found) {
-            patientName = found.name;
-            currentHealer = found.assignedHealer || 'Dr. Arjun';
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
-      // 2. Fetch backend sessions (Online Mode)
-      let backendSessions: HealingSession[] = [];
-      let fetchSuccess = false;
-
-      try {
-        const sessionsRes = await getSessions();
-        if (sessionsRes && Array.isArray(sessionsRes.data)) {
-          fetchSuccess = true;
-          sessionsRes.data.forEach((s: any) => {
-            const patient = s.patient;
-            const isMatch = patient && (
-              patient.email?.toLowerCase() === userEmail.toLowerCase() ||
-              patient.id === patientDbId ||
-              patient.name?.toLowerCase().trim() === patientName.toLowerCase().trim()
-            );
-
-            if (isMatch) {
-              const sessionNo = s.sessionNo || `S-${s.id?.substring(0, 4) || 'XXXX'}`;
-              
-              if (!backendSessions.some(existing => existing.sessionNo === sessionNo)) {
-                const mappedSession: HealingSession = {
-                  id: s.id,
-                  sessionNo: sessionNo,
-                  date: new Date(s.sessionDate || s.createdAt || Date.now()).toISOString().split('T')[0],
-                  startTime: s.startTime || '10:00 AM',
-                  endTime: s.endTime || '11:00 AM',
-                  patient: patientName,
-                  healer: s.healer?.name ? (s.healer.name.startsWith('Dr.') ? s.healer.name : `Dr. ${s.healer.name}`) : currentHealer,
-                  type: s.type || 'Basic Pranic Healing',
-                  status: s.status === 'scheduled' ? 'Scheduled' : (s.status === 'completed' ? 'Completed' : 'Cancelled'),
-                  paymentStatus: s.paymentStatus === 'Paid' ? 'Paid' : 'Pending',
-                  notes: s.notes ? {
-                    treatmentType: s.type || 'Basic Pranic Healing',
-                    observations: s.notes || '—',
-                    detailedNotes: '—',
-                    recommendation: '—'
-                  } : undefined
-                };
-                backendSessions.push(mappedSession);
-              }
-            }
-          });
-        }
-      } catch (err) {
-        console.warn('Backend sessions fetch failed:', err);
-      }
-
-      // If backend loading is successful and we retrieved data, show only database data to prevent local storage duplication
-      if (fetchSuccess && backendSessions.length > 0) {
-        backendSessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setSessions(backendSessions);
-        return;
-      }
-
-      // 3. Fallback/Offline Mode: Load sessions matching patientName from localStorage
-      const savedSessions = localStorage.getItem('phms_sessions');
-      let filtered: HealingSession[] = [];
-      if (savedSessions) {
-        try {
-          const parsed: HealingSession[] = JSON.parse(savedSessions);
-          filtered = parsed.filter(
-            (s) => s.patient?.toLowerCase().trim() === patientName.toLowerCase().trim()
-          );
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
-      // Fallback/Sample data for session history if empty
-      if (filtered.length === 0) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-        filtered = [
-          {
-            id: Date.now() - 3600000 * 2, // Booked 2 hours ago
-            sessionNo: 'SESS-2041',
-            date: tomorrowStr,
-            startTime: '10:00 AM',
-            endTime: '11:00 AM',
-            patient: patientName,
-            healer: currentHealer,
-            type: 'Advanced Pranic Healing',
-            status: 'Scheduled',
-            paymentStatus: 'Pending'
-          },
-          {
-            id: Date.now() - 3600000 * 48, // Booked 2 days ago
-            sessionNo: 'SESS-2035',
-            date: yesterdayStr,
-            startTime: '11:00 AM',
-            endTime: '12:00 PM',
-            patient: patientName,
-            healer: currentHealer,
-            type: 'Basic Pranic Healing',
-            status: 'Completed',
-            paymentStatus: 'Paid',
-            notes: {
-              treatmentType: 'Basic Pranic Healing',
-              observations: 'Patient reported moderate stress levels and shoulder tension. Performed aura cleansing and energized the solar plexus and throat chakras. Patient felt lighter immediately after the session.',
-              detailedNotes: 'Successfully completed the basic chakra alignment protocol. Cleansed both front and back solar plexus chakras. Energized the throat chakra to ease communication blockages.',
-              recommendation: 'Perform soft breathing exercises daily in the morning. Hydrate well and walk in nature twice a day.'
-            }
-          }
-        ];
-      }
-
-      // Sort by date/time descending
-      filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setSessions(filtered);
-    };
-
-    loadData();
-  }, [userEmail, userName]);
+  /* ─── Status badge helper ─────────────────────────────────────── */
+  const statusClass = (status: SessionRecord['status']) => {
+    if (status === 'Completed') return 'healer-status-badge healer-status-badge--completed';
+    if (status === 'Cancelled') return 'healer-status-badge healer-status-badge--cancelled';
+    return 'healer-status-badge healer-status-badge--scheduled';
+  };
 
   return (
     <IonPage className="sa-page">
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
+          <IonButtons slot="start">
+            <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
+              <IonIcon icon={arrowBackOutline} />
+            </button>
+          </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Healing Sessions History</IonTitle>
           <IonButtons slot="end">
+            <button
+              className="healer-back-btn"
+              onClick={() => refetch()}
+              title="Refresh sessions"
+              style={{ marginRight: '4px' }}
+            >
+              <IonIcon icon={refreshOutline} />
+            </button>
             <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="sa-page__content">
-        <div className="healer-container">
-          
+        <div className="healer-container pat-container-narrow-900">
+
           <div className="healer-header-box">
             <h1 className="healer-page-title">Session History</h1>
             <p className="healer-page-subtitle">
@@ -236,62 +153,87 @@ const SessionHistoryPage: React.FC = () => {
           </div>
 
           <AppCard padding="large" shadow>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: '0 0 16px 0' }}>
+            <h3 className="pat-card-title-16-m16">
               My Healing Sessions ({sessions.length})
             </h3>
 
-            {sessions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 16px', color: '#94a3b8' }}>
-                <IonIcon icon={timeOutline} style={{ fontSize: '48px', opacity: 0.3, marginBottom: '8px' }} />
-                <p style={{ margin: 0 }}>No session logs found on your account.</p>
+            {/* Loading state */}
+            {isLoading && (
+              <div style={{ textAlign: 'center', padding: '40px 16px', color: '#0d9488' }}>
+                <IonSpinner name="crescent" style={{ color: '#0d9488' }} />
+                <p style={{ marginTop: '12px', fontWeight: 600, color: '#64748b' }}>
+                  Loading your sessions…
+                </p>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            )}
+
+            {/* Error state */}
+            {!isLoading && isError && (
+              <div style={{ textAlign: 'center', padding: '40px 16px', color: '#ef4444' }}>
+                <p style={{ margin: 0, fontWeight: 600 }}>Failed to load sessions.</p>
+                <button
+                  className="healer-btn"
+                  onClick={() => refetch()}
+                  style={{ marginTop: '12px' }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!isLoading && !isError && sessions.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 16px', color: '#94a3b8' }}>
+                <IonIcon icon={timeOutline} style={{ fontSize: '48px', opacity: 0.3, marginBottom: '8px', display: 'block', margin: '0 auto 8px' }} />
+                <p style={{ margin: 0 }}>No session records found for your account.</p>
+              </div>
+            )}
+
+            {/* Sessions list */}
+            {!isLoading && !isError && sessions.length > 0 && (
+              <div className="pat-vertical-list-16">
                 {sessions.map((session) => (
-                  <div 
-                    key={session.id}
-                    style={{
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '18px',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                  <div key={session.id} className="pat-session-card">
+                    <div className="pat-card-header-flex">
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <strong style={{ fontSize: '16px', color: '#0f172a' }}>{session.sessionNo}</strong>
-                          <span style={{ fontSize: '12px', background: '#e2f5f1', color: '#0f766e', padding: '2px 8px', borderRadius: '4px', fontWeight: '700' }}>
-                            {session.type}
-                          </span>
+                        <div className="pat-flex-align-center-gap8">
+                          <strong className="pat-session-no-text">{session.sessionNo}</strong>
+                          <span className="pat-session-badge-teal">{session.type}</span>
                         </div>
-                        
-                        <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <IonIcon icon={personOutline} style={{ color: '#0d9488' }} /> Healer: <strong>{session.healer}</strong>
+
+                        <p className="pat-card-line-p6">
+                          <IonIcon icon={personOutline} /> Healer: <strong>{session.healer}</strong>
                         </p>
-                        
-                        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <IonIcon icon={calendarOutline} style={{ color: '#0d9488' }} /> Conducted: <strong>{session.date} • {session.startTime} - {session.endTime}</strong>
+
+                        <p className="pat-card-line-p4">
+                          <IonIcon icon={calendarOutline} /> Conducted:{' '}
+                          <strong>{session.date} • {session.startTime} – {session.endTime}</strong>
+                        </p>
+
+                        <p className="pat-card-line-p4" style={{ marginTop: '4px' }}>
+                          Payment:{' '}
+                          <span style={{
+                            fontWeight: 700,
+                            color: session.paymentStatus === 'Paid' ? '#0d9488' : '#f59e0b',
+                          }}>
+                            {session.paymentStatus}
+                          </span>
                         </p>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                        <span className={`healer-status-badge ${
-                          session.status === 'Completed' ? 'healer-status-badge--completed' : 'healer-status-badge--scheduled'
-                        }`}>
+                      <div className="pat-card-right-flex">
+                        <span className={statusClass(session.status)}>
                           {session.status}
                         </span>
 
-                        {/* {session.status === 'Completed' && (
-                          <button 
-                            className="healer-photo-upload-btn"
-                            style={{ border: '1px solid #0f766e', color: '#0f766e', background: 'transparent' }}
+                        {session.status === 'Completed' && (
+                          <button
+                            className="pat-btn-notes-outline"
                             onClick={() => setSelectedSession(session)}
                           >
-                            View Notes & Advice
+                            View Notes
                           </button>
-                        )} */}
+                        )}
                       </div>
                     </div>
                   </div>
@@ -299,12 +241,11 @@ const SessionHistoryPage: React.FC = () => {
               </div>
             )}
           </AppCard>
-
         </div>
 
-        {/* Detailed Session Notes Modal */}
-        <IonModal 
-          isOpen={selectedSession !== null} 
+        {/* Session Notes Modal */}
+        <IonModal
+          isOpen={selectedSession !== null}
           onDidDismiss={() => setSelectedSession(null)}
           className="healer-modal-popup"
         >
@@ -323,76 +264,53 @@ const SessionHistoryPage: React.FC = () => {
             <IonContent className="ion-padding healer-modal-content">
               {selectedSession && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '16px 8px' }}>
-                  
+
                   {/* Overview Card */}
                   <AppCard padding="large" shadow>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#64748b' }}>Session Modality</span>
-                        <strong style={{ color: '#0f766e' }}>{selectedSession.type}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#64748b' }}>Healing Practitioner</span>
-                        <strong style={{ color: '#1e293b' }}>{selectedSession.healer}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#64748b' }}>Conduct Date</span>
-                        <strong style={{ color: '#1e293b' }}>{selectedSession.date}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span style={{ color: '#64748b' }}>Timing Slot</span>
-                        <strong style={{ color: '#1e293b' }}>{selectedSession.startTime} - {selectedSession.endTime}</strong>
-                      </div>
+                      {[
+                        ['Session Modality', selectedSession.type],
+                        ['Healing Practitioner', selectedSession.healer],
+                        ['Conduct Date', selectedSession.date],
+                        ['Timing Slot', `${selectedSession.startTime} – ${selectedSession.endTime}`],
+                        ['Payment Status', selectedSession.paymentStatus],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#64748b' }}>{label}</span>
+                          <strong style={{ color: '#0f766e' }}>{value}</strong>
+                        </div>
+                      ))}
                     </div>
                   </AppCard>
 
-                  {/* Observations Section */}
+                  {/* Notes Section */}
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                      Healer Observations & Aura Assessment
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      Healer Notes &amp; Observations
                     </h4>
                     <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', fontSize: '14px', color: '#334155', lineHeight: 1.5 }}>
-                      {selectedSession.notes?.observations && selectedSession.notes.observations !== '—' 
-                        ? selectedSession.notes.observations 
-                        : 'No observations logged for this session.'
-                      }
+                      {selectedSession.notes && selectedSession.notes !== '—'
+                        ? selectedSession.notes
+                        : 'No notes logged for this session.'}
                     </div>
                   </div>
 
-                  {/* Detailed Notes Section */}
+                  {/* Recommendations */}
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                      Session Treatment Summary
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <IonIcon icon={leafOutline} /> Recommendations
                     </h4>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', fontSize: '14px', color: '#334155', lineHeight: 1.5 }}>
-                      {selectedSession.notes?.detailedNotes && selectedSession.notes.detailedNotes !== '—' 
-                        ? selectedSession.notes.detailedNotes 
-                        : 'No detailed clinical summary logged.'
-                      }
+                    <div style={{ background: '#faf8fc', border: '1px solid #faf5ff', borderRadius: '8px', padding: '16px', fontSize: '14px', color: '#5b21b6', lineHeight: 1.5, fontWeight: 500 }}>
+                      Ensure regular practice of physical exercises and meditation as advised by your healer.
                     </div>
                   </div>
 
-                  {/* Recommendations Section */}
-                  <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <IonIcon icon={leafOutline} /> Healer Recommendations & Advice
-                    </h4>
-                    <div style={{ background: '#faf8fc', border: '1px solid #faf5ff', borderRadius: '8px', padding: '16px', fontSize: '14px', color: '#5b21b6', lineHeight: 1.5, fontWeight: '500' }}>
-                      {selectedSession.notes?.recommendation && selectedSession.notes.recommendation !== '—' 
-                        ? selectedSession.notes.recommendation 
-                        : 'No specific recommendations logged yet. Ensure regular practice of physical exercises and meditation as advised.'
-                      }
-                    </div>
-                  </div>
-
-                  <button 
-                    className="healer-btn-primary" 
+                  <button
                     onClick={() => setSelectedSession(null)}
-                    style={{ padding: '12px', borderRadius: '8px', border: 'none', background: '#0f766e', color: 'white', fontWeight: '700', cursor: 'pointer', marginTop: '12px' }}
+                    style={{ padding: '12px', borderRadius: '8px', border: 'none', background: '#0f766e', color: 'white', fontWeight: 700, cursor: 'pointer', marginTop: '12px' }}
                   >
                     Done
                   </button>
-
                 </div>
               )}
             </IonContent>

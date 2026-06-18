@@ -42,6 +42,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true,
     },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   }, {
     tableName: 'users',
     timestamps: true,
@@ -49,8 +53,8 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   User.associate = (models) => {
-    // Associations will be defined here
     User.belongsTo(models.Branch, { foreignKey: 'branchId', as: 'branch' });
+    User.hasOne(models.BranchAdmin, { foreignKey: 'userId', as: 'branchAdminProfile' });
   };
 
   return User;

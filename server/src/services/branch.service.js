@@ -1,8 +1,5 @@
 const branchRepository = require('../repositories/branch.repository');
-const userRepository = require('../repositories/user.repository');
-const { admin } = require('../config/firebase.config');
 const ApiError = require('../helpers/error.helper');
-const { v4: uuidv4 } = require('uuid');
 
 class BranchService {
   async createBranch(data) {
@@ -12,34 +9,7 @@ class BranchService {
       throw new ApiError(400, 'Branch name already exists.');
     }
 
-    // 2. Check if a user with this email already exists in local DB
-    if (data.email) {
-      const existingUser = await userRepository.findByEmail(data.email);
-      if (existingUser) {
-        throw new ApiError(400, 'A user with this email address already exists.');
-      }
-    }
-
-    // 3. Create the Firebase User if email & password are provided
-    let firebaseUid = `mock-uid-${uuidv4()}`;
-    if (data.email && data.password) {
-      try {
-        if (admin && admin.apps && admin.apps.length > 0) {
-          const fbUser = await admin.auth().createUser({
-            email: data.email,
-            password: data.password,
-            displayName: `${data.name} Admin`,
-          });
-          firebaseUid = fbUser.uid;
-        } else {
-          console.warn('Firebase Admin is not initialized. Skipping Firebase user registration (simulated for dev).');
-        }
-      } catch (fbError) {
-        throw new ApiError(500, `Authentication service error: ${fbError.message}`);
-      }
-    }
-
-    // 4. Create the Branch in local DB
+    // 2. Create the Branch in local DB
     const address = [
       data.addressLine1,
       data.addressLine2,
@@ -64,24 +34,16 @@ class BranchService {
       details: data.details || null
     });
 
-    // 5. Create the local User (Branch Admin)
-    if (data.email) {
-      await userRepository.create({
-        firebaseUid,
-        email: data.email,
-        name: `${data.name} Admin`,
-        role: 'BRANCH_ADMIN',
-        phoneNumber: data.phone,
-        branchId: branch.id,
-        status: 'active'
-      });
-    }
-
     return branch;
   }
 
   async getAllBranches(filter = {}) {
-    return await branchRepository.findAll(filter);
+    const branches = await branchRepository.findAll(filter);
+    return branches.map(branch => {
+      const branchJson = branch.toJSON ? branch.toJSON() : { ...branch };
+      branchJson.admin = branchJson.branchAdmin ? branchJson.branchAdmin.name : 'Unassigned';
+      return branchJson;
+    });
   }
 
   async getBranchById(id) {
@@ -89,7 +51,9 @@ class BranchService {
     if (!branch) {
       throw new ApiError(404, 'Branch not found.');
     }
-    return branch;
+    const branchJson = branch.toJSON ? branch.toJSON() : { ...branch };
+    branchJson.admin = branchJson.branchAdmin ? branchJson.branchAdmin.name : 'Unassigned';
+    return branchJson;
   }
 
   async updateBranch(id, data) {
@@ -97,7 +61,10 @@ class BranchService {
     if (!branch) {
       throw new ApiError(404, 'Branch not found.');
     }
-    return branch;
+    const refreshed = await branchRepository.findById(id);
+    const branchJson = refreshed.toJSON ? refreshed.toJSON() : { ...refreshed };
+    branchJson.admin = branchJson.branchAdmin ? branchJson.branchAdmin.name : 'Unassigned';
+    return branchJson;
   }
 
   async deleteBranch(id) {

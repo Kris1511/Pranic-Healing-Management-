@@ -1,4 +1,6 @@
 const patientRepository = require('../repositories/patient.repository');
+const userRepository = require('../repositories/user.repository');
+const { admin } = require('../config/firebase.config');
 const ApiError = require('../helpers/error.helper');
 const crypto = require('crypto');
 const userService = require('./user.service');
@@ -9,10 +11,12 @@ class PatientService {
     if (!data.password) {
       data.password = crypto.randomBytes(4).toString('hex');
     }
-    
-    if (!data.username) {
-      data.username = data.email || data.phone || `patient_${crypto.randomBytes(2).toString('hex')}`;
+
+    if (data.healerId === '') {
+      data.healerId = null;
     }
+    
+
 
     // Generate patient unique ID if not provided
     if (!data.patientId) {
@@ -64,13 +68,119 @@ class PatientService {
 
   async updatePatient(id, data, branchId) {
     const existing = await this.getPatientById(id, branchId); // reusing getPatientById for validation
+    
+    // Check if email is being changed and if new email already exists (for other patient or user)
+    if (data.email && data.email !== existing.email) {
+      // Check if new email exists in patients table
+      const patientsWithEmail = await patientRepository.findAll({ email: data.email });
+      const otherPatient = patientsWithEmail.find(p => p.id !== existing.id);
+      if (otherPatient) {
+        throw new ApiError(400, 'A patient with this email address already exists.');
+      }
+      
+      // Check if new email exists in users table
+      const userWithEmail = await userRepository.findByEmail(data.email);
+      if (userWithEmail) {
+        throw new ApiError(400, 'A user with this email address already exists.');
+      }
+    }
+
+    if (data.healerId === '') {
+      data.healerId = null;
+    }
+
+    // 1. Update Firebase Auth user details (best-effort)
+    if (existing.email) {
+      try {
+        if (admin && admin.apps && admin.apps.length > 0) {
+          const fbUser = await admin.auth().getUserByEmail(existing.email);
+          const fbUpdateData = {};
+          if (data.email) fbUpdateData.email = data.email;
+          if (data.name) fbUpdateData.displayName = data.name;
+          if (data.password) fbUpdateData.password = data.password;
+          if (data.status) {
+            fbUpdateData.disabled = (data.status.toLowerCase() === 'inactive');
+          }
+          
+          if (Object.keys(fbUpdateData).length > 0) {
+            await admin.auth().updateUser(fbUser.uid, fbUpdateData);
+            logger.info(`Firebase user updated for email: ${existing.email}`);
+          }
+        }
+      } catch (fbErr) {
+        logger.warn(`Could not update Firebase account for ${existing.email}: ${fbErr.message}`);
+      }
+    }
+
+    // 2. Update linked user in users table
+    if (existing.email) {
+      try {
+        const user = await userRepository.findByEmail(existing.email);
+        if (user) {
+          const userUpdateData = {};
+           if (data.name !== undefined) userUpdateData.name = data.name;
+          if (data.email !== undefined) userUpdateData.email = data.email;
+          if (data.phone !== undefined) userUpdateData.phoneNumber = data.phone;
+          if (data.password !== undefined) userUpdateData.password = data.password;
+          
+          if (data.status !== undefined) {
+            userUpdateData.status = data.status.toLowerCase();
+          }
+          if (data.branchId !== undefined) {
+            userUpdateData.branchId = data.branchId;
+          } else if (existing.branchId) {
+            userUpdateData.branchId = existing.branchId;
+          }
+          
+          await userRepository.update(user.id, userUpdateData);
+          logger.info(`User record updated for email: ${existing.email}`);
+        } else {
+          logger.warn(`No user record found for patient email: ${existing.email}`);
+        }
+      } catch (userErr) {
+        logger.error(`Error updating user record for patient email ${existing.email}: ${userErr.message}`);
+        throw new ApiError(500, `Failed to update linked user record: ${userErr.message}`);
+      }
+    }
+
+    // 3. Update patient in patients table
     const patient = await patientRepository.update(id, data);
     return patient;
   }
 
   async deletePatient(id, branchId) {
-    await this.getPatientById(id, branchId); // reusing getPatientById for validation
-    const patient = await patientRepository.delete(id);
+    // 1. Resolve the patient record
+    const existing = await this.getPatientById(id, branchId);
+
+    // 2. Delete the linked Firebase Auth account (best-effort)
+    if (existing.email) {
+      try {
+        if (admin && admin.apps && admin.apps.length > 0) {
+          const fbUser = await admin.auth().getUserByEmail(existing.email);
+          await admin.auth().deleteUser(fbUser.uid);
+          logger.info(`Firebase account deleted for patient email: ${existing.email}`);
+        }
+      } catch (fbErr) {
+        logger.warn(`Could not delete Firebase account for ${existing.email}: ${fbErr.message}`);
+      }
+    }
+
+    // 3. Delete the linked user record from the users table
+    if (existing.email) {
+      try {
+        const deleted = await userRepository.deleteByEmail(existing.email);
+        if (deleted) {
+          logger.info(`User record deleted for patient email: ${existing.email}`);
+        } else {
+          logger.warn(`No user record found for patient email: ${existing.email}`);
+        }
+      } catch (userErr) {
+        logger.error(`Error deleting user record for patient email ${existing.email}: ${userErr.message}`);
+      }
+    }
+
+    // 4. Delete the patient record
+    const patient = await patientRepository.delete(existing.id);
     return patient;
   }
 }

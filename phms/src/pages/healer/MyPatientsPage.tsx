@@ -241,8 +241,7 @@ const MyPatientsPage: React.FC = () => {
                           <button
                             className="healer-btn"
                             onClick={() => {
-                              setSelectedPatient(patient);
-                              setShowDetailModal(true);
+                              history.push(`/healer/patients/details/${patient.id}`);
                             }}
                             title="View Patient Details"
                             style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}

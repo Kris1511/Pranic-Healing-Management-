@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   IonPage,
   IonContent,
@@ -9,6 +9,7 @@ import {
   IonIcon,
   IonTitle,
   IonButton,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -43,7 +44,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
-import { getHealers } from '../../api/healer.api';
+import { getHealers, deleteHealer } from '../../api/healer.api';
 import './branch-admin.css';
 import '../super-admin/super-admin.css';
 
@@ -169,46 +170,51 @@ const HealersPage: React.FC = () => {
   // ── Local Storage State Hook Up ───────────────────────────────────────────
   const [healers, setHealers] = useState<Healer[]>([]);
 
-  useEffect(() => {
-    const fetchHealers = async () => {
-      try {
-        const response = await getHealers();
-        // Depending on response wrapper, adjust to response.data or response directly
-        const apiHealers = Array.isArray(response) ? response : (response.data || response);
-        if (Array.isArray(apiHealers)) {
-          const formattedHealers = apiHealers.map((h: any) => ({
-            id: h.healerId || h.id,
-            name: h.name,
-            gender: h.gender || 'Other',
-            dob: h.dob || '1990-01-01',
-            email: h.email || '',
-            phone: h.mobile || h.phone || '',
-            address: h.address || '',
-            certificationLevel: h.certLevel || h.certificationLevel || 'Associate Healer',
-            specialization: typeof h.specialization === 'string' ? h.specialization.split(',') : (h.specialization || []),
-            experience: h.experience || 0,
-            status: h.status?.toUpperCase() || 'ACTIVE',
-            branch: h.branch?.name || assignedBranch,
-            createdAt: h.createdAt || new Date().toISOString(),
-            cumulativeHealingCount: h.cumulativeHealingCount || 0,
-            completedSessions: h.completedSessions || 0,
-            pendingNotes: h.pendingNotes || 0,
-            urgentFollowUps: h.urgentFollowUps || 0,
-            avatarBg: ['#0f5b4b', '#1e40af', '#7c3aed', '#db2777', '#b45309'][Math.floor(Math.random() * 5)],
-            initials: h.name ? h.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase() : 'HE',
-            bio: h.bio || `Certified healer specializing in ${h.specialization || 'general healing'}.`,
-          }));
-          setHealers(formattedHealers);
-        } else {
-          throw new Error("Invalid API response");
-        }
-      } catch (error) {
-        console.error('Error fetching healers:', error);
-        setHealers([]);
+  const fetchHealers = useCallback(async () => {
+    try {
+      const response = await getHealers();
+      // Depending on response wrapper, adjust to response.data or response directly
+      const apiHealers = Array.isArray(response) ? response : (response.data || response);
+      if (Array.isArray(apiHealers)) {
+        const formattedHealers = apiHealers.map((h: any) => ({
+          id: h.healerId || h.id,
+          name: h.name,
+          gender: h.gender || 'Other',
+          dob: h.dob || '1990-01-01',
+          email: h.email || '',
+          phone: h.mobile || h.phone || '',
+          address: h.address || '',
+          certificationLevel: h.certLevel || h.certificationLevel || 'Associate Healer',
+          specialization: typeof h.specialization === 'string' ? h.specialization.split(',') : (h.specialization || []),
+          experience: h.experience || 0,
+          status: h.status?.toUpperCase() || 'ACTIVE',
+          branch: h.branch?.name || assignedBranch,
+          createdAt: h.createdAt || new Date().toISOString(),
+          cumulativeHealingCount: h.cumulativeHealingCount || 0,
+          completedSessions: h.completedSessions || 0,
+          pendingNotes: h.pendingNotes || 0,
+          urgentFollowUps: h.urgentFollowUps || 0,
+          avatarBg: ['#0f5b4b', '#1e40af', '#7c3aed', '#db2777', '#b45309'][Math.floor(Math.random() * 5)],
+          initials: h.name ? h.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase() : 'HE',
+          bio: h.bio || `Certified healer specializing in ${h.specialization || 'general healing'}.`,
+        }));
+        setHealers(formattedHealers);
+      } else {
+        throw new Error("Invalid API response");
       }
-    };
-    fetchHealers();
+    } catch (error) {
+      console.error('Error fetching healers:', error);
+      setHealers([]);
+    }
   }, [assignedBranch]);
+
+  useEffect(() => {
+    fetchHealers();
+  }, [fetchHealers]);
+
+  useIonViewWillEnter(() => {
+    fetchHealers();
+  });
 
   const [patients, setPatients] = useState<Patient[]>([]);
 
@@ -294,6 +300,27 @@ const HealersPage: React.FC = () => {
   // Toast message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // ── Delete Confirmation Modal State ───────────────────────────────────────
+  const [healerToDelete, setHealerToDelete] = useState<Healer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!healerToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteHealer(healerToDelete.id);
+      setHealers(prev => prev.filter(h => h.id !== healerToDelete.id));
+      logAudit('HEALER_DELETION', `Deleted healer ${healerToDelete.name} (ID: ${healerToDelete.id}).`);
+      triggerToast(`Healer "${healerToDelete.name}" has been permanently removed.`);
+    } catch (err: any) {
+      console.error('Error deleting healer:', err);
+      triggerError(err?.response?.data?.message || 'Failed to delete healer. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setHealerToDelete(null);
+    }
+  };
 
   // Trigger brief visual toasts
   const triggerToast = (msg: string) => {
@@ -449,8 +476,6 @@ const HealersPage: React.FC = () => {
       return;
     }
 
-    const cleanName = addForm.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const genUsername = `${cleanName}_${Math.floor(10 + Math.random() * 90)}`;
     const genPassword = `PHMS-${Math.random().toString(36).substring(2, 7).toUpperCase()}#${Math.floor(10 + Math.random() * 90)}`;
 
     const healerId = `H-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -480,8 +505,8 @@ const HealersPage: React.FC = () => {
 
     setHealers(prev => [...prev, newHealer]);
 
-    sendNotification('SMS', addForm.phone, `Welcome Dr. ${addForm.name}. Your account created. Username: ${genUsername}, Temp Pass: ${genPassword}`);
-    sendNotification('Email', addForm.email, `Dear Dr. ${addForm.name}, Welcome to PHMS. Your healer credentials: Username: ${genUsername}, Password: ${genPassword}`);
+    sendNotification('SMS', addForm.phone, `Welcome Dr. ${addForm.name}. Your account created. Login Email: ${addForm.email}, Temp Pass: ${genPassword}`);
+    sendNotification('Email', addForm.email, `Dear Dr. ${addForm.name}, Welcome to PHMS. Your healer credentials: Login Email: ${addForm.email}, Password: ${genPassword}`);
     logAudit('HEALER_CREATION', `Created healer ${addForm.name} (ID: ${healerId}) assigned to branch ${assignedBranch}. Auto-credentials dispatched.`);
 
     triggerToast('Healer account created successfully.');
@@ -1043,7 +1068,7 @@ const HealersPage: React.FC = () => {
                                   <button title="Edit Profile" onClick={() => history.push(`/branch-admin/healers/edit/${healer.id}`)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b', padding: 0 }}>
                                     <IonIcon icon={pencilOutline} />
                                   </button>
-                                  <button title="Delete Healer" onClick={() => { if(window.confirm(`Are you sure you want to remove ${healer.name}?`)) { setHealers(prev => prev.filter(h => h.id !== healer.id)); logAudit('HEALER_DELETION', `Deleted healer ${healer.name} (ID: ${healer.id}).`); triggerToast(`Healer ${healer.name} removed.`); } }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#ef4444', padding: 0 }}>
+                                  <button title="Delete Healer" onClick={() => setHealerToDelete(healer)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#ef4444', padding: 0 }}>
                                     <IonIcon icon={trashOutline} />
                                   </button>
                                 </div>
@@ -1413,6 +1438,138 @@ const HealersPage: React.FC = () => {
             </div>
           </div>
         )}
+
+      {/* ── Themed Delete Confirmation Modal ──────────────────────────────── */}
+      {healerToDelete && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            width: '90%',
+            maxWidth: '420px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            overflow: 'hidden',
+            animation: 'slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1)'
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              padding: '24px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '60px', height: '60px',
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 12px',
+                fontSize: '28px'
+              }}>
+                <IonIcon icon={trashOutline} style={{ color: 'white' }} />
+              </div>
+              <h2 style={{ margin: 0, color: 'white', fontSize: '20px', fontWeight: 700 }}>Delete Healer</h2>
+              <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '13px' }}>This action cannot be undone</p>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '24px', textAlign: 'center' }}>
+              <p style={{ margin: '0 0 6px', fontSize: '15px', color: '#334155', fontWeight: 600 }}>
+                Are you sure you want to permanently remove
+              </p>
+              <p style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 800, color: '#1e293b' }}>
+                "{healerToDelete.name}"?
+              </p>
+              <div style={{
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                textAlign: 'left'
+              }}>
+                <IonIcon icon={alertCircleOutline} style={{ color: '#ef4444', fontSize: '18px', flexShrink: 0, marginTop: '1px' }} />
+                <p style={{ margin: 0, fontSize: '13px', color: '#991b1b', lineHeight: 1.5 }}>
+                  This will permanently delete the healer's profile, session records, and all associated data from the system.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #f1f5f9',
+              display: 'flex',
+              gap: '12px',
+              background: '#fafbfc',
+              borderRadius: '0 0 20px 20px'
+            }}>
+              <button
+                disabled={isDeleting}
+                onClick={() => setHealerToDelete(null)}
+                style={{
+                  flex: 1,
+                  padding: '11px 0',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '10px',
+                  background: 'white',
+                  color: '#64748b',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#94a3b8'; (e.currentTarget as HTMLButtonElement).style.color = '#334155'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; }}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                style={{
+                  flex: 1,
+                  padding: '11px 0',
+                  border: 'none',
+                  borderRadius: '10px',
+                  background: isDeleting
+                    ? '#fca5a5'
+                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  boxShadow: isDeleting ? 'none' : '0 4px 12px rgba(239,68,68,0.4)',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                {isDeleting ? (
+                  <>
+                    <span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                    Deleting…
+                  </>
+                ) : (
+                  <>
+                    <IonIcon icon={trashOutline} />
+                    Yes, Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </IonContent>
     </IonPage>

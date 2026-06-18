@@ -50,9 +50,8 @@ export default function BARegisterPatientPage() {
     status: "Active" as "Active" | "On Hold" | "Completed" | "Inactive",
     medicalHistory: "",
     treatmentType: "Pranic Psychotherapy",
-    assignedHealer: "Dr. Aris Varma",
-    username: "dr._aris varma",
-    password: "PHMS-5542",
+    assignedHealer: "",
+    password: "",
     accountStatus: "Active" as "Active" | "Inactive",
   });
 
@@ -144,7 +143,6 @@ export default function BARegisterPatientPage() {
       medicalHistory: "",
       treatmentType: "",
       assignedHealer: "",
-      username: "",
       password: "",
       accountStatus: "Active",
     });
@@ -209,7 +207,6 @@ export default function BARegisterPatientPage() {
         medicalHistory: formData.medicalHistory,
         treatmentType: formData.treatmentType,
         healerId: formData.assignedHealer,
-        username: formData.username,
         password: formData.password,
         status: formData.accountStatus,
         branchId: typeof user?.branch === 'object' && user?.branch !== null 
@@ -237,7 +234,6 @@ export default function BARegisterPatientPage() {
         medicalHistory: "",
         treatmentType: "Pranic Psychotherapy",
         assignedHealer: "",
-        username: "",
         password: "",
         accountStatus: "Active",
       });
@@ -269,7 +265,9 @@ export default function BARegisterPatientPage() {
 
   const closeAndRedirect = () => {
     setShowSuccessToast(false);
-    history.push(ROUTES.BRANCH_ADMIN.PATIENTS);
+    // Use replace so Ionic removes this page from the stack and
+    // fires useIonViewWillEnter on PatientsPage, triggering a fresh fetch.
+    history.replace(ROUTES.BRANCH_ADMIN.PATIENTS);
   };
 
   if (!isBranchAdmin) {
@@ -675,20 +673,7 @@ export default function BARegisterPatientPage() {
                             />
                           </div>
 
-                          <div className="st-form-group">
-                            <label style={customStyles.label}>
-                              EMAIL ADDRESS *
-                            </label>
-                            <input
-                              type="email"
-                              name="email"
-                              style={customStyles.grayInput}
-                              value={formData.email}
-                              onChange={handleInputChange}
-                              required
-                              placeholder="Enter email address"
-                            />
-                          </div>
+                          
                         </div>
 
                         <div className="st-form-group">
@@ -840,21 +825,23 @@ export default function BARegisterPatientPage() {
                       </div>
 
                       <div className="st-form-group">
-                        <label style={customStyles.label}>USERNAME *</label>
-                        <input
-                          type="text"
-                          name="username"
-                          style={customStyles.grayInput}
-                          value={formData.username}
-                          onChange={handleInputChange}
-                          placeholder="e.g. dr._aris varma"
-                          required
-                        />
-                      </div>
+                            <label style={customStyles.label}>
+                              EMAIL ADDRESS *
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              style={customStyles.grayInput}
+                              value={formData.email}
+                              onChange={handleInputChange}
+                              required
+                              placeholder="Enter email address"
+                            />
+                          </div>
 
                       <div className="st-form-group">
                         <label style={customStyles.label}>
-                          PASSWORD (AUTO GENERATED) *
+                          PASSWORD (AUTO GENERATED)
                         </label>
                         <div style={{ display: "flex", gap: "12px" }}>
                           <input
@@ -867,7 +854,6 @@ export default function BARegisterPatientPage() {
                             value={formData.password}
                             onChange={handleInputChange}
                             placeholder="PHMS-XXXX"
-                            required
                           />
                           <button
                             type="button"
@@ -885,7 +871,7 @@ export default function BARegisterPatientPage() {
                               transition: "background 0.2s ease",
                             }}
                           >
-                            Regenerate
+                            {formData.password ? "Regenerate" : "Generate"}
                           </button>
                         </div>
                       </div>

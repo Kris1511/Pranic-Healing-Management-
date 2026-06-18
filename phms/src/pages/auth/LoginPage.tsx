@@ -132,6 +132,8 @@ const LoginPage: React.FC = () => {
 
   const onSubmit = async (data: LoginFormInputs) => {
   clearError();
+  const { email } = data;
+  console.log("Login Payload:", { email });
 
   try {
     await login(data as LoginRequest);

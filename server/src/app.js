@@ -15,6 +15,16 @@ const routes = require('./routes/index');
 
 const app = express();
 
+// Enable CORS first — must be before all other middleware so CORS headers
+// are present on every response, including rate-limit (429) and error responses.
+// Without this ordering, the browser sees a response with no CORS headers and
+// reports a generic "Network Error" instead of the real HTTP status code.
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 // Body parser
 app.use(express.json());
 
@@ -36,9 +46,6 @@ app.use(limiter);
 
 // Prevent http param pollution
 app.use(hpp());
-
-// Enable CORS
-app.use(cors());
 
 // Logging
 if (config.env === 'development') {

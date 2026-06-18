@@ -12,6 +12,8 @@ import { ROUTES } from './constants/routes.constant';
 import SADashboardPage from './pages/super-admin/DashboardPage';
 import SABranchAdminsPage from './pages/super-admin/BranchAdminsPage';
 import SACreateBranchAdminPage from './pages/super-admin/CreateBranchAdminPage';
+import SABranchAdminDetailsPage from './pages/super-admin/AdminDetailsPage';
+import SABranchAdminEditPage from './pages/super-admin/EditBranchAdminPage';
 import SAHealersPage from './pages/super-admin/HealersPage';
 import SABranchesPage from './pages/super-admin/BranchesPage';
 import SABranchDetailsPage from './pages/super-admin/BranchDetailsPage';
@@ -55,13 +57,17 @@ import HealerDashboardPage from './pages/healer/DashboardPage';
 import MyPatientsPage from './pages/healer/MyPatientsPage';
 import SessionLogPage from './pages/healer/SessionLogPage';
 import SessionNotesPage from './pages/healer/SessionNotesPage';
+import DocumentsPages from './pages/healer/DocumentsPages';
 import ProfilePage from './pages/healer/ProfilePage';
+import PatientsDetialsPages from './pages/healer/PatientsDetialsPages';
 
 /* Patient Pages */
 import PatientDashboardPage from './pages/patient/DashboardPage';
 import SessionHistoryPage from './pages/patient/SessionHistoryPage';
 import PaymentHistoryPage from './pages/patient/PaymentHistoryPage';
 import PatientProfilePage from './pages/patient/ProfilePage';
+import FeedbackPage from './pages/patient/FeedbackPage';
+import DocumentsPage from './pages/patient/DocumentsPage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -135,6 +141,12 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.CREATE_BRANCH_ADMIN} exact={true}>
           <SACreateBranchAdminPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.BRANCH_ADMIN_DETAILS} exact={true}>
+          <SABranchAdminDetailsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.EDIT_BRANCH_ADMIN} exact={true}>
+          <SABranchAdminEditPage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.BRANCHES} exact={true}>
           <SABranchesPage />
@@ -257,11 +269,17 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.HEALER.PATIENTS} exact={true}>
           <MyPatientsPage />
         </Route>
+        <Route path={ROUTES.HEALER.PATIENT_DETAILS} exact={true}>
+          <PatientsDetialsPages />
+        </Route>
         <Route path={ROUTES.HEALER.SESSIONS} exact={true}>
           <SessionLogPage />
         </Route>
         <Route path={ROUTES.HEALER.SESSION_NOTES} exact={true}>
           <SessionNotesPage />
+        </Route>
+        <Route path={ROUTES.HEALER.DOCUMENTS} exact={true}>
+          <DocumentsPages />
         </Route>
         <Route path={ROUTES.HEALER.SCHEDULE} exact={true}>
           <SessionLogPage />
@@ -285,6 +303,12 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path={ROUTES.PATIENT.PROFILE} exact={true}>
           <PatientProfilePage />
+        </Route>
+        <Route path={ROUTES.PATIENT.FEEDBACK} exact={true}>
+          <FeedbackPage />
+        </Route>
+        <Route path={ROUTES.PATIENT.HEALTH_RECORDS} exact={true}>
+          <DocumentsPage />
         </Route>
 
         <Route path="/" exact={true}>

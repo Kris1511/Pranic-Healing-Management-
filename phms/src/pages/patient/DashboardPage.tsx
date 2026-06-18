@@ -15,7 +15,8 @@ import {
   medkitOutline,
   documentTextOutline,
   chevronForwardOutline,
-  personOutline
+  personOutline,
+  chatboxOutline
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useHistory } from 'react-router-dom';
@@ -196,6 +197,28 @@ const PatientDashboardPage: React.FC = () => {
                     </h4>
                     <p className="healer-action-card__subtitle">
                       Update your personal details and contact information.
+                    </p>
+                  </div>
+                </div>
+                <IonIcon icon={chevronForwardOutline} className="healer-action-card__arrow" />
+              </div>
+            </div>
+
+            <div 
+              className="healer-action-card" 
+              onClick={() => history.push('/patient/feedback')}
+            >
+              <div className="healer-action-card__inner">
+                <div className="healer-action-card__left">
+                  <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--purple">
+                    <IonIcon icon={chatboxOutline} className="healer-action-card__icon" />
+                  </div>
+                  <div>
+                    <h4 className="healer-action-card__title">
+                      Feedback
+                    </h4>
+                    <p className="healer-action-card__subtitle">
+                      Submit ratings and testimonials for your completed sessions.
                     </p>
                   </div>
                 </div>

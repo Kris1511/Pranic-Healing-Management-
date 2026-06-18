@@ -43,6 +43,64 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
       },
+      dob: {
+        type: Sequelize.DATEONLY,
+        allowNull: true,
+      },
+      blood_group: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      occupation: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      email: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      emergency_contact: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      medical_history: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
+      treatment_type: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      healer_id: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'healers',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
+      },
+      password: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      medical_report: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      lab_report: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      prescription: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      id_proof: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,

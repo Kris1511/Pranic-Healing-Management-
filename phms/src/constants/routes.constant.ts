@@ -18,6 +18,8 @@ export const ROUTES = {
     USERS: '/super-admin/users',
     BRANCH_ADMINS: '/super-admin/branch-admins',
     CREATE_BRANCH_ADMIN: '/super-admin/branch-admins/create',
+    BRANCH_ADMIN_DETAILS: '/super-admin/branch-admins/details/:id',
+    EDIT_BRANCH_ADMIN: '/super-admin/branch-admins/edit/:id',
     HEALERS: '/super-admin/healers',
     PATIENTS: '/super-admin/patients',
     BRANCHES: '/super-admin/branches',
@@ -66,7 +68,9 @@ export const ROUTES = {
     DASHBOARD: '/healer/dashboard',
     SESSIONS: '/healer/sessions',
     PATIENTS: '/healer/patients',
+    PATIENT_DETAILS: '/healer/patients/details/:id',
     SESSION_NOTES: '/healer/session-notes',
+    DOCUMENTS: '/healer/documents',
     SCHEDULE: '/healer/schedule',
     AVAILABILITY: '/healer/availability',
     PROFILE: '/healer/profile',
@@ -82,6 +86,7 @@ export const ROUTES = {
     SESSION_HISTORY: '/patient/session-history',
     PAYMENT_HISTORY: '/patient/payment-history',
     VISITORS: '/patient/visitors',
+    FEEDBACK: '/patient/feedback',
   },
 
   // Common Routes

@@ -14,8 +14,12 @@ const protect = async (req, res, next) => {
   }
 
   if (!token) {
+    console.log("JWT:", token);
+    console.log("Authorization Header:", req.headers.authorization);
     return next(new ApiError(401, 'Not authorized'));
   }
+  console.log("JWT:", token);
+  console.log("Authorization Header:", req.headers.authorization);
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
