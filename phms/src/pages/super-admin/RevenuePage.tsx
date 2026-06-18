@@ -21,45 +21,43 @@ import {
   businessOutline,
   cardOutline,
 } from 'ionicons/icons';
+import { useQuery } from '@tanstack/react-query';
+import { getSuperAdminRevenueFinance } from '../../api/finance.api';
 import './super-admin.css';
 
 const RevenuePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRange, setSelectedRange] = useState('This Month');
   
-  const [transactions, setTransactions] = useState([
-    { id: 1, patient: 'Elena Gilbert', branch: 'Uptown Sanctuary', amount: 1500, method: 'Credit Card', status: 'completed', date: '2024-04-24', time: '10:30 AM' },
-    { id: 2, patient: 'Stefan Salvatore', branch: 'Coastal Healing Center', amount: 2000, method: 'UPI', status: 'completed', date: '2024-04-24', time: '11:15 AM' },
-    { id: 3, patient: 'Bonnie Bennett', branch: 'Green Valley Branch', amount: 1200, method: 'Cash', status: 'pending', date: '2024-04-24', time: '12:00 PM' },
-    { id: 4, patient: 'Damon Salvatore', branch: 'Downtown Sanctuary', amount: 3500, method: 'Debit Card', status: 'completed', date: '2024-04-23', time: '04:45 PM' },
-    { id: 5, patient: 'Caroline Forbes', branch: 'Uptown Sanctuary', amount: 1800, method: 'UPI', status: 'completed', date: '2024-04-23', time: '02:30 PM' },
-    { id: 6, patient: 'Matt Donovan', branch: 'Coastal Healing Center', amount: 900, method: 'Cash', status: 'failed', date: '2024-04-22', time: '11:00 AM' },
-    { id: 7, patient: 'Alaric Saltzman', branch: 'Green Valley Branch', amount: 2500, method: 'UPI', status: 'completed', date: '2024-04-22', time: '09:00 AM' },
-    { id: 8, patient: 'Tyler Lockwood', branch: 'Downtown Sanctuary', amount: 1200, method: 'Cash', status: 'completed', date: '2024-04-21', time: '03:15 PM' },
-  ]);
+  const { data: revenueData } = useQuery({
+    queryKey: ['sa-revenue-overview'],
+    queryFn: async () => {
+      const res = await getSuperAdminRevenueFinance();
+      return res?.success && res?.data ? res.data : null;
+    },
+    refetchInterval: 3000,
+  });
 
-  const [expenses, setExpenses] = useState([
-    { id: 1, category: 'Salaries', branch: 'All Branches', amount: 15000, date: '2024-04-20', status: 'paid' },
-    { id: 2, category: 'Rent', branch: 'Uptown Sanctuary', amount: 5000, date: '2024-04-01', status: 'paid' },
-    { id: 3, category: 'Medical Supplies', branch: 'Coastal Healing Center', amount: 3200, date: '2024-04-15', status: 'paid' },
-    { id: 4, category: 'Utilities', branch: 'Green Valley Branch', amount: 1200, date: '2024-04-18', status: 'pending' },
-  ]);
+  const transactions = revenueData?.transactions || [];
+  const expenses = revenueData?.expenses || [];
 
   const totalIncome = transactions
-    .filter(t => t.status === 'completed')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t: any) => t.status === 'completed')
+    .reduce((sum: number, t: any) => sum + t.amount, 0) + 
+    transactions
+      .filter((t: any) => t.status === 'pending')
+      .reduce((sum: number, t: any) => sum + (t.paid || 0), 0);
 
   const totalPending = transactions
-    .filter(t => t.status === 'pending')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum: number, t: any) => sum + (t.outstanding || 0), 0);
 
   const totalExpenses = expenses
-    .filter(e => e.status === 'paid')
-    .reduce((sum, e) => sum + e.amount, 0);
+    .filter((e: any) => e.status === 'paid')
+    .reduce((sum: number, e: any) => sum + e.amount, 0);
 
   const netProfit = totalIncome - totalExpenses;
 
-  const filteredTransactions = transactions.filter(t => 
+  const filteredTransactions = transactions.filter((t: any) => 
     t.patient.toLowerCase().includes(searchQuery.toLowerCase()) || 
     t.branch.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -218,12 +216,12 @@ const RevenuePage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((t) => (
+                {filteredTransactions.map((t: any) => (
                   <tr key={t.id}>
                     <td>
                       <div className="sa-table__user">
                         <div className="sa-table__avatar sa-table__avatar--primary">
-                          {t.patient.split(' ').map(n => n[0]).join('')}
+                          {t.patient.split(' ').map((n: string) => n[0]).join('')}
                         </div>
                         <span className="sa-table__user-name">{t.patient}</span>
                       </div>

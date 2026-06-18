@@ -28,6 +28,19 @@ class PaymentService {
       });
     }
 
+    const financeService = require('./finance.service');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const summaryBefore = await financeService.getSuperAdminDaily(todayStr);
+    const financeSummary = {
+      totalIncome: summaryBefore.dailyStats.totalIncome,
+      totalExpense: summaryBefore.dailyStats.totalExpense,
+      closingBalance: summaryBefore.dailyStats.closingBalance,
+      totalRevenue: summaryBefore.systemStats.totalRevenue,
+      totalCollections: summaryBefore.systemStats.totalCollections,
+      outstandingBalance: summaryBefore.systemStats.outstandingBalance,
+      pendingCount: summaryBefore.systemStats.patientPaymentStats.pendingCount
+    };
+
     // Update corresponding Session paymentStatus and paymentMethod
     const { Session } = require('../models');
     const session = await Session.findByPk(sessionId);
@@ -46,7 +59,25 @@ class PaymentService {
         paymentStatus: newStatus,
         paymentMethod: paymentMethod || session.paymentMethod
       });
+      await session.reload();
     }
+
+    const summaryAfter = await financeService.getSuperAdminDaily(todayStr);
+    const updatedFinanceSummary = {
+      totalIncome: summaryAfter.dailyStats.totalIncome,
+      totalExpense: summaryAfter.dailyStats.totalExpense,
+      closingBalance: summaryAfter.dailyStats.closingBalance,
+      totalRevenue: summaryAfter.systemStats.totalRevenue,
+      totalCollections: summaryAfter.systemStats.totalCollections,
+      outstandingBalance: summaryAfter.systemStats.outstandingBalance,
+      pendingCount: summaryAfter.systemStats.patientPaymentStats.pendingCount
+    };
+
+    const payment_status = session ? session.paymentStatus : 'pending';
+    console.log("Session Payment Data:", session);
+    console.log("Finance Totals Before:", financeSummary);
+    console.log("Finance Totals After:", updatedFinanceSummary);
+    console.log("Payment Status:", payment_status);
 
     return payment;
   }

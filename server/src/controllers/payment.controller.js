@@ -100,8 +100,11 @@ class PaymentController {
 
     // ─── Admin / healer roles: return session-based ledger for all patients in the branch ───
     const filter = {};
-    if (req.branchId) filter.branchId = req.branchId;
-    if (req.query.branchId) filter.branchId = req.query.branchId;
+    if (req.user && req.user.role === 'SUPER_ADMIN') {
+      if (req.query.branchId) filter.branchId = req.query.branchId;
+    } else {
+      if (req.branchId) filter.branchId = req.branchId;
+    }
     if (req.query.patientId) filter.patientId = req.query.patientId;
     if (req.query.healerId) filter.healerId = req.query.healerId;
 

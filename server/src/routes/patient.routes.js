@@ -13,6 +13,8 @@ router.route('/')
   .post(validate(patientValidator.register), patientController.register)
   .get(patientController.getAll);
 
+router.get('/dashboard-stats', patientController.getStats);
+
 router.route('/:id')
   .get(patientController.getById)
   .put(validate(patientValidator.update), patientController.update)

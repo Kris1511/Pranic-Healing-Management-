@@ -33,6 +33,18 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
       },
+      remarks: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
+      payment_mode: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      created_by: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,

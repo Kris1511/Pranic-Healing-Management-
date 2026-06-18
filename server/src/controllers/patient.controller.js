@@ -16,18 +16,44 @@ const mapPatientToResponse = (patient) => {
   }
 
   return {
+    // Core identity
     id: patient.id,
-    name: patient.name,
     patientId: patient.patientId,
-    age: patient.age,
+    name: patient.name,
     gender: patient.gender,
+    dob: patient.dob,
+    age: patient.age,
+    bloodGroup: patient.bloodGroup,
+    occupation: patient.occupation,
+
+    // Contact
     phone: patient.phone,
+    email: patient.email,
+    emergencyContact: patient.emergencyContact,
     address: patient.address,
-    status: patient.status,
+
+    // Medical
+    medicalHistory: patient.medicalHistory,
+    treatmentType: patient.treatmentType,
+
+    // Assignment
     branchId: patient.branchId,
     healerId: patient.healerId,
-    email: patient.email,
+
+    // Status & auth
+    status: patient.status,
+    password: patient.password,
+
+    // Document paths
+    medicalReport: patient.medicalReport,
+    labReport: patient.labReport,
+    prescription: patient.prescription,
+    idProof: patient.idProof,
+
+    // Computed
     lastVisit,
+
+    // Associations
     branch: patient.branch ? {
       id: patient.branch.id,
       name: patient.branch.name
@@ -41,9 +67,11 @@ const mapPatientToResponse = (patient) => {
 
 class PatientController {
   register = async (req, res) => {
+    console.log("Registering patient. Payload received:", req.body);
     if (req.branchId) req.body.branchId = req.branchId;
     const patient = await patientService.registerPatient(req.body);
-    return sendResponse(res, 201, 'Patient registered successfully', patient);
+    console.log("Patient registered successfully. Emergency Contact stored:", patient.emergencyContact);
+    return sendResponse(res, 201, 'Patient registered successfully', mapPatientToResponse(patient));
   };
 
   getAll = async (req, res) => {
@@ -77,13 +105,69 @@ class PatientController {
   };
 
   update = async (req, res) => {
+    console.log("Updating patient ID:", req.params.id, "Payload received:", req.body);
     const patient = await patientService.updatePatient(req.params.id, req.body, req.branchId);
-    return sendResponse(res, 200, 'Patient updated successfully', patient);
+    console.log("Patient updated successfully. Emergency Contact stored:", patient.emergencyContact);
+    return sendResponse(res, 200, 'Patient updated successfully', mapPatientToResponse(patient));
   };
 
   delete = async (req, res) => {
     await patientService.deletePatient(req.params.id, req.branchId);
     return sendResponse(res, 200, 'Patient deleted successfully');
+  };
+
+  getStats = async (req, res) => {
+    const { Patient, Session } = require('../models');
+    const { Op } = require('sequelize');
+
+    const branchId = req.branchId || req.query.branchId;
+    const whereClause = branchId ? { branchId } : {};
+
+    const activeCases = await Patient.count({
+      where: {
+        ...whereClause,
+        status: {
+          [Op.in]: ['active', 'Active']
+        }
+      }
+    });
+
+    const totalRegistered = await Patient.count({
+      where: whereClause
+    });
+
+    const sessions = await Session.findAll({
+      where: whereClause,
+      include: [{ association: 'payment' }]
+    });
+
+    let pendingBalance = 0;
+    for (const session of sessions) {
+      const sessionFee = session.sessionFee !== null && session.sessionFee !== undefined
+        ? parseFloat(session.sessionFee)
+        : (parseFloat(session.totalAmount) || 0);
+
+      const rawStatus = (session.paymentStatus || 'pending').toLowerCase();
+      let paidAmount = 0;
+      let outstanding = 0;
+
+      if (rawStatus === 'paid') {
+        outstanding = 0;
+      } else if (rawStatus === 'pending' || rawStatus === 'unpaid') {
+        outstanding = sessionFee;
+      } else {
+        // partial or other status
+        paidAmount = session.payment ? parseFloat(session.payment.amount) || 0 : 0;
+        outstanding = Math.max(0, sessionFee - paidAmount);
+      }
+      pendingBalance += outstanding;
+    }
+
+    return sendResponse(res, 200, 'Stats retrieved successfully', {
+      activeCases,
+      totalRegistered,
+      pendingBalance: Math.round(pendingBalance * 100) / 100
+    });
   };
 }
 

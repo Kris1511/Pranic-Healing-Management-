@@ -54,7 +54,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
-import { getPatients, deletePatient } from '../../api/patient.api';
+import { getPatients, deletePatient, getPatientStats } from '../../api/patient.api';
 import { getHealers } from '../../api/healer.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
@@ -265,11 +265,24 @@ const PatientsPage: React.FC = () => {
   const [healersList, setHealersList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteConfirmPatient, setDeleteConfirmPatient] = useState<any | null>(null);
+  const [stats, setStats] = useState({ activeCases: 0, totalRegistered: 0, pendingBalance: 0 });
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await getPatientStats();
+      if (response.success && response.data) {
+        setStats(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching patient stats:', error);
+    }
+  }, []);
 
   // ── Fetch patients from DB ───────────────────────────────────────────────
   const fetchPatients = useCallback(async () => {
     setIsLoading(true);
     try {
+      fetchStats();
       const response = await getPatients();
       const apiPatients = Array.isArray(response) ? response : (response.data || response);
       if (Array.isArray(apiPatients)) {
@@ -426,7 +439,18 @@ const PatientsPage: React.FC = () => {
     };
     fetchPatients();
     fetchHealers();
-  }, [fetchPatients]);
+
+    // Poll stats every 3 seconds for immediate summary updates
+    const statsInterval = setInterval(fetchStats, 3000);
+
+    // Poll patient list every 10 seconds for general updates
+    const patientsInterval = setInterval(fetchPatients, 10000);
+
+    return () => {
+      clearInterval(statsInterval);
+      clearInterval(patientsInterval);
+    };
+  }, [fetchPatients, fetchStats]);
 
   // ── Re-fetch patients every time this page becomes active ────────────────
   // This ensures the list is always up-to-date after registration / edits.
@@ -1073,11 +1097,11 @@ const PatientsPage: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                 <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #10b981', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Active Cases</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{activeCount}</span>
+                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{stats.activeCases}</span>
                 </div>
                 <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #1e3a8a', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Total Registered</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{mtdRegistered}</span>
+                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{stats.totalRegistered}</span>
                 </div>
                 {/* <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Daily Appts Queue</span>
@@ -1089,7 +1113,7 @@ const PatientsPage: React.FC = () => {
                 </div> */}
                 <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #ef4444', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Pending Balance</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>₹2500</span>
+                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>₹{stats.pendingBalance}</span>
                 </div>
               </div>
 

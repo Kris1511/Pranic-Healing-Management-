@@ -194,11 +194,8 @@ export default function EditSessionsPages() {
     : (user?.branch || 'Mumbai');
   const branchName = rawBranch.toLowerCase().includes('branch') ? rawBranch : `${rawBranch} Branch`;
 
-  // Load healers, patients, and sessions from localStorage
-  const [registeredHealers] = useState<Healer[]>(() => {
-    const saved = localStorage.getItem('phms_healers');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Load healers
+  const [registeredHealers, setRegisteredHealers] = useState<Healer[]>([]);
 
   const [sessions, setSessions] = useState<HealingSession[]>(() => {
     const saved = localStorage.getItem('phms_sessions');
@@ -238,8 +235,7 @@ export default function EditSessionsPages() {
       try {
         const healersRes = await getHealers();
         if (healersRes.success) {
-          // setRegisteredHealers(healersRes.data);
-          localStorage.setItem('phms_healers', JSON.stringify(healersRes.data));
+          setRegisteredHealers(healersRes.data);
         }
 
         const sessionRes = await getSessionById(id);
@@ -316,15 +312,8 @@ export default function EditSessionsPages() {
     fetchData();
   }, [id, sessions]);
 
-  // Dynamic healers list falling back to default active healers if empty
-  const activeHealers = registeredHealers.length > 0
-    ? registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE')
-    : [
-        { id: 'H-2091', name: 'Aris Varma', specialization: ['Advanced Pranic Healing'] },
-        { id: 'H-2104', name: 'Julian Mars', specialization: ['Pranic Psychotherapy'] },
-        { id: 'H-1822', name: 'Maya Rose', specialization: ['Crystal Healing'] },
-        { id: 'H-1994', name: 'Lila Thorne', specialization: ['Basic Pranic Healing'] }
-      ];
+  // Dynamic healers list
+  const activeHealers = registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE');
 
   // Current Date display
   const formattedDate = new Date().toLocaleDateString('en-US', {
@@ -692,13 +681,36 @@ export default function EditSessionsPages() {
                               style={customStyles.grayInput}
                               value={formData.healer}
                               onChange={(e) => setFormData({ ...formData, healer: e.target.value })}
+                              disabled={activeHealers.length === 0}
                             >
-                              {activeHealers.map((h, i) => (
-                                <option key={i} value={h.name}>
-                                  {/* Dr. {h.name} {h.specialization ? `(${h.specialization.join(', ')})` : ''} */}
-                                  Dr. {h.name} {Array.isArray(h.specialization) ? `(${h.specialization.join(', ')})` : ''}
-                                </option>
-                              ))}
+                              {activeHealers.length === 0 ? (
+                                <option value="">No Healers Available</option>
+                              ) : (
+                                activeHealers.map((h, i) => {
+                                  let specText = '';
+                                  if (h.specialization) {
+                                    if (Array.isArray(h.specialization)) {
+                                      specText = ` (${h.specialization.join(', ')})`;
+                                    } else {
+                                      try {
+                                        const parsed = JSON.parse(h.specialization);
+                                        if (Array.isArray(parsed)) {
+                                          specText = ` (${parsed.join(', ')})`;
+                                        } else {
+                                          specText = ` (${h.specialization})`;
+                                        }
+                                      } catch (e) {
+                                        specText = ` (${h.specialization})`;
+                                      }
+                                    }
+                                  }
+                                  return (
+                                    <option key={i} value={h.name}>
+                                      Dr. {h.name}{specText}
+                                    </option>
+                                  );
+                                })
+                              )}
                             </select>
                           </div>
 

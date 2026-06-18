@@ -48,8 +48,18 @@ class HealerRepository {
   }
 
   async findAll(filter = {}, options = {}) {
+    const { Op } = require('sequelize');
+    const processedFilter = { ...filter };
+    if (processedFilter.status) {
+      if (typeof processedFilter.status === 'string') {
+        const val = processedFilter.status.toLowerCase();
+        processedFilter.status = {
+          [Op.in]: [val, val.charAt(0).toUpperCase() + val.slice(1)]
+        };
+      }
+    }
     return await Healer.findAll({
-      where: filter,
+      where: processedFilter,
       ...options,
       include: ['branch']
     });

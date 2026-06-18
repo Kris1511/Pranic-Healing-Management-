@@ -9,6 +9,7 @@ import {
   IonIcon,
   IonMenuButton,
   IonModal,
+  useIonToast,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -24,6 +25,9 @@ import {
   arrowUpOutline,
   arrowDownOutline,
 } from 'ionicons/icons';
+import { useQuery } from '@tanstack/react-query';
+import { getBranches } from '../../api/branch.api';
+import { getSuperAdminDailyFinance, addFinanceTransaction } from '../../api/finance.api';
 import './super-admin.css';
 
 const DailyFinancePage: React.FC = () => {
@@ -31,64 +35,93 @@ const DailyFinancePage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddModal, setShowAddModal] = useState(false);
   
-  const today = new Date().toISOString().split('T')[0];
-  
-  // Combined Income and Expense records
-  const [records, setRecords] = useState([
-    { id: 1, title: 'Patient Treatment (Elena)', type: 'income', category: 'Healing', branch: 'Uptown Sanctuary', amount: 1500, method: 'Card', date: today },
-    { id: 2, title: 'Medical Supplies', type: 'expense', category: 'Equipment', branch: 'Uptown Sanctuary', amount: 3200, method: 'UPI', date: today },
-    { id: 3, title: 'Patient Consultation (Stefan)', type: 'income', category: 'Consultation', branch: 'Coastal Healing Center', amount: 2000, method: 'UPI', date: today },
-    { id: 4, title: 'Staff Lunch Reimbursement', type: 'expense', category: 'Misc', branch: 'Green Valley Branch', amount: 450, method: 'Cash', date: today },
-    { id: 5, title: 'Patient Session (Caroline)', type: 'income', category: 'Healing', branch: 'Uptown Sanctuary', amount: 1800, method: 'Cash', date: today },
-    { id: 6, title: 'Office Stationery', type: 'expense', category: 'Supplies', branch: 'Downtown Sanctuary', amount: 850, method: 'UPI', date: today },
-    { id: 7, title: 'New Healer Onboarding', type: 'expense', category: 'Salaries', branch: 'All Branches', amount: 12000, method: 'Bank Transfer', date: today },
-    { id: 8, title: 'Patient Recovery Fee (Alaric)', type: 'income', category: 'Recovery', branch: 'Green Valley Branch', amount: 2500, method: 'UPI', date: today },
-    { id: 9, title: 'Utility Bill (Water)', type: 'expense', category: 'Utilities', branch: 'Coastal Healing Center', amount: 1100, method: 'Cash', date: today },
-    { id: 10, title: 'Patient Session (Bonnie)', type: 'income', category: 'Healing', branch: 'Green Valley Branch', amount: 1200, method: 'UPI', date: today },
-    { id: 11, title: 'Electricity Bill', type: 'expense', category: 'Utilities', branch: 'Downtown Sanctuary', amount: 2500, method: 'Bank Transfer', date: today },
-    { id: 12, title: 'Facility Rent', type: 'expense', category: 'Misc', branch: 'Uptown Sanctuary', amount: 45000, method: 'Bank Transfer', date: today },
-  ]);
+  const [present] = useIonToast();
+  const triggerToast = (message: string, color: 'success' | 'danger' = 'success') => {
+    present({
+      message,
+      duration: 2000,
+      color,
+      position: 'bottom'
+    });
+  };
 
   const [newEntry, setNewEntry] = useState({
     title: '',
     type: 'income',
     category: 'Healing',
-    branch: 'Uptown Sanctuary',
-    amount: 0,
-    method: 'Cash'
+    branchId: '',
+    amount: 0
   });
 
-  const handleAddEntry = () => {
-    if (!newEntry.title || newEntry.amount <= 0) return;
-    
-    const entry = {
-      id: records.length + 1,
-      ...newEntry,
-      date: selectedDate
-    };
+  // Fetch branches for selection in adding modal
+  const { data: branchesData } = useQuery({
+    queryKey: ['sa-branches'],
+    queryFn: async () => {
+      const res = await getBranches();
+      return Array.isArray(res?.data) ? res.data : [];
+    }
+  });
+  const branches = branchesData || [];
 
-    setRecords([entry, ...records]);
-    setNewEntry({ title: '', type: 'income', category: 'Healing', branch: 'Uptown Sanctuary', amount: 0, method: 'Cash' });
-    setShowAddModal(false);
+  // Fetch dynamic daily statistics and records
+  const { data: dailyFinanceData, refetch: refetchDailyFinance } = useQuery({
+    queryKey: ['sa-daily-finance', selectedDate],
+    queryFn: async () => {
+      const res = await getSuperAdminDailyFinance({ date: selectedDate });
+      return res?.success && res?.data ? res.data : null;
+    },
+    refetchInterval: 3000,
+  });
+
+  const records = dailyFinanceData?.records || [];
+  const dailyStats = dailyFinanceData?.dailyStats || { totalIncome: 0, totalExpense: 0, closingBalance: 0 };
+
+  const handleAddEntry = async () => {
+    if (!newEntry.title || newEntry.amount <= 0) {
+      triggerToast('Please provide a valid description and amount.', 'danger');
+      return;
+    }
+    if (!newEntry.branchId) {
+      triggerToast('Please select a branch.', 'danger');
+      return;
+    }
+
+    try {
+      await addFinanceTransaction({
+        description: newEntry.title,
+        type: newEntry.type,
+        category: newEntry.category,
+        amount: newEntry.amount,
+        branchId: newEntry.branchId,
+        date: selectedDate
+      });
+
+      triggerToast('Financial entry recorded successfully!');
+      refetchDailyFinance();
+      setNewEntry({ title: '', type: 'income', category: 'Healing', branchId: '', amount: 0 });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to record financial entry.', 'danger');
+    }
   };
 
-  const filteredRecords = records.filter(r => {
+  const filteredRecords = records.filter((r: any) => {
     const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          r.branch.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          r.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDate = r.date === selectedDate;
-    return matchesSearch && matchesDate;
+    return matchesSearch;
   });
 
-  const totalIncome = filteredRecords
-    .filter(r => r.type === 'income')
-    .reduce((sum, r) => sum + r.amount, 0);
+  const totalIncome = dailyStats.totalIncome;
+  const totalExpense = dailyStats.totalExpense;
+  const netBalance = dailyStats.closingBalance;
 
-  const totalExpense = filteredRecords
-    .filter(r => r.type === 'expense')
-    .reduce((sum, r) => sum + r.amount, 0);
-
-  const netBalance = totalIncome - totalExpense;
+  const financeData = records;
+  const branchIds = branches.map((b: any) => b.id);
+  console.log("All Branches:", branches);
+  console.log("Finance Records:", financeData);
+  console.log("Branch IDs Included:", branchIds);
 
   return (
     <IonPage className="sa-page">
@@ -112,7 +145,7 @@ const DailyFinancePage: React.FC = () => {
                 <h1 className="sa-page__title">Daily Income & Expense</h1>
                 <p className="sa-page__subtitle">Track all daily cash flows and financial transactions</p>
               </div>
-              {/* <div className="sa-page__header-actions">
+              <div className="sa-page__header-actions">
                 <div className="sa-date-picker">
                   <IonIcon icon={calendarOutline} />
                   <input 
@@ -121,10 +154,7 @@ const DailyFinancePage: React.FC = () => {
                     onChange={(e) => setSelectedDate(e.target.value)} 
                   />
                 </div>
-                <button className="sa-btn sa-btn--primary">
-                  <IonIcon icon={downloadOutline} /> Daily Report
-                </button>
-              </div> */}
+              </div>
             </div>
           </div>
 
@@ -158,6 +188,71 @@ const DailyFinancePage: React.FC = () => {
             </div>
           </div>
 
+          <div className="sa-section-header" style={{ marginTop: '24px' }}>
+            <h2 className="sa-section__title" style={{ fontSize: '18px', fontWeight: 700 }}>System-wide Financial Overview</h2>
+            <p className="sa-section__subtitle">All-time consolidated statistics across all branches</p>
+          </div>
+
+          <div className="sa-stats sa-stats--3" style={{ marginTop: '12px' }}>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--success">
+                <IonIcon icon={cashOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Total Income (Manual)</div>
+                <div className="sa-stat-card__value">₹{(dailyFinanceData?.systemStats?.totalIncome || 0).toLocaleString()}</div>
+              </div>
+            </div>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--danger">
+                <IonIcon icon={walletOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Total Expense (Manual)</div>
+                <div className="sa-stat-card__value">₹{(dailyFinanceData?.systemStats?.totalExpense || 0).toLocaleString()}</div>
+              </div>
+            </div>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--warning">
+                <IonIcon icon={walletOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Outstanding Balance</div>
+                <div className="sa-stat-card__value">₹{(dailyFinanceData?.systemStats?.outstandingBalance || 0).toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="sa-stats sa-stats--3" style={{ marginTop: '12px', marginBottom: '24px' }}>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--danger">
+                <IonIcon icon={trendingUpOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Pending Payments</div>
+                <div className="sa-stat-card__value">{(dailyFinanceData?.systemStats?.patientPaymentStats?.pendingCount || 0).toLocaleString()}</div>
+              </div>
+            </div>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--warning">
+                <IonIcon icon={trendingUpOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Partial Payments</div>
+                <div className="sa-stat-card__value">{(dailyFinanceData?.systemStats?.patientPaymentStats?.partialCount || 0).toLocaleString()}</div>
+              </div>
+            </div>
+            <div className="sa-stat-card">
+              <div className="sa-stat-card__icon sa-stat-card__icon--success">
+                <IonIcon icon={trendingUpOutline} />
+              </div>
+              <div>
+                <div className="sa-stat-card__label">Paid Payments</div>
+                <div className="sa-stat-card__value">{(dailyFinanceData?.systemStats?.patientPaymentStats?.paidCount || 0).toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+
           <div className="sa-section-header" style={{ display: 'flex', gap: '16px', alignItems: 'center', marginTop: '24px' }}>
             <div className="sa-search">
               <IonIcon icon={searchOutline} />
@@ -171,9 +266,6 @@ const DailyFinancePage: React.FC = () => {
               <button className="sa-btn sa-btn--outline" style={{ marginBottom: '20px' }}>
                 <IonIcon icon={filterOutline} /> Filter
               </button>
-              <button className="sa-btn sa-btn--primary" style={{ marginBottom: '20px' }} onClick={() => setShowAddModal(true)}>
-                <IonIcon icon={addOutline} /> Add Entry
-              </button>
             </div>
           </div>
 
@@ -185,49 +277,62 @@ const DailyFinancePage: React.FC = () => {
                   <th>Branch</th>
                   <th>Category</th>
                   <th>Amount</th>
-                  {/* <th>Method</th> */}
                   <th>Date</th>
                   <th>Type</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredRecords.length > 0 ? filteredRecords.map((record) => (
-                  <tr key={record.id}>
-                    <td>
-                      <div className="sa-table__user">
-                        <div className={`sa-table__avatar ${record.type === 'income' ? 'sa-table__avatar--success' : 'sa-table__avatar--danger'}`}>
-                          <IonIcon icon={record.type === 'income' ? addOutline : removeOutline} />
+                {filteredRecords.length > 0 ? filteredRecords.map((record: any) => {
+                  const rType = record.type.toLowerCase();
+                  const isPositive = rType === 'income' || rType === 'paid' || rType === 'partial';
+                  const isNegative = rType === 'expense';
+                  
+                  let amtPrefix = '';
+                  if (isPositive) amtPrefix = '+ ';
+                  if (isNegative) amtPrefix = '- ';
+
+                  let amtColor = 'var(--color-success)';
+                  if (rType === 'expense' || rType === 'pending') amtColor = 'var(--color-danger)';
+                  if (rType === 'partial') amtColor = '#f59e0b';
+
+                  let badgeClass = 'sa-badge--inactive';
+                  if (rType === 'income' || rType === 'paid') badgeClass = 'sa-badge--active';
+                  if (rType === 'expense' || rType === 'pending') badgeClass = 'sa-badge--absent';
+
+                  return (
+                    <tr key={record.id}>
+                      <td>
+                        <div className="sa-table__user">
+                          <div className={`sa-table__avatar ${isPositive ? 'sa-table__avatar--success' : 'sa-table__avatar--danger'}`}>
+                            <IonIcon icon={isPositive ? addOutline : removeOutline} />
+                          </div>
+                          <span className="sa-table__user-name">{record.title}</span>
                         </div>
-                        <span className="sa-table__user-name">{record.title}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="sa-table__branch-info">
-                        <IonIcon icon={businessOutline} /> {record.branch}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="sa-badge sa-badge--inactive">
-                        {record.category}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ 
-                        fontWeight: 700, 
-                        color: record.type === 'income' ? 'var(--color-success)' : 'var(--color-danger)' 
-                      }}>
-                        {record.type === 'income' ? '+' : '-'} ₹{record.amount.toLocaleString()}
-                      </span>
-                    </td>
-                    {/* <td>{record.method}</td> */}
-                    <td>{record.date}</td>
-                    <td>
-                      <span className={`sa-badge sa-badge--${record.type === 'income' ? 'active' : 'absent'}`}>
-                        {record.type.toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
-                )) : (
+                      </td>
+                      <td>
+                        <div className="sa-table__branch-info">
+                          <IonIcon icon={businessOutline} /> {record.branch}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="sa-badge sa-badge--inactive">
+                          {record.category}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: amtColor }}>
+                          {amtPrefix}₹{record.amount.toLocaleString()}
+                        </span>
+                      </td>
+                      <td>{record.date}</td>
+                      <td>
+                        <span className={`sa-badge ${badgeClass}`}>
+                          {record.type.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }) : (
                   <tr>
                     <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
                       No records found for the selected date.
@@ -307,13 +412,14 @@ const DailyFinancePage: React.FC = () => {
               <label className="sa-settings__label">Branch</label>
               <select 
                 className="sa-settings__input"
-                value={newEntry.branch}
-                onChange={(e) => setNewEntry({ ...newEntry, branch: e.target.value })}
+                required
+                value={newEntry.branchId}
+                onChange={(e) => setNewEntry({ ...newEntry, branchId: e.target.value })}
               >
-                <option>Uptown Sanctuary</option>
-                <option>Coastal Healing Center</option>
-                <option>Green Valley Branch</option>
-                <option>Downtown Sanctuary</option>
+                <option value="">-- Choose Branch --</option>
+                {branches.map((b: any) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
               </select>
             </div>
           </div>

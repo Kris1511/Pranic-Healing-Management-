@@ -24,3 +24,8 @@ export const deletePatient = async (id: string) => {
   const response = await axiosInstance.delete(`/patients/${id}`);
   return response.data;
 };
+
+export const getPatientStats = async (params?: any) => {
+  const response = await axiosInstance.get('/patients/dashboard-stats', { params });
+  return response.data;
+};
