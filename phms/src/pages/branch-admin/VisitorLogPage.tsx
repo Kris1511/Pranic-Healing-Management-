@@ -865,7 +865,7 @@ const VisitorLogPage: React.FC = () => {
 
                 {/* Table Footer / Pagination */}
                 <div className="vl-table-footer">
-                  <span className="vl-table-info">Showing 3 of 45 visitors</span>
+                  <span className="vl-table-info">Showing {filteredVisitors.length} of {visitors.length} visitors</span>
                   <div className="vl-table-pagination">
                     <button className="vl-pagination-btn" disabled>
                       <IonIcon icon={chevronBackOutline} />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   IonPage,
   IonContent,
@@ -10,6 +10,8 @@ import {
   IonMenuButton,
   IonModal,
   useIonViewWillEnter,
+  useIonViewDidEnter,
+  useIonViewDidLeave,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -32,8 +34,23 @@ const VisitorLogPage: React.FC = () => {
   const [visitors, setVisitors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const intervalRef = useRef<any>(null);
+
   useIonViewWillEnter(() => {
     fetchVisitors();
+  });
+
+  useIonViewDidEnter(() => {
+    // Auto-refresh every 10 seconds while the page is visible
+    intervalRef.current = setInterval(() => {
+      fetchVisitors();
+    }, 10000);
+  });
+
+  useIonViewDidLeave(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
   });
 
   const fetchVisitors = async () => {
