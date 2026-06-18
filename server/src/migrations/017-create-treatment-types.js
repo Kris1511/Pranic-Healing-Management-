@@ -1,0 +1,58 @@
+'use strict';
+
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.createTable('treatment_types', {
+      id: {
+        allowNull: false,
+        primaryKey: true,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+      },
+      name: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      category: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      code: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      session_duration: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        defaultValue: '30 min',
+      },
+      status: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: 'Active',
+      },
+      description: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
+      total_sessions: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      created_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+      updated_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+    });
+  },
+
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable('treatment_types');
+  },
+};

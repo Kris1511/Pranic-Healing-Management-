@@ -1,0 +1,8 @@
+const ROLES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  BRANCH_ADMIN: 'BRANCH_ADMIN',
+  HEALER: 'HEALER',
+  PATIENT: 'PATIENT',
+};
+
+module.exports = ROLES;
