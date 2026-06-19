@@ -2,10 +2,16 @@ const multer = require('multer');
 const path = require('path');
 const ApiError = require('../helpers/error.helper');
 
+const fs = require('fs');
+
 // Storage configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../storage/temp'));
+    const tempDir = path.join(__dirname, '../../src/storage/temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    cb(null, tempDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);

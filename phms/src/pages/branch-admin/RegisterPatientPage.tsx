@@ -20,6 +20,7 @@ import { useAuthStore } from "../../store/auth.store";
 import { ROUTES } from "../../constants/routes.constant";
 import { getHealers } from "../../api/healer.api";
 import { createPatient } from "../../api/patient.api";
+import { uploadDocument } from "../../api/document.api";
 import "./branch-admin.css";
 
 export default function BARegisterPatientPage() {
@@ -57,7 +58,7 @@ export default function BARegisterPatientPage() {
 
   // Uploaded files state for the 7 requested fields
   const [uploadedFiles, setUploadedFiles] = useState<{
-    [key: string]: { name: string; size: string } | null;
+    [key: string]: { file?: File; name: string; size: string } | null;
   }>({
     reports: null,
     labResults: null,
@@ -112,7 +113,7 @@ export default function BARegisterPatientPage() {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
       setUploadedFiles((prev) => ({
         ...prev,
-        [field]: { name: file.name, size: `${sizeMB} MB` },
+        [field]: { file, name: file.name, size: `${sizeMB} MB` },
       }));
     }
   };
@@ -216,7 +217,29 @@ export default function BARegisterPatientPage() {
 
       const result = await createPatient(payload);
 
+      const realPatientId = result.data.id;
       setNewPatientId(result.data.patientId);
+
+      // Upload documents
+      const uploadPromises: Promise<any>[] = [];
+      const documentTypes: Record<string, string> = {
+        reports: "MEDICAL_REPORT",
+        labResults: "LAB_REPORT",
+        prescriptions: "PRESCRIPTION",
+        idProofs: "ID_PROOF",
+      };
+
+      Object.entries(uploadedFiles).forEach(([field, data]) => {
+        if (data && data.file && documentTypes[field]) {
+          uploadPromises.push(
+            uploadDocument(realPatientId, data.file, documentTypes[field])
+          );
+        }
+      });
+
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+      }
 
       // Clear form
       setFormData({

@@ -9,15 +9,13 @@ import {
   IonIcon,
   IonMenuButton,
   IonModal,
+  useIonToast,
 } from '@ionic/react';
 import {
   searchOutline,
   addOutline,
   documentTextOutline,
   cloudUploadOutline,
-  funnelOutline,
-  ellipsisVerticalOutline,
-  heartOutline,
   eyeOutline,
   pieChartOutline,
   folderOpenOutline,
@@ -25,278 +23,150 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
   closeOutline,
-  printOutline,
   downloadOutline,
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
+import { getPatients } from '../../api/patient.api';
+import {
+  getAllDocuments,
+  uploadDocument,
+  deleteDocument,
+  getDocumentBlob,
+} from '../../api/document.api';
 import './branch-admin.css';
 
 interface UploadedDocument {
-  id: number;
+  id: string;
   documentName: string;
   patientName: string;
-  type: 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other';
+  patientId: string;
+  type: string;
   date: string;
-  format: 'PDF' | 'JPG' | 'PNG' | 'DOCX' | 'XLSX';
-  size: string;
-  uploadedBy: string;
-  assignedHealer?: string; // BRD Requirement: Healer Visibility restriction
+  format: string;
+  mimeType: string;
+  filePath: string;
 }
-
-
 
 const DocumentManagementPage: React.FC = () => {
   const { user } = useAuthStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Dynamic Branch Names
-  const rawBranch = typeof user?.branch === 'object' && user?.branch !== null
-    ? (user.branch as any).name
-    : (user?.branch || 'Mumbai Main');
-  const branchName = rawBranch.toLowerCase().includes('branch') ? rawBranch : `${rawBranch} Branch`;
+  const [present] = useIonToast();
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
+
+  // Documents and Patients States
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Full-Page Document Viewer State
-  const [selectedViewDoc, setSelectedViewDoc] = useState<UploadedDocument | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  const handleRecentReportClick = (reportTitle: string, patientName: string) => {
-    setSelectedViewDoc({
-      id: Date.now(),
-      documentName: `${reportTitle.replace(/\s+/g, '_')}.pdf`,
-      patientName: patientName,
-      type: reportTitle.includes('Cardiology') ? 'Doctor Report' : 'Lab Report',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      format: 'PDF',
-      size: '1.2 MB',
-      uploadedBy: 'Dr. Shailesh [Cardiology]',
-      assignedHealer: 'Dr. Shailesh'
-    });
-  };
+  const [viewingDoc, setViewingDoc] = useState<UploadedDocument | null>(null);
+  const [viewBlobUrl, setViewBlobUrl] = useState<string | null>(null);
+  const [isFetchingBlob, setIsFetchingBlob] = useState(false);
 
   // Add Document Modal State
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    patientName: '',
-    documentType: 'Doctor Report' as 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other',
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadForm, setUploadForm] = useState<{
+    patientId: string;
+    documentType: 'Medical Report' | 'Lab Report' | 'Prescription' | 'ID Proof';
+    selectedFile: File | null;
+    selectedFileName: string;
+  }>({
+    patientId: '',
+    documentType: 'Medical Report',
+    selectedFile: null,
     selectedFileName: '',
   });
 
-  // Load patients list from localStorage with fallback defaults
-  const [patientOptions] = useState<string[]>(() => {
-    const saved = localStorage.getItem('phms_patients');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Unique list of patient names
-          const names = parsed.map((p: any) => p.name);
-          return Array.from(new Set(names));
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return ['Arjun Sharma', 'Priya Kapoor', 'Rahul Verma', 'Meera Singh'];
-  });
-
-  // Mock Upload Progress State
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadingFileName, setUploadingFileName] = useState('');
-
-  // Primary Documents State (BRD Categories + Healer Assignments)
-  const [documents, setDocuments] = useState<UploadedDocument[]>(() => {
-    const cached = localStorage.getItem('phms_uploaded_documents');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    const defaults: UploadedDocument[] = [
-      {
-        id: 1,
-        documentName: 'Post-Op_Scan_V1.pdf',
-        patientName: 'Arjun Sharma',
-        type: 'Doctor Report',
-        date: 'Oct 24, 2023',
-        format: 'PDF',
-        size: '2.4 MB',
-        uploadedBy: 'Dr. Shailesh [Cardiology]',
-        assignedHealer: 'Dr. Shailesh',
-      },
-      {
-        id: 2,
-        documentName: 'Blood_Work_Q3.jpg',
-        patientName: 'Priya Kapoor',
-        type: 'Lab Report',
-        date: 'Oct 23, 2023',
-        format: 'JPG',
-        size: '4.8 MB',
-        uploadedBy: 'Lab Tech Priya',
-        assignedHealer: 'Healer Julian',
-      },
-      {
-        id: 3,
-        documentName: 'Healing_Plan_Final.docx',
-        patientName: 'Rahul Verma',
-        type: 'Consultation Note',
-        date: 'Oct 22, 2023',
-        format: 'DOCX',
-        size: '1.1 MB',
-        uploadedBy: 'Healer Julian',
-        assignedHealer: 'Healer Julian',
-      },
-      {
-        id: 4,
-        documentName: 'General_Waiver.pdf',
-        patientName: 'Meera Singh',
-        type: 'Other',
-        date: 'Oct 20, 2023',
-        format: 'PDF',
-        size: '0.8 MB',
-        uploadedBy: 'Admin Staff David',
-        assignedHealer: 'Dr. Aris Varma',
-      },
-    ];
-    localStorage.setItem('phms_uploaded_documents', JSON.stringify(defaults));
-    return defaults;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('phms_uploaded_documents', JSON.stringify(documents));
-  }, [documents]);
-
-
-
-  // Handle clicking the dashed dropzone
-  const handleDropzoneClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // Handle selecting a file from the hidden input
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const fileName = files[0].name;
-      // Pre-fill file details and redirect/open the upload modal for remainder details filling
-      setUploadForm((prev) => ({
-        ...prev,
-        selectedFileName: fileName,
-      }));
-      setShowUploadModal(true);
-      // Reset input element value so same file can be selected again
-      e.target.value = '';
-    }
-  };
-
-  // Simulates file encryption and uploading
-  const triggerMockUpload = (fileName: string, type: 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other', patient: string) => {
-    if (isUploading) return;
-    setIsUploading(true);
-    setUploadProgress(0);
-    setUploadingFileName(fileName);
-
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            const extension = (fileName.split('.').pop() || 'PDF').toUpperCase() as any;
-            const newDoc: UploadedDocument = {
-              id: Date.now(),
-              documentName: fileName,
-              patientName: patient || 'Guest Patient',
-              type: type,
-              date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              format: extension,
-              size: `${(Math.random() * 5 + 1).toFixed(1)} MB`,
-              uploadedBy: user?.name || 'Branch Admin',
-              assignedHealer: user?.name || 'Healer Julian',
-            };
-
-            // Prepend new document
-            setDocuments((prevDocs) => [newDoc, ...prevDocs]);
-
-
-
-            setIsUploading(false);
-            setUploadProgress(0);
-            setUploadingFileName('');
-          }, 300);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 150);
-  };
-
-  // Handle submitting from the modal
-  const handleModalUploadSubmit = () => {
-    const patientName = user?.role === 'PATIENT' ? (user.name || 'Guest Patient') : uploadForm.patientName;
-    if (!patientName || !uploadForm.selectedFileName) {
-      alert('Please fill out all fields and select a file name.');
-      return;
-    }
-    setShowUploadModal(false);
-    triggerMockUpload(
-      uploadForm.selectedFileName,
-      uploadForm.documentType,
-      patientName
-    );
-    // Reset form
-    setUploadForm({
-      patientName: '',
-      documentType: 'Doctor Report',
-      selectedFileName: '',
+  const triggerToast = (msg: string, color: 'success' | 'danger' = 'success') => {
+    present({
+      message: msg,
+      duration: 3000,
+      position: 'top',
+      color: color,
     });
   };
 
-  // Filter logic
+  const fetchAllData = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Fetch Patients
+      const patientsRes = await getPatients();
+      if (patientsRes.success) {
+        setPatients(patientsRes.data);
+      }
+
+      // 2. Fetch Documents
+      const documentsRes = await getAllDocuments();
+      if (documentsRes.success && Array.isArray(documentsRes.data)) {
+        const mapped: UploadedDocument[] = documentsRes.data.map((doc: any) => {
+          const extension = (doc.fileName.split('.').pop() || 'PDF').toUpperCase();
+          
+          // Map backend fileType to UI display type
+          let displayType = 'Other';
+          if (doc.fileType === 'MEDICAL_REPORT') displayType = 'Medical Report';
+          else if (doc.fileType === 'LAB_REPORT') displayType = 'Lab Report';
+          else if (doc.fileType === 'PRESCRIPTION') displayType = 'Prescription';
+          else if (doc.fileType === 'ID_PROOF') displayType = 'ID Proof';
+
+          // Format date
+          const dateObj = new Date(doc.createdAt);
+          const formattedDate = dateObj.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          });
+
+          return {
+            id: doc.id,
+            documentName: doc.fileName,
+            patientName: doc.patient ? doc.patient.name : 'Unknown Patient',
+            patientId: doc.patient ? doc.patient.patientId : 'N/A',
+            type: displayType,
+            date: formattedDate,
+            format: extension,
+            mimeType: doc.mimeType || 'application/pdf',
+            filePath: doc.filePath,
+          };
+        });
+        setDocuments(mapped);
+      }
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Failed to retrieve documents ledger.', 'danger');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  // Filter & Search Logic
   const filteredDocs = documents.filter((doc) => {
     const matchesSearch =
       doc.documentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.uploadedBy.toLowerCase().includes(searchQuery.toLowerCase());
+      doc.patientId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.type.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesType = filterType === 'All' || doc.type === filterType;
 
-    // Assigned Healer Visibility Logic (BRD Security Compliance):
-    // Documents are visible ONLY to the Assigned Healer and Branch Admins.
-    let matchesHealerVisibility = true;
-    if (user?.role === 'HEALER') {
-      // Healer can only see documents assigned to them or uploaded by them
-      matchesHealerVisibility = 
-        doc.assignedHealer === user.name || 
-        doc.uploadedBy === user.name;
-    } else if (user?.role === 'PATIENT') {
-      // Patients can only see their own documents
-      matchesHealerVisibility = doc.patientName === user.name;
-    }
-
-    return matchesSearch && matchesType && matchesHealerVisibility;
+    return matchesSearch && matchesType;
   });
 
-  // Dynamic values based on list length
-  const totalDocsCount = 1280 + documents.length;
-  const docReportsCount = 430 + documents.filter((d) => d.type === 'Doctor Report').length;
-  const labReportsCount = 313 + documents.filter((d) => d.type === 'Lab Report').length;
-  const consultNotesCount = 535 + documents.filter((d) => d.type === 'Consultation Note').length;
+  // Dynamic summary values based on full list
+  const totalDocsCount = documents.length;
+  const medicalReportsCount = documents.filter((d) => d.type === 'Medical Report').length;
+  const labReportsCount = documents.filter((d) => d.type === 'Lab Report').length;
+  const prescriptionsCount = documents.filter((d) => d.type === 'Prescription').length;
+  const idProofsCount = documents.filter((d) => d.type === 'ID Proof').length;
 
   // Pagination
   const totalPages = Math.ceil(filteredDocs.length / itemsPerPage) || 1;
@@ -311,6 +181,98 @@ const DocumentManagementPage: React.FC = () => {
     setCurrentPage(1);
     setShowAll(false);
   }, [searchQuery, filterType]);
+
+  // Action: View Document
+  const handleViewDoc = async (doc: UploadedDocument) => {
+    try {
+      setIsFetchingBlob(true);
+      setViewingDoc(doc);
+      const blob = await getDocumentBlob(doc.id);
+      const fileBlob = new Blob([blob], { type: doc.mimeType });
+      const url = window.URL.createObjectURL(fileBlob);
+      setViewBlobUrl(url);
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Failed to fetch document content for preview.', 'danger');
+      setViewingDoc(null);
+    } finally {
+      setIsFetchingBlob(false);
+    }
+  };
+
+  const handleCloseViewer = () => {
+    if (viewBlobUrl) {
+      window.URL.revokeObjectURL(viewBlobUrl);
+    }
+    setViewBlobUrl(null);
+    setViewingDoc(null);
+  };
+
+  // Action: Download Document
+  const handleDownloadDoc = async (id: string, fileName: string) => {
+    try {
+      const blob = await getDocumentBlob(id);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      triggerToast('Document download started.', 'success');
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Failed to download document.', 'danger');
+    }
+  };
+
+  // Action: Delete Document
+  const handleDeleteDoc = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    try {
+      await deleteDocument(id);
+      triggerToast('Document deleted successfully!', 'success');
+      fetchAllData();
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.response?.data?.message || 'Failed to delete document', 'danger');
+    }
+  };
+
+  // Modal Upload Submit Handler
+  const handleModalUploadSubmit = async () => {
+    if (!uploadForm.patientId || !uploadForm.selectedFile) {
+      triggerToast('Please select a patient and a document file.', 'danger');
+      return;
+    }
+
+    let backendType = 'MEDICAL_REPORT';
+    if (uploadForm.documentType === 'Lab Report') backendType = 'LAB_REPORT';
+    else if (uploadForm.documentType === 'Prescription') backendType = 'PRESCRIPTION';
+    else if (uploadForm.documentType === 'ID Proof') backendType = 'ID_PROOF';
+
+    try {
+      setIsUploading(true);
+      await uploadDocument(uploadForm.patientId, uploadForm.selectedFile, backendType);
+      triggerToast('Document uploaded successfully!', 'success');
+      setShowUploadModal(false);
+      
+      // Reset Form
+      setUploadForm({
+        patientId: '',
+        documentType: 'Medical Report',
+        selectedFile: null,
+        selectedFileName: '',
+      });
+      
+      fetchAllData();
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.response?.data?.message || 'Failed to upload document.', 'danger');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <IonPage className="sa-page">
@@ -334,11 +296,10 @@ const DocumentManagementPage: React.FC = () => {
             <div className="dm-action-row__left">
               <h1 className="dm-action-row__title">Document Management</h1>
               <p className="dm-action-row__subtitle">
-                Manage medical records, lab results, and healer assessments.
+                Manage medical records, lab results, and patient credentials.
               </p>
             </div>
             <div className="dm-action-row__right">
-              
               <button
                 className="dm-action-btn dm-action-btn--primary"
                 onClick={() => setShowUploadModal(true)}
@@ -349,8 +310,8 @@ const DocumentManagementPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Stat Cards Horizontal Row (4 Cards) */}
-          <div className="dm-stats-row">
+          {/* Dashboard Summary Cards */}
+          <div className="dm-stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             <div className="dm-stat-card">
               <div className="dm-stat-card__main">
                 <div className="dm-stat-card__left">
@@ -359,10 +320,9 @@ const DocumentManagementPage: React.FC = () => {
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Total Documents</span>
-                    <span className="dm-stat-card__value">{totalDocsCount.toLocaleString()}</span>
+                    <span className="dm-stat-card__value">{totalDocsCount}</span>
                   </div>
                 </div>
-                <span className="dm-stat-badge dm-stat-badge--success">+12%</span>
               </div>
             </div>
 
@@ -373,8 +333,8 @@ const DocumentManagementPage: React.FC = () => {
                     <IonIcon icon={folderOpenOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
-                    <span className="dm-stat-card__label">Doctor Reports</span>
-                    <span className="dm-stat-card__value">{docReportsCount}</span>
+                    <span className="dm-stat-card__label">Medical Reports</span>
+                    <span className="dm-stat-card__value">{medicalReportsCount}</span>
                   </div>
                 </div>
               </div>
@@ -401,22 +361,36 @@ const DocumentManagementPage: React.FC = () => {
                     <IonIcon icon={documentOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
-                    <span className="dm-stat-card__label">Consultation Notes</span>
-                    <span className="dm-stat-card__value">{consultNotesCount}</span>
+                    <span className="dm-stat-card__label">Prescriptions</span>
+                    <span className="dm-stat-card__value">{prescriptionsCount}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="dm-stat-card">
+              <div className="dm-stat-card__main">
+                <div className="dm-stat-card__left">
+                  <div className="dm-stat-card__icon dm-stat-card__icon--teal">
+                    <IonIcon icon={cloudUploadOutline} />
+                  </div>
+                  <div className="dm-stat-card__meta">
+                    <span className="dm-stat-card__label">ID Proofs</span>
+                    <span className="dm-stat-card__value">{idProofsCount}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Search & Filter Bar (Moved side-by-side above the Recently Uploaded Documents section) */}
+          {/* Search & Filter Bar */}
           <div className="dm-control-bar">
             {/* Search Input */}
             <div className="dm-body-search">
               <IonIcon icon={searchOutline} className="dm-search-bar-icon" />
               <input
                 type="text"
-                placeholder="Search patients or files..."
+                placeholder="Search patients, ID, document name..."
                 className="dm-search-bar-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -425,48 +399,22 @@ const DocumentManagementPage: React.FC = () => {
 
             {/* Document Filter Tabs */}
             <div className="dm-panel-filter-tabs">
-              <button
-                className={`dm-filter-tab ${filterType === 'All' ? 'dm-filter-tab--active' : ''}`}
-                onClick={() => setFilterType('All')}
-              >
-                All
-              </button>
-              <button
-                className={`dm-filter-tab ${filterType === 'Doctor Report' ? 'dm-filter-tab--active' : ''}`}
-                onClick={() => setFilterType('Doctor Report')}
-              >
-                Doctor Report
-              </button>
-              <button
-                className={`dm-filter-tab ${filterType === 'Lab Report' ? 'dm-filter-tab--active' : ''}`}
-                onClick={() => setFilterType('Lab Report')}
-              >
-                Lab Report
-              </button>
-              <button
-                className={`dm-filter-tab ${filterType === 'Consultation Note' ? 'dm-filter-tab--active' : ''}`}
-                onClick={() => setFilterType('Consultation Note')}
-              >
-                Consultation Note
-              </button>
-              <button
-                className={`dm-filter-tab ${filterType === 'Other' ? 'dm-filter-tab--active' : ''}`}
-                onClick={() => setFilterType('Other')}
-              >
-                Other
-              </button>
+              {['All', 'Medical Report', 'Lab Report', 'Prescription', 'ID Proof'].map((tab) => (
+                <button
+                  key={tab}
+                  className={`dm-filter-tab ${filterType === tab ? 'dm-filter-tab--active' : ''}`}
+                  onClick={() => setFilterType(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Recently Uploaded Documents Panel (Full-Width) */}
+          {/* Documents Ledger Panel */}
           <div className="dm-panel" style={{ marginBottom: '24px' }}>
             <div className="dm-panel__header">
-              <h2 className="dm-panel__title">Recently Uploaded Documents</h2>
-              <div className="dm-panel__controls">
-                {/* <button className="dm-icon-btn">
-                  <IonIcon icon={ellipsisVerticalOutline} />
-                </button> */}
-              </div>
+              <h2 className="dm-panel__title">Documents Registry</h2>
             </div>
 
             <div className="dm-table-container">
@@ -475,45 +423,71 @@ const DocumentManagementPage: React.FC = () => {
                   <tr>
                     <th>DOCUMENT NAME</th>
                     <th>PATIENT NAME</th>
+                    <th>PATIENT ID</th>
                     <th>TYPE</th>
-                    <th>UPLOADED BY</th>
-                    <th>DATE</th>
-                    {/* <th>FORMAT</th> */}
+                    <th>UPLOAD DATE</th>
+                    <th style={{ textAlign: 'center' }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedDocs.length > 0 ? (
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={6} className="dm-table-empty">
+                        Loading documents ledger...
+                      </td>
+                    </tr>
+                  ) : paginatedDocs.length > 0 ? (
                     paginatedDocs.map((doc) => (
                       <tr key={doc.id} className="dm-table-row">
                         <td 
                           className="dm-cell-docname"
                           style={{ cursor: 'pointer' }}
-                          onClick={() => setSelectedViewDoc(doc)}
+                          onClick={() => handleViewDoc(doc)}
                         >
                           <IonIcon icon={documentOutline} className="dm-cell-icon" />
-                          <span className="dm-doc-title" style={{ color: '#1f7a6a', fontWeight: 600 }}>{doc.documentName}</span>
+                          <span className="dm-doc-title" style={{ color: '#1f7a6a', fontWeight: 600 }}>
+                            {doc.documentName}
+                          </span>
                         </td>
                         <td className="dm-cell-patient">{doc.patientName}</td>
+                        <td style={{ color: '#64748b', fontWeight: 500 }}>{doc.patientId}</td>
                         <td>
                           <span className={`dm-badge dm-badge--${doc.type.toLowerCase().replace(' ', '-')}`}>
                             {doc.type}
                           </span>
                         </td>
-                        <td className="dm-cell-uploadedby" style={{ fontWeight: 500, color: '#475569' }}>
-                          {doc.uploadedBy}
-                        </td>
                         <td className="dm-cell-date">{doc.date}</td>
-                        {/* <td>
-                          <span className={`dm-format dm-format--${doc.format.toLowerCase()}`}>
-                            {doc.format}
-                          </span>
-                        </td> */}
+                        <td>
+                          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                            <button
+                              onClick={() => handleViewDoc(doc)}
+                              style={{ background: 'none', border: 'none', color: '#1f7a6a', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title="View Document"
+                            >
+                              <IonIcon icon={eyeOutline} /> View
+                            </button>
+                            <button
+                              onClick={() => handleDownloadDoc(doc.id, doc.documentName)}
+                              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title="Download Document"
+                            >
+                              <IonIcon icon={downloadOutline} /> Download
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDoc(doc.id)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title="Delete Document"
+                            >
+                              <IonIcon icon={closeOutline} /> Delete
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td colSpan={6} className="dm-table-empty">
-                        No documents match your filter query.
+                        No documents found matching the filter query.
                       </td>
                     </tr>
                   )}
@@ -521,7 +495,7 @@ const DocumentManagementPage: React.FC = () => {
               </table>
             </div>
 
-            {/* Pagination footer */}
+            {/* Pagination */}
             {totalPages > 1 && !showAll && (
               <div className="dm-pagination">
                 <button
@@ -544,7 +518,7 @@ const DocumentManagementPage: React.FC = () => {
               </div>
             )}
 
-            <div className="dm-panel__footer">
+            {/* <div className="dm-panel__footer">
               <button className="dm-view-all-btn" onClick={() => setShowAll(!showAll)}>
                 {showAll ? 'Show Sliced Pages' : 'View All Documents'}
                 <IonIcon 
@@ -552,108 +526,8 @@ const DocumentManagementPage: React.FC = () => {
                   className="dm-view-all-arrow" 
                 />
               </button>
-            </div>
+            </div> */}
           </div>
-
-          {/* 2-Column Workspace Grid */}
-          {/* <div className="dm-workspace-grid"> */}
-            
-            {/* COLUMN 1: Secure File Upload */}
-            {/* <div className="dm-col">
-              <div className="dm-panel">
-                <div
-                  className={`dm-upload-dropzone ${isUploading ? 'dm-upload-dropzone--uploading' : ''}`}
-                  onClick={handleDropzoneClick}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                    accept=".pdf,.jpg,.jpeg,.png,.docx"
-                  />
-                  <div className="dm-upload-dropzone__body">
-                    <div className="dm-upload-cloud-icon">
-                      <IonIcon icon={cloudUploadOutline} />
-                    </div>
-                    <h3 className="dm-upload-dropzone__title">Secure File Upload</h3>
-                    <p className="dm-upload-dropzone__text">
-                      Drag and drop patient files here, or <span className="dm-upload-link">click to browse</span> local storage.
-                    </p>
-                    <p className="dm-upload-dropzone__subtext">
-                      Supported: PDF, JPG, PNG, DOCX (Max 25MB)
-                    </p>
-                  </div>
-                </div>
-
-                {isUploading && (
-                  <div className="dm-upload-progress-container">
-                    <div className="dm-upload-progress-header">
-                      <span className="dm-uploading-file-label">
-                        Encrypting & Storing: <strong>{uploadingFileName}</strong>
-                      </span>
-                      <span className="dm-uploading-file-pct">{uploadProgress}%</span>
-                    </div>
-                    <div
-                      className="dm-upload-progress-bar"
-                      style={{ '--progress-pct': `${uploadProgress}%` } as React.CSSProperties}
-                    ></div>
-                    <span className="dm-uploading-subtext">Ready to encrypt and store...</span>
-                  </div>
-                )}
-              </div>
-            </div> */}
-
-            {/* COLUMN 2: Recent Reports */}
-            {/* <div className="dm-col">
-              <div className="dm-panel">
-                <div className="dm-panel__header">
-                  <h2 className="dm-panel__title">Recent Reports</h2>
-                  <IonIcon icon={documentTextOutline} className="dm-panel-header-icon" />
-                </div>
-                <div className="dm-report-cards-list">
-                  <div 
-                    className="dm-report-item" 
-                    style={{ cursor: 'pointer' }} 
-                    onClick={() => handleRecentReportClick('Cardiology Report', 'Kumar')}
-                  >
-                    <div className="dm-report-item__left">
-                      <div className="dm-report-item__circle-icon dm-report-item__circle-icon--blue">
-                        <IonIcon icon={heartOutline} />
-                      </div>
-                      <div className="dm-report-item__meta">
-                        <h4 className="dm-report-item__title">Cardiology Report</h4>
-                        <span className="dm-report-item__patient">Patient: Kumar</span>
-                      </div>
-                    </div>
-                    <button className="dm-report-action-icon" onClick={(e) => e.stopPropagation()}>
-                      <IonIcon icon={ellipsisVerticalOutline} />
-                    </button>
-                  </div>
-
-                  <div 
-                    className="dm-report-item" 
-                    style={{ cursor: 'pointer' }} 
-                    onClick={() => handleRecentReportClick('Ophthalmology Report', 'Rao')}
-                  >
-                    <div className="dm-report-item__left">
-                      <div className="dm-report-item__circle-icon dm-report-item__circle-icon--red">
-                        <IonIcon icon={eyeOutline} />
-                      </div>
-                      <div className="dm-report-item__meta">
-                        <h4 className="dm-report-item__title">Ophthalmology</h4>
-                        <span className="dm-report-item__patient">Patient: Rao</span>
-                      </div>
-                    </div>
-                    <button className="dm-report-action-icon" onClick={(e) => e.stopPropagation()}>
-                      <IonIcon icon={ellipsisVerticalOutline} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div> */}
-
-          {/* </div> */}
         </div>
       </IonContent>
 
@@ -666,28 +540,19 @@ const DocumentManagementPage: React.FC = () => {
           </div>
           <div className="sa-modal__body">
             <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Patient Name</label>
-              {user?.role === 'PATIENT' ? (
-                <input
-                  type="text"
-                  className="sa-input"
-                  value={user.name || ''}
-                  disabled
-                />
-              ) : (
-                <select
-                  className="sa-input"
-                  value={uploadForm.patientName}
-                  onChange={(e) => setUploadForm({ ...uploadForm, patientName: e.target.value })}
-                >
-                  <option value="">Select Patient Name</option>
-                  {patientOptions.map((patName) => (
-                    <option key={patName} value={patName}>
-                      {patName}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <label className="sa-settings__label">Select Patient</label>
+              <select
+                className="sa-input"
+                value={uploadForm.patientId}
+                onChange={(e) => setUploadForm({ ...uploadForm, patientId: e.target.value })}
+              >
+                <option value="">Choose Patient</option>
+                {patients.map((pat) => (
+                  <option key={pat.id} value={pat.id}>
+                    {pat.name} ({pat.patientId})
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="sa-settings__form-group">
@@ -697,10 +562,10 @@ const DocumentManagementPage: React.FC = () => {
                 value={uploadForm.documentType}
                 onChange={(e) => setUploadForm({ ...uploadForm, documentType: e.target.value as any })}
               >
-                <option value="Doctor Report">Doctor Report</option>
+                <option value="Medical Report">Medical Report</option>
                 <option value="Lab Report">Lab Report</option>
-                <option value="Consultation Note">Consultation Note</option>
-                <option value="Other">Other</option>
+                <option value="Prescription">Prescription</option>
+                <option value="ID Proof">ID Proof</option>
               </select>
             </div>
 
@@ -709,11 +574,10 @@ const DocumentManagementPage: React.FC = () => {
               <input
                 type="text"
                 className="sa-input"
-                placeholder="e.g. MRI_Scan_Final.pdf"
+                placeholder="Selected file name will appear here"
                 value={uploadForm.selectedFileName}
-                onChange={(e) => setUploadForm({ ...uploadForm, selectedFileName: e.target.value })}
+                disabled
               />
-              <span className="dm-modal-tip">Include extension (.pdf, .jpg, .docx)</span>
             </div>
 
             <div className="sa-settings__form-group" style={{ marginTop: '16px' }}>
@@ -729,7 +593,12 @@ const DocumentManagementPage: React.FC = () => {
                   onChange={(e) => {
                     const files = e.target.files;
                     if (files && files.length > 0) {
-                      setUploadForm({ ...uploadForm, selectedFileName: files[0].name });
+                      const file = files[0];
+                      setUploadForm({
+                        ...uploadForm,
+                        selectedFile: file,
+                        selectedFileName: file.name
+                      });
                     }
                   }}
                   accept=".pdf,.jpg,.jpeg,.png,.docx"
@@ -748,228 +617,89 @@ const DocumentManagementPage: React.FC = () => {
             <button className="sa-btn sa-btn--outline" onClick={() => setShowUploadModal(false)}>
               Cancel
             </button>
-            <button className="sa-btn sa-btn--primary" onClick={handleModalUploadSubmit}>
-              Upload & Encrypt
+            <button className="sa-btn sa-btn--primary" onClick={handleModalUploadSubmit} disabled={isUploading}>
+              {isUploading ? 'Uploading...' : 'Upload & Encrypt'}
             </button>
           </div>
         </div>
       </IonModal>
+
       {/* Full-Page Document Viewer Modal */}
       <IonModal 
-        isOpen={selectedViewDoc !== null} 
-        onDidDismiss={() => setSelectedViewDoc(null)} 
+        isOpen={viewingDoc !== null} 
+        onDidDismiss={handleCloseViewer} 
         className="sa-modal sa-modal--full"
       >
-        {selectedViewDoc && (
-          <div className="dm-viewer-container">
-            <div className="dm-viewer-header">
-              <div className="dm-viewer-header-left">
-                <IonIcon icon={documentOutline} style={{ fontSize: '24px', color: '#10b981' }} />
+        {viewingDoc && (
+          <div className="dm-viewer-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div className="dm-viewer-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <div className="dm-viewer-header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <IonIcon icon={documentOutline} style={{ fontSize: '24px', color: '#1f7a6a' }} />
                 <div>
-                  <h3 className="dm-viewer-title">{selectedViewDoc.documentName}</h3>
-                  <span className="dm-badge dm-badge--small" style={{ fontSize: '10px', marginTop: '2px', display: 'inline-block' }}>
-                    {selectedViewDoc.type} • {selectedViewDoc.format} • {selectedViewDoc.size}
+                  <h3 className="dm-viewer-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{viewingDoc.documentName}</h3>
+                  <span className="dm-badge dm-badge--small" style={{ fontSize: '11px', marginTop: '2px', display: 'inline-block' }}>
+                    {viewingDoc.type} • {viewingDoc.format}
                   </span>
                 </div>
               </div>
               <div className="dm-viewer-header-right">
-                <button className="dm-viewer-close-btn" onClick={() => setSelectedViewDoc(null)} style={{ background: '#ef4444', borderColor: '#ef4444' }}>
+                <button 
+                  className="dm-viewer-close-btn" 
+                  onClick={handleCloseViewer} 
+                  style={{ background: '#ef4444', borderColor: '#ef4444', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                >
                   <IonIcon icon={closeOutline} />
                   Close
                 </button>
               </div>
             </div>
 
-            <div className="dm-viewer-body">
-              <div className="dm-viewer-paper">
-                <div className="dm-viewer-paper-header">
-                  <div className="dm-viewer-paper-logo">
-                    <div className="dm-viewer-logo-icon" style={{ fontSize: '24px', color: '#1f7a6a', marginRight: '8px' }}>✦</div>
-                    <div>
-                      <div className="dm-viewer-logo-text" style={{ fontSize: '18px', fontWeight: 700, color: '#1f7a6a' }}>NPHMS HEALTHCARE</div>
-                      <div className="dm-viewer-logo-sub" style={{ fontSize: '10px', color: '#64748b' }}>Mumbai Main Branch • Patient Records Division</div>
+            <div className="dm-viewer-body" style={{ flex: 1, padding: '24px', background: '#e2e8f0', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {isFetchingBlob ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <h3>Loading Document Preview...</h3>
+                </div>
+              ) : viewBlobUrl ? (
+                <div className="dm-viewer-paper" style={{ width: '100%', maxWidth: '900px', background: '#ffffff', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                  {viewingDoc.mimeType === 'application/pdf' || viewingDoc.format === 'PDF' ? (
+                    <iframe 
+                      src={viewBlobUrl} 
+                      style={{ width: '100%', height: '700px', border: 'none' }} 
+                      title={viewingDoc.documentName} 
+                    />
+                  ) : viewingDoc.mimeType.startsWith('image/') || ['PNG', 'JPG', 'JPEG'].includes(viewingDoc.format) ? (
+                    <div style={{ textAlign: 'center', padding: '24px', background: '#ffffff' }}>
+                      <img 
+                        src={viewBlobUrl} 
+                        alt={viewingDoc.documentName} 
+                        style={{ maxWidth: '100%', maxHeight: '650px', borderRadius: '4px', objectFit: 'contain' }} 
+                      />
                     </div>
-                  </div>
-                  <div className="dm-viewer-paper-meta" style={{ textAlign: 'right' }}>
-                    <h2 className="dm-viewer-meta-title" style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px 0' }}>{selectedViewDoc.type}</h2>
-                    <p className="dm-viewer-meta-text" style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}><strong>RECORD ID:</strong> NPHMS-DOC-{selectedViewDoc.id}</p>
-                    <p className="dm-viewer-meta-text" style={{ fontSize: '11px', color: '#64748b', margin: '2px 0' }}><strong>DATE GENERATED:</strong> {selectedViewDoc.date}</p>
-                  </div>
-                </div>
-
-                <div className="dm-viewer-patient-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-                  <div className="dm-viewer-patient-item" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span className="dm-viewer-patient-label" style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>PATIENT NAME</span>
-                    <span className="dm-viewer-patient-val" style={{ fontSize: '14px', fontWeight: 500 }}>{selectedViewDoc.patientName}</span>
-                  </div>
-                  <div className="dm-viewer-patient-item" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span className="dm-viewer-patient-label" style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>ASSIGNED HEALER</span>
-                    <span className="dm-viewer-patient-val" style={{ fontSize: '14px', fontWeight: 500 }}>{selectedViewDoc.assignedHealer || 'Healer Julian'}</span>
-                  </div>
-                  <div className="dm-viewer-patient-item" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span className="dm-viewer-patient-label" style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>UPLOADED BY</span>
-                    <span className="dm-viewer-patient-val" style={{ fontSize: '14px', fontWeight: 500 }}>{selectedViewDoc.uploadedBy}</span>
-                  </div>
-                  <div className="dm-viewer-patient-item" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span className="dm-viewer-patient-label" style={{ fontSize: '10px', fontWeight: 600, color: '#64748b' }}>ENCRYPTION STATUS</span>
-                    <span className="dm-viewer-patient-val" style={{ fontSize: '14px', color: '#10b981', fontWeight: 600 }}>✓ SECURE AES-256</span>
-                  </div>
-                </div>
-
-                {selectedViewDoc.type === 'Doctor Report' && (
-                  <div className="dm-viewer-content-block" style={{ marginBottom: '24px' }}>
-                    <h3 className="dm-viewer-section-title" style={{ fontSize: '13px', fontWeight: 700, color: '#1f7a6a', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '12px' }}>Clinical Diagnoses & Evaluation</h3>
-                    <p className="dm-viewer-content-text" style={{ fontSize: '13px', lineHeight: 1.6, color: '#334155', margin: '0 0 12px 0' }}>
-                      Patient presented for deep energy diagnostic evaluation. Subjective scans indicate persistent physical discomfort in the upper back region and mild chest tightness, which has been exacerbated by occupational stress.
-                    </p>
-                    <p className="dm-viewer-content-text" style={{ fontSize: '13px', lineHeight: 1.6, color: '#334155', margin: '0 0 12px 0' }}>
-                      <strong>Pranic Scan Observations:</strong><br />
-                      Congestion detected in the front and back Solar Plexus chakras. The Heart chakra scans clean but exhibits minor energy leakage in the left auric sheath. The Ajna chakra is balanced and active.
-                    </p>
-                    <p className="dm-viewer-content-text" style={{ fontSize: '13px', lineHeight: 1.6, color: '#334155', margin: '0 0 12px 0' }}>
-                      <strong>Prescribed Therapy Action Plan:</strong><br />
-                      1. General sweeping of the entire body aura twice daily.<br />
-                      2. Thorough localized sweeping on the solar plexus and chest cavity.<br />
-                      3. Energizing the treated chakras with light-whitish green and light-whitish blue pranic frequencies.<br />
-                      4. Scheduled for 3 crystal-assisted healing sessions over the next 2 weeks.
-                    </p>
-                  </div>
-                )}
-
-                {selectedViewDoc.type === 'Lab Report' && (
-                  <div className="dm-viewer-content-block" style={{ marginBottom: '24px' }}>
-                    <h3 className="dm-viewer-section-title" style={{ fontSize: '13px', fontWeight: 700, color: '#1f7a6a', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '12px' }}>Diagnostic Lab Analysis Results</h3>
-                    <table className="dm-viewer-lab-table" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ background: '#f1f5f9', color: '#475569', fontSize: '11px', fontWeight: 600, padding: '8px 12px', borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>TEST PARAMETER</th>
-                          <th style={{ background: '#f1f5f9', color: '#475569', fontSize: '11px', fontWeight: 600, padding: '8px 12px', borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>PATIENT VALUE</th>
-                          <th style={{ background: '#f1f5f9', color: '#475569', fontSize: '11px', fontWeight: 600, padding: '8px 12px', borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>REFERENCE RANGE</th>
-                          <th style={{ background: '#f1f5f9', color: '#475569', fontSize: '11px', fontWeight: 600, padding: '8px 12px', borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>STATUS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>Blood Glucose (Fasting)</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>94 mg/dL</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>70 - 100 mg/dL</td>
-                          <td style={{ padding: '10px 12px' }}><span className="dm-viewer-lab-badge dm-viewer-lab-badge--normal" style={{ background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>Normal</span></td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>Total Cholesterol</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>218 mg/dL</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>&lt; 200 mg/dL</td>
-                          <td style={{ padding: '10px 12px' }}><span className="dm-viewer-lab-badge dm-viewer-lab-badge--high" style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 6px', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>High</span></td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>Hemoglobin</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>14.5 g/dL</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>12.0 - 16.0 g/dL</td>
-                          <td style={{ padding: '10px 12px' }}><span className="dm-viewer-lab-badge dm-viewer-lab-badge--normal" style={{ background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>Normal</span></td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>Platelet Count</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>285,000 /µL</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>150,000 - 450,000 /µL</td>
-                          <td style={{ padding: '10px 12px' }}><span className="dm-viewer-lab-badge dm-viewer-lab-badge--normal" style={{ background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>Normal</span></td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>TSH (Thyroid Stimulating Hormone)</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>0.45 µIU/mL</td>
-                          <td style={{ padding: '10px 12px', fontSize: '13px' }}>0.50 - 5.00 µIU/mL</td>
-                          <td style={{ padding: '10px 12px' }}><span className="dm-viewer-lab-badge dm-viewer-lab-badge--low" style={{ background: '#dbeafe', color: '#1d4ed8', padding: '2px 6px', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>Low</span></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <p className="dm-viewer-content-text" style={{ fontSize: '13px', color: '#64748b' }}>
-                      *Fast-draw procedure completed successfully. Recommended clinical evaluation relative to clinical thyroid baseline observations.
-                    </p>
-                  </div>
-                )}
-
-                {selectedViewDoc.type === 'Consultation Note' && (
-                  <div className="dm-viewer-content-block" style={{ marginBottom: '24px' }}>
-                    <h3 className="dm-viewer-section-title" style={{ fontSize: '13px', fontWeight: 700, color: '#1f7a6a', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '12px' }}>Healer Consultation Observation & Chakra Analysis</h3>
-                    <p className="dm-viewer-content-text" style={{ fontSize: '13px', lineHeight: 1.6, color: '#334155', margin: '0 0 12px 0' }}>
-                      Conducted full aura evaluation. The client experienced deep relaxation during the treatment log sweeps. Noted release of negative emotional energetic build-ups in the lower abdominal auric layers.
-                    </p>
-                    
-                    <h4 style={{ fontSize: '12px', fontWeight: 700, color: '#334155', margin: '16px 0 8px 0' }}>Chakra Energy Status Measurements</h4>
-                    <div className="dm-viewer-energy-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div className="dm-viewer-energy-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <span className="dm-viewer-energy-name" style={{ fontSize: '12px', fontWeight: 600 }}>Ajna Chakra (Intuition)</span>
-                        <div className="dm-viewer-energy-bar-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
-                          <div className="dm-viewer-energy-bar" style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div className="dm-viewer-energy-fill dm-viewer-energy-fill--clean" style={{ width: '85%', height: '100%', background: '#10b981' }}></div>
-                          </div>
-                          <span className="dm-viewer-energy-val" style={{ fontSize: '10px', color: '#64748b', width: '50px', textAlign: 'right' }}>85% Clean</span>
-                        </div>
-                      </div>
-                      <div className="dm-viewer-energy-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <span className="dm-viewer-energy-name" style={{ fontSize: '12px', fontWeight: 600 }}>Heart Chakra (Compassion)</span>
-                        <div className="dm-viewer-energy-bar-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
-                          <div className="dm-viewer-energy-bar" style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div className="dm-viewer-energy-fill dm-viewer-energy-fill--clean" style={{ width: '70%', height: '100%', background: '#10b981' }}></div>
-                          </div>
-                          <span className="dm-viewer-energy-val" style={{ fontSize: '10px', color: '#64748b', width: '50px', textAlign: 'right' }}>70% Clean</span>
-                        </div>
-                      </div>
-                      <div className="dm-viewer-energy-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <span className="dm-viewer-energy-name" style={{ fontSize: '12px', fontWeight: 600 }}>Solar Plexus Chakra (Emotion)</span>
-                        <div className="dm-viewer-energy-bar-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
-                          <div className="dm-viewer-energy-bar" style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div className="dm-viewer-energy-fill dm-viewer-energy-fill--highly-congested" style={{ width: '90%', height: '100%', background: '#ef4444' }}></div>
-                          </div>
-                          <span className="dm-viewer-energy-val" style={{ fontSize: '10px', color: '#64748b', width: '50px', textAlign: 'right' }}>90% Cong.</span>
-                        </div>
-                      </div>
-                      <div className="dm-viewer-energy-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <span className="dm-viewer-energy-name" style={{ fontSize: '12px', fontWeight: 600 }}>Basic Chakra (Grounding)</span>
-                        <div className="dm-viewer-energy-bar-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '200px' }}>
-                          <div className="dm-viewer-energy-bar" style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div className="dm-viewer-energy-fill dm-viewer-energy-fill--congested" style={{ width: '60%', height: '100%', background: '#f59e0b' }}></div>
-                          </div>
-                          <span className="dm-viewer-energy-val" style={{ fontSize: '10px', color: '#64748b', width: '50px', textAlign: 'right' }}>60% Cong.</span>
-                        </div>
-                      </div>
+                  ) : (
+                    <div style={{ padding: '60px 40px', textAlign: 'center', background: '#ffffff' }}>
+                      <IonIcon icon={documentOutline} style={{ fontSize: '72px', color: '#94a3b8', marginBottom: '20px' }} />
+                      <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Preview Not Supported</h3>
+                      <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '400px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+                        Direct browser previews are not supported for {viewingDoc.format} documents. Please download the file to view its content locally.
+                      </p>
+                      <button 
+                        className="sa-btn sa-btn--primary" 
+                        onClick={() => handleDownloadDoc(viewingDoc.id, viewingDoc.documentName)}
+                      >
+                        Download {viewingDoc.format}
+                      </button>
                     </div>
-                  </div>
-                )}
-
-                {selectedViewDoc.type === 'Other' && (
-                  <div className="dm-viewer-content-block" style={{ marginBottom: '24px' }}>
-                    <h3 className="dm-viewer-section-title" style={{ fontSize: '13px', fontWeight: 700, color: '#1f7a6a', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '12px' }}>General Center Waiver & Consent</h3>
-                    <p className="dm-viewer-content-text" style={{ fontSize: '13px', fontStyle: 'italic', background: '#f8fafc', padding: '16px', borderRadius: '6px', borderLeft: '3px solid #1f7a6a', margin: '0 0 12px 0' }}>
-                      "I hereby acknowledge that pranic healing therapy is designed to balance the physical body's energy system and is a complementary wellness practice. I understand that healers do not diagnose physical illnesses, prescribe drugs, or interfere with traditional medical treatments."
-                    </p>
-                    <p className="dm-viewer-content-text" style={{ fontSize: '13px', lineHeight: 1.6, color: '#334155', margin: '0 0 12px 0' }}>
-                      <strong>Patient Confirmation Statement:</strong><br />
-                      The patient has signed this intake waiver indicating agreement with the NPHMS privacy policy. This consent is stored securely under the blockchain vault reference key `NPHMS-RBAC-SEC-KEY`.
-                    </p>
-                  </div>
-                )}
-
-                <div className="dm-viewer-paper-footer" style={{ marginTop: 'auto', borderTop: '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div className="dm-viewer-signature-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                    <div className="dm-viewer-signature-line" style={{ width: '150px', borderBottom: '1px dashed #64748b', marginBottom: '4px' }}></div>
-                    <span className="dm-viewer-signature-label" style={{ fontSize: '10px', color: '#64748b' }}>Signature of Attending Staff</span>
-                  </div>
-                  <div className="dm-viewer-seal" style={{ width: '60px', height: '60px', border: '2px dashed rgba(31, 122, 106, 0.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'rgba(31, 122, 106, 0.5)', transform: 'rotate(-15deg)', textTransform: 'uppercase', textAlign: 'center' }}>
-                    NPHMS<br />SEAL
-                  </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <h3>Document content is unavailable.</h3>
+                </div>
+              )}
             </div>
           </div>
         )}
       </IonModal>
-
-      {/* Glassmorphic Toast Overlay */}
-      {toastMessage && (
-        <div className="dm-toast">
-          <span>{toastMessage}</span>
-        </div>
-      )}
     </IonPage>
   );
 };

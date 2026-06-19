@@ -16,6 +16,7 @@ const reportRoutes = require('./report.routes');
 const treatmentCategoryRoutes = require('./treatmentCategory.routes');
 const treatmentTypeRoutes = require('./treatmentType.routes');
 const branchAdminRoutes = require('./branchAdmin.routes');
+const documentRoutes = require('./document.routes');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -32,5 +33,6 @@ router.use('/reports', reportRoutes);
 router.use('/treatment-categories', treatmentCategoryRoutes);
 router.use('/treatment-types', treatmentTypeRoutes);
 router.use('/branch-admins', branchAdminRoutes);
+router.use('/documents', documentRoutes);
 
 module.exports = router;

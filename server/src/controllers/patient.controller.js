@@ -27,6 +27,10 @@ const mapPatientToResponse = (patient) => {
     branchId: patient.branchId,
     healerId: patient.healerId,
     email: patient.email,
+    medicalReport: patient.medicalReport,
+    labReport: patient.labReport,
+    prescription: patient.prescription,
+    idProof: patient.idProof,
     lastVisit,
     branch: patient.branch ? {
       id: patient.branch.id,
