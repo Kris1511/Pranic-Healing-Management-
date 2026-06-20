@@ -39,18 +39,7 @@ const mapPatientToResponse = (patient) => {
     // Assignment
     branchId: patient.branchId,
     healerId: patient.healerId,
-
-    // Status & auth
-    status: patient.status,
-    password: patient.password,
-
-    // Document paths
-    medicalReport: patient.medicalReport,
-    labReport: patient.labReport,
-    prescription: patient.prescription,
-    idProof: patient.idProof,
-
-    // Computed
+    email: patient.email,
     lastVisit,
 
     // Associations
