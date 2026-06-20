@@ -358,6 +358,28 @@ const getFormattedTime = (date: Date) => {
   return `${hoursStr}:${minutesStr} ${ampm}`;
 };
 
+const getPeriodFrom24h = (time24h: string) => {
+  if (!time24h) return 'AM'; // default
+  const [hoursStr] = time24h.split(':');
+  const hours = parseInt(hoursStr, 10);
+  return hours >= 12 ? 'PM' : 'AM';
+};
+
+const togglePeriod = (time24h: string, newPeriod: 'AM' | 'PM') => {
+  if (!time24h) {
+    return newPeriod === 'AM' ? '09:00' : '17:00';
+  }
+  const [hoursStr, minutesStr] = time24h.split(':');
+  let hours = parseInt(hoursStr, 10);
+  if (isNaN(hours)) return time24h;
+  if (newPeriod === 'PM' && hours < 12) {
+    hours += 12;
+  } else if (newPeriod === 'AM' && hours >= 12) {
+    hours -= 12;
+  }
+  return `${hours.toString().padStart(2, '0')}:${minutesStr}`;
+};
+
 const AttendancePage: React.FC = () => {
   const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -371,77 +393,128 @@ const AttendancePage: React.FC = () => {
   // Fetch from API
   const [isLoading, setIsLoading] = useState(false);
   
+  const fetchAttendance = async () => {
+    try {
+      setIsLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch today's records
+      const response = await getAttendanceHistory(undefined, { date: today });
+      const records = response.data || [];
+      
+      // Fetch all healers for the current branch
+      const branchId = (user as any)?.branchId || (typeof user?.branch === 'object' && user?.branch !== null ? (user.branch as any).id : undefined);
+      const usersRes = await getUsers({ role: 'HEALER', branchId });
+      const healersList = usersRes.data || [];
+
+      // Map healers list to daily attendance entries, merging with existing records
+      const mappedDaily = healersList.map((healer: any) => {
+        const record = records.find((r: any) => (r.userId || r.user?.id) === healer.id);
+        if (record) {
+          return {
+            id: record.id,
+            userId: healer.id,
+            name: healer.name || 'Unknown',
+            role: healer.role === 'HEALER' ? 'Healer' : (healer.role || 'Staff'),
+            branchId: record.branch?.id || healer.branch?.id || 'N/A',
+            branchName: record.branch?.name || healer.branch?.name || 'Unassigned',
+            checkIn: record.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+            checkOut: record.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+            status: record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'Present',
+          };
+        } else {
+          return {
+            id: healer.id,
+            userId: healer.id,
+            name: healer.name || 'Unknown',
+            role: healer.role === 'HEALER' ? 'Healer' : (healer.role || 'Staff'),
+            branchId: healer.branch?.id || 'N/A',
+            branchName: healer.branch?.name || healer.branch?.name || 'Unassigned',
+            checkIn: 'N/A',
+            checkOut: 'N/A',
+            status: 'Select...',
+          };
+        }
+      });
+
+      // Add any other attendance records that are not healers
+      records.forEach((record: any) => {
+        const userId = record.userId || record.user?.id;
+        const exists = mappedDaily.some((d: any) => d.userId === userId);
+        if (!exists) {
+          mappedDaily.push({
+            id: record.id,
+            userId: userId,
+            name: record.user?.name || 'Unknown',
+            role: record.user?.role || 'Staff',
+            branchId: record.branch?.id || 'N/A',
+            branchName: record.branch?.name || 'Unassigned',
+            checkIn: record.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+            checkOut: record.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+            status: record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'Present',
+          });
+        }
+      });
+      
+      setDailyAttendance(mappedDaily);
+
+      // Fetch all historical records
+      const historyResponse = await getAttendanceHistory();
+      const historyRecords = historyResponse.data || [];
+
+      // Sort by date descending
+      historyRecords.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      const mappedHistory = historyRecords.map((record: any) => {
+        let hoursStr = '--';
+        if (record.checkIn && record.checkOut) {
+          const inTime = new Date(record.checkIn);
+          const outTime = new Date(record.checkOut);
+          const diffMs = outTime.getTime() - inTime.getTime();
+          if (diffMs > 0) {
+            const diffHours = diffMs / (1000 * 60 * 60);
+            hoursStr = `${diffHours.toFixed(1)}h`;
+          }
+        } else if (record.status?.toLowerCase() === 'absent') {
+          hoursStr = '0.0h';
+        }
+
+        let displayStatus: 'Present' | 'Absent' | 'Half Day' = 'Present';
+        const statusLower = record.status?.toLowerCase() || '';
+        if (statusLower === 'absent') {
+          displayStatus = 'Absent';
+        } else if (statusLower === 'half day' || statusLower === 'halfday') {
+          displayStatus = 'Half Day';
+        }
+
+        let displayDate = '';
+        if (record.date) {
+          displayDate = getFormattedDate(new Date(`${record.date}T00:00:00`));
+        }
+
+        return {
+          id: record.id,
+          date: displayDate,
+          workerName: record.user?.name || 'Unknown',
+          status: displayStatus,
+          hours: hoursStr,
+          remarks: record.remarks || (
+            statusLower === 'present' ? 'Regular shift.' :
+            statusLower === 'half day' || statusLower === 'halfday' ? 'Half day shift.' :
+            statusLower === 'absent' ? 'Absent.' : '--'
+          )
+        };
+      });
+
+      setHistoricalLogs(mappedHistory);
+    } catch (error) {
+      console.error('Failed to fetch attendance data', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   React.useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        setIsLoading(true);
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Fetch today's records
-        const response = await getAttendanceHistory(undefined, { date: today });
-        const records = response.data || [];
-        
-        // Fetch all healers for the current branch
-        const branchId = (user as any)?.branchId || (typeof user?.branch === 'object' && user?.branch !== null ? (user.branch as any).id : undefined);
-        const usersRes = await getUsers({ role: 'HEALER', branchId });
-        const healersList = usersRes.data || [];
-
-        // Map healers list to daily attendance entries, merging with existing records
-        const mappedDaily = healersList.map((healer: any) => {
-          const record = records.find((r: any) => (r.userId || r.user?.id) === healer.id);
-          if (record) {
-            return {
-              id: record.id,
-              userId: healer.id,
-              name: healer.name || 'Unknown',
-              role: healer.role === 'HEALER' ? 'Healer' : (healer.role || 'Staff'),
-              branchId: record.branch?.id || healer.branch?.id || 'N/A',
-              branchName: record.branch?.name || healer.branch?.name || 'Unassigned',
-              checkIn: record.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-              checkOut: record.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
-              status: record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'Present',
-            };
-          } else {
-            return {
-              id: healer.id,
-              userId: healer.id,
-              name: healer.name || 'Unknown',
-              role: healer.role === 'HEALER' ? 'Healer' : (healer.role || 'Staff'),
-              branchId: healer.branch?.id || 'N/A',
-              branchName: healer.branch?.name || healer.branch?.name || 'Unassigned',
-              checkIn: 'N/A',
-              checkOut: 'N/A',
-              status: 'Select...',
-            };
-          }
-        });
-
-        // Add any other attendance records that are not healers
-        records.forEach((record: any) => {
-          const userId = record.userId || record.user?.id;
-          const exists = mappedDaily.some((d: any) => d.userId === userId);
-          if (!exists) {
-            mappedDaily.push({
-              id: record.id,
-              userId: userId,
-              name: record.user?.name || 'Unknown',
-              role: record.user?.role || 'Staff',
-              branchId: record.branch?.id || 'N/A',
-              branchName: record.branch?.name || 'Unassigned',
-              checkIn: record.checkIn ? new Date(record.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-              checkOut: record.checkOut ? new Date(record.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
-              status: record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'Present',
-            });
-          }
-        });
-        
-        setDailyAttendance(mappedDaily);
-      } catch (error) {
-        console.error('Failed to fetch attendance history', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchAttendance();
   }, [user]);
 
@@ -473,28 +546,10 @@ const AttendancePage: React.FC = () => {
   const [editStatus, setEditStatus] = useState<'Present' | 'Absent' | 'Half Day' | 'Select...'>('Present');
 
   // Daily staff attendance data matching the screenshot!
-  const [dailyAttendance, setDailyAttendance] = useState<WorkerDailyAttendance[]>([
-    { id: 1, name: 'Elena Rodriguez', role: 'Senior Healer', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: '08:15 AM', checkOut: '--', status: 'Present' },
-    { id: 2, name: 'David Park', role: 'Admin Staff', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: 'N/A', checkOut: 'N/A', status: 'Absent' },
-    { id: 3, name: 'Ayesha Khan', role: 'Lead Healer', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: '09:30 AM', checkOut: '--', status: 'Half Day' },
-    { id: 4, name: 'Samuel Peterson', role: 'Physician', branchId: 'B-001', branchName: 'Uptown Sanctuary', checkIn: '08:00 AM', checkOut: '--', status: 'Select...' },
-  ]);
+  const [dailyAttendance, setDailyAttendance] = useState<WorkerDailyAttendance[]>([]);
 
   // Historical log items matching the screenshot (expanded for pagination support)!
-  const [historicalLogs, setHistoricalLogs] = useState<HistoricalLog[]>([
-    { id: 1, date: 'Oct 24, 2023', workerName: 'David Park', status: 'Present', hours: '8.5h', remarks: 'Regular shift.' },
-    { id: 2, date: 'Oct 24, 2023', workerName: 'Elena Rodriguez', status: 'Half Day', hours: '4.0h', remarks: "Doctor's appointment in the afternoon." },
-    { id: 3, date: 'Oct 23, 2023', workerName: 'Samuel Peterson', status: 'Absent', hours: '0.0h', remarks: 'Medical leave (Cert submitted).' },
-    { id: 4, date: 'Oct 23, 2023', workerName: 'Ayesha Khan', status: 'Present', hours: '9.0h', remarks: 'Completed healer session logs.' },
-    { id: 5, date: 'Oct 22, 2023', workerName: 'Elena Rodriguez', status: 'Present', hours: '8.0h', remarks: 'Regular shift.' },
-    { id: 6, date: 'Oct 22, 2023', workerName: 'David Park', status: 'Present', hours: '8.5h', remarks: 'Regular shift.' },
-    { id: 7, date: 'Oct 21, 2023', workerName: 'Samuel Peterson', status: 'Present', hours: '8.0h', remarks: 'Regular shift.' },
-    { id: 8, date: 'Oct 21, 2023', workerName: 'Ayesha Khan', status: 'Half Day', hours: '4.5h', remarks: 'Left early for personal reasons.' },
-    { id: 9, date: 'Oct 20, 2023', workerName: 'David Park', status: 'Present', hours: '8.5h', remarks: 'Regular shift.' },
-    { id: 10, date: 'Oct 20, 2023', workerName: 'Elena Rodriguez', status: 'Present', hours: '8.0h', remarks: 'Regular shift.' },
-    { id: 11, date: 'Oct 19, 2023', workerName: 'Samuel Peterson', status: 'Present', hours: '8.0h', remarks: 'Regular shift.' },
-    { id: 12, date: 'Oct 19, 2023', workerName: 'Ayesha Khan', status: 'Present', hours: '8.5h', remarks: 'Regular shift.' },
-  ]);
+  const [historicalLogs, setHistoricalLogs] = useState<HistoricalLog[]>([]);
 
   const handleSaveAttendance = async () => {
     if (!selectedWorker) return;
@@ -522,27 +577,8 @@ const AttendancePage: React.FC = () => {
 
       await saveAttendanceRecord(payload);
       
-      // Update local state for immediate feedback
-      let displayCheckIn = editCheckIn ? new Date(`${today}T${editCheckIn}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-      let displayCheckOut = editCheckOut ? new Date(`${today}T${editCheckOut}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
-
-      if (editStatus === 'Absent') {
-        displayCheckIn = 'N/A';
-        displayCheckOut = 'N/A';
-      }
-
-      setDailyAttendance(
-        dailyAttendance.map((w) =>
-          w.id === selectedWorker.id
-            ? {
-                ...w,
-                status: editStatus,
-                checkIn: displayCheckIn,
-                checkOut: displayCheckOut,
-              }
-            : w
-        )
-      );
+      // Refresh all logs from database to keep UI in sync
+      await fetchAttendance();
 
       setShowStatusModal(false);
       setSelectedWorker(null);
@@ -853,7 +889,7 @@ const AttendancePage: React.FC = () => {
           </div>
 
           {/* Historical Logs Full-Width Section */}
-          {/* <div className="sa-section" id="historical-attendance-logs">
+          <div className="sa-section" id="historical-attendance-logs">
             <div className="sa-section__header">
               <div>
                 <h2 className="sa-section__title">Historical Attendance Logs</h2>
@@ -1021,7 +1057,7 @@ const AttendancePage: React.FC = () => {
                 </button>
               </div>
             </div>
-          </div> */}
+          </div>
         </div>
       </IonContent>
 
@@ -1057,21 +1093,57 @@ const AttendancePage: React.FC = () => {
                 <>
                   <div className="sa-form-group">
                     <label className="sa-form-label">Check-In Time</label>
-                    <input 
-                      type="time" 
-                      className="sa-input" 
-                      value={editCheckIn} 
-                      onChange={(e) => setEditCheckIn(e.target.value)} 
-                    />
+                    <div className="sa-time-picker-wrapper">
+                      <input 
+                        type="time" 
+                        className="sa-input" 
+                        value={editCheckIn} 
+                        onChange={(e) => setEditCheckIn(e.target.value)} 
+                      />
+                      <div className="sa-ampm-toggle">
+                        <button
+                          type="button"
+                          className={`sa-ampm-btn ${getPeriodFrom24h(editCheckIn) === 'AM' ? 'sa-ampm-btn--active' : ''}`}
+                          onClick={() => setEditCheckIn(togglePeriod(editCheckIn, 'AM'))}
+                        >
+                          AM
+                        </button>
+                        <button
+                          type="button"
+                          className={`sa-ampm-btn ${getPeriodFrom24h(editCheckIn) === 'PM' ? 'sa-ampm-btn--active' : ''}`}
+                          onClick={() => setEditCheckIn(togglePeriod(editCheckIn, 'PM'))}
+                        >
+                          PM
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <div className="sa-form-group">
                     <label className="sa-form-label">Check-Out Time</label>
-                    <input 
-                      type="time" 
-                      className="sa-input" 
-                      value={editCheckOut} 
-                      onChange={(e) => setEditCheckOut(e.target.value)} 
-                    />
+                    <div className="sa-time-picker-wrapper">
+                      <input 
+                        type="time" 
+                        className="sa-input" 
+                        value={editCheckOut} 
+                        onChange={(e) => setEditCheckOut(e.target.value)} 
+                      />
+                      <div className="sa-ampm-toggle">
+                        <button
+                          type="button"
+                          className={`sa-ampm-btn ${getPeriodFrom24h(editCheckOut) === 'AM' ? 'sa-ampm-btn--active' : ''}`}
+                          onClick={() => setEditCheckOut(togglePeriod(editCheckOut, 'AM'))}
+                        >
+                          AM
+                        </button>
+                        <button
+                          type="button"
+                          className={`sa-ampm-btn ${getPeriodFrom24h(editCheckOut) === 'PM' ? 'sa-ampm-btn--active' : ''}`}
+                          onClick={() => setEditCheckOut(togglePeriod(editCheckOut, 'PM'))}
+                        >
+                          PM
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </>
               )}

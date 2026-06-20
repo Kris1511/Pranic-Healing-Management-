@@ -226,14 +226,29 @@ const ReportsPage: React.FC = () => {
       }
 
       if (aData.status === 'fulfilled' && aData.value?.data) {
-        setAttendanceData(aData.value.data.map((a: any) => ({
-          worker: a.user?.name || 'Unknown',
-          role: a.user?.role || 'Staff',
-          date: formatToCustomStr(a.date || a.createdAt),
-          checkIn: a.checkIn ? new Date(a.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-          hours: a.workingHours ? `${a.workingHours}h` : '0.0h',
-          status: String(a.status).toLowerCase() === 'present' ? 'Present' : (String(a.status).toLowerCase() === 'absent' ? 'Absent' : 'Half Day')
-        })));
+        setAttendanceData(aData.value.data.map((a: any) => {
+          let calcHours = '0.0h';
+          if (a.workingHours) {
+            calcHours = `${parseFloat(a.workingHours).toFixed(1)}h`;
+          } else if (a.checkIn && a.checkOut) {
+            const checkInDate = new Date(a.checkIn);
+            const checkOutDate = new Date(a.checkOut);
+            if (!isNaN(checkInDate.getTime()) && !isNaN(checkOutDate.getTime())) {
+              const diffMs = checkOutDate.getTime() - checkInDate.getTime();
+              const diffHrs = diffMs / (1000 * 60 * 60);
+              calcHours = `${diffHrs.toFixed(1)}h`;
+            }
+          }
+
+          return {
+            worker: a.user?.name || 'Unknown',
+            role: a.user?.role || 'Staff',
+            date: formatToCustomStr(a.date || a.createdAt),
+            checkIn: a.checkIn ? new Date(a.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+            hours: calcHours,
+            status: String(a.status).toLowerCase() === 'present' ? 'Present' : (String(a.status).toLowerCase() === 'absent' ? 'Absent' : 'Half Day')
+          };
+        }));
       }
 
       if (hData.status === 'fulfilled' && hData.value?.data) {
@@ -773,7 +788,7 @@ const ReportsPage: React.FC = () => {
                       <th>WORKER</th>
                       <th>ROLE</th>
                       <th>DATE</th>
-                      <th>CHECK-IN</th>
+                      {/* <th>CHECK-IN</th> */}
                       <th>TOTAL HOURS</th>
                       <th>STATUS</th>
                     </tr>
@@ -785,7 +800,7 @@ const ReportsPage: React.FC = () => {
                           <td className="rp-cell-bold">{row.worker}</td>
                           <td>{row.role}</td>
                           <td>{row.date}</td>
-                          <td>{row.checkIn}</td>
+                          {/* <td>{row.checkIn}</td> */}
                           <td className="rp-cell-bold">{row.hours}</td>
                           <td>
                             <span className={`rp-badge rp-badge--${row.status.toLowerCase().replace(' ', '-')}`}>

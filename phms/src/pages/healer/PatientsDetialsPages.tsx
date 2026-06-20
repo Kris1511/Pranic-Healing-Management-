@@ -86,16 +86,9 @@ const PatientsDetialsPages: React.FC = () => {
     return patientRes.data || patientRes;
   }, [patientRes]);
 
-  // Parse address fields
-  const addressParts = useMemo(() => {
-    if (!patient?.address) return { line1: 'N/A', line2: '—', city: '—', state: '—' };
-    const parts = patient.address.split(',');
-    return {
-      line1: parts[0]?.trim() || patient.address || 'N/A',
-      line2: parts[1]?.trim() || '—',
-      city: parts[2]?.trim() || '—',
-      state: parts[3]?.trim() || '—'
-    };
+  // Use patient address directly
+  const displayAddress = useMemo(() => {
+    return patient?.address || 'N/A';
   }, [patient?.address]);
 
   // Parse medical history text from database (structured as "Condition | DiagnosedDate | Description, ...")
@@ -267,20 +260,8 @@ const PatientsDetialsPages: React.FC = () => {
                       <span className="info-value">{patient.occupation || 'N/A'}</span>
                     </div>
                     <div className="info-item">
-                      <span className="info-label">Address Line 1</span>
-                      <span className="info-value">{addressParts.line1}</span>
-                    </div>
-                    <div className="info-item">
-                      <span className="info-label">Address Line 2</span>
-                      <span className="info-value">{addressParts.line2}</span>
-                    </div>
-                    <div className="info-item">
-                      <span className="info-label">City</span>
-                      <span className="info-value">{addressParts.city}</span>
-                    </div>
-                    <div className="info-item">
-                      <span className="info-label">State</span>
-                      <span className="info-value">{addressParts.state}</span>
+                      <span className="info-label">Address</span>
+                      <span className="info-value">{displayAddress}</span>
                     </div>
                   </div>
                 </div>

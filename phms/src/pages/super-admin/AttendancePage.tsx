@@ -8,6 +8,8 @@ import {
   IonButtons,
   IonIcon,
   IonMenuButton,
+  useIonViewDidEnter,
+  useIonViewDidLeave,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -34,6 +36,15 @@ const AttendancePage: React.FC = () => {
   const [healers, setHealers] = useState<any[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(false);
+
+  useIonViewDidEnter(() => {
+    setIsPageVisible(true);
+  });
+
+  useIonViewDidLeave(() => {
+    setIsPageVisible(false);
+  });
 
   // Fetch healers once on mount
   useEffect(() => {
@@ -49,22 +60,31 @@ const AttendancePage: React.FC = () => {
     fetchHealers();
   }, []);
 
-  // Fetch attendance records for the selected date
+  // Fetch attendance records for the selected date with auto-refresh
   useEffect(() => {
-    const fetchAttendanceRecords = async () => {
+    if (!isPageVisible) return;
+
+    const fetchAttendanceRecords = async (isPolling = false) => {
       try {
-        setIsLoading(true);
+        if (!isPolling) setIsLoading(true);
         const response = await getAttendanceHistory(undefined, { date: selectedDate });
         const data = response.data || response || [];
         setAttendanceRecords(data);
       } catch (error) {
         console.error('Error fetching attendance records:', error);
       } finally {
-        setIsLoading(false);
+        if (!isPolling) setIsLoading(false);
       }
     };
-    fetchAttendanceRecords();
-  }, [selectedDate]);
+
+    fetchAttendanceRecords(false);
+
+    const intervalId = setInterval(() => {
+      fetchAttendanceRecords(true);
+    }, 10000); // 10 seconds auto-refresh
+
+    return () => clearInterval(intervalId);
+  }, [selectedDate, isPageVisible]);
 
   // Merge healers with their attendance record for the selected date
   const mergedAttendance = healers.map((healer: any) => {

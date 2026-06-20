@@ -572,6 +572,58 @@
   background: white;
 }
 
+/* AM/PM Manual Picker Toggle */
+.sa-time-picker-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.sa-time-picker-wrapper .sa-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sa-ampm-toggle {
+  display: flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sa-ampm-btn {
+  border: none;
+  padding: 0 16px;
+  background: #f8f9fb;
+  color: #475569;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.sa-ampm-btn:hover {
+  background: #f1f5f9;
+}
+
+.sa-ampm-btn--active {
+  background: #1f7a6a;
+  color: #ffffff !important;
+}
+
+.sa-ampm-btn--active:hover {
+  background: #196356;
+}
+
+.sa-ampm-btn + .sa-ampm-btn {
+  border-left: 1px solid #cbd5e1;
+}
+
 /* =========================================================================
    Document Management Styles (.dm-)
    ========================================================================= */
