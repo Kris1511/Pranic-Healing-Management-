@@ -293,7 +293,7 @@ export default function EditSessionsPages() {
       }
 
       // Fallback to local storage (mock data)
-      const found = sessions.find(s => s.id === Number(id) || s.id.toString() === id);
+      const found = sessions.find(s => s.id === id || String(s.id) === String(id));
       if (found) {
         setTargetSession(found);
         
@@ -395,7 +395,7 @@ export default function EditSessionsPages() {
     }
 
     const updatedSessions = sessions.map(s => {
-      if (s.id === Number(id)) {
+      if (s.id === id || String(s.id) === String(id)) {
         const hasNotes = formData.status === 'Completed' || formData.observations || formData.detailedNotes || formData.recommendation;
         const hasFeedback = formData.status === 'Completed' || formData.comment || formData.rating !== 5;
 
