@@ -24,6 +24,7 @@ import { ROUTES } from '../../constants/routes.constant';
 import { Patient } from './PatientsPage';
 import { getPatientById, updatePatient } from '../../api/patient.api';
 import { getHealers } from '../../api/healer.api';
+import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './branch-admin.css';
 export default function EditPatientPages() {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +81,7 @@ export default function EditPatientPages() {
 
   const [healersList, setHealersList] = useState<any[]>([]);
   const [patientHealer, setPatientHealer] = useState<any>(null);
+  const [treatmentTypes, setTreatmentTypes] = useState<any[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,7 +97,18 @@ export default function EditPatientPages() {
         console.error('[EditPatient] Error fetching healers:', error);
       }
     };
+    const fetchTreatmentTypes = async () => {
+      try {
+        const response = await getTreatmentTypes({ status: 'Active' });
+        if (response.success && Array.isArray(response.data) && isMounted) {
+          setTreatmentTypes(response.data);
+        }
+      } catch (error) {
+        console.error('[EditPatient] Error fetching treatment types:', error);
+      }
+    };
     fetchHealers();
+    fetchTreatmentTypes();
 
     const intervalId = setInterval(fetchHealers, 3000);
 
@@ -776,10 +789,9 @@ export default function EditPatientPages() {
                         <label style={customStyles.label}>ASSIGN TREATMENT TYPE</label>
                         <select name="treatmentType" className="st-input" style={customStyles.grayInput} value={formData.treatmentType} onChange={handleInputChange}>
                           <option value="">Select Treatment Type</option>
-                          <option value="Pranic Psychotherapy">Pranic Psychotherapy</option>
-                          <option value="Advanced Pranic Healing">Advanced Pranic Healing</option>
-                          <option value="Crystal Pranic Healing">Crystal Pranic Healing</option>
-                          <option value="Basic Pranic Healing">Basic Pranic Healing</option>
+                          {treatmentTypes.map(t => (
+                            <option key={t.id} value={t.name}>{t.name}</option>
+                          ))}
                         </select>
                       </div>
 

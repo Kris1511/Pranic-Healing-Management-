@@ -26,69 +26,75 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
-import { getBranches } from '../../api/branch.api';
-import { getPatients } from '../../api/patient.api';
-import { getHealers } from '../../api/healer.api';
-import { getVisitorLog } from '../../api/visitor.api';
+import { getSuperAdminDashboardStats, getSuperAdminWeeklyFinance } from '../../api/finance.api';
 import './super-admin.css';
 
 const DashboardPage: React.FC = () => {
   const history = useHistory();
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [branchesCount, setBranchesCount] = useState(0);
-  const [patientsCount, setPatientsCount] = useState(0);
-  const [healersCount, setHealersCount] = useState(0);
-  const [visitorsCount, setVisitorsCount] = useState(0);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [weeklyFinance, setWeeklyFinance] = useState<any>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [branches, patients, healers, visitors] = await Promise.all([
-          getBranches(),
-          getPatients(),
-          getHealers(),
-          getVisitorLog()
-        ]);
-
-        if (branches && branches.data) setBranchesCount(branches.data.length || 0);
-        else if (Array.isArray(branches)) setBranchesCount(branches.length);
-
-        if (patients && patients.data) setPatientsCount(patients.data.length || 0);
-        else if (Array.isArray(patients)) setPatientsCount(patients.length);
-
-        if (healers && healers.data) setHealersCount(healers.data.length || 0);
-        else if (Array.isArray(healers)) setHealersCount(healers.length);
-
-        if (visitors && visitors.data) setVisitorsCount(visitors.data.length || 0);
-        else if (Array.isArray(visitors)) setVisitorsCount(visitors.length);
-
+        const res = await getSuperAdminDashboardStats();
+        if (res?.success && res?.data) {
+          setDashboardStats(res.data);
+        }
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
       }
     };
     fetchDashboardData();
+
+    // Polling interval for live real-time updates
+    const interval = setInterval(fetchDashboardData, 3000);
+    return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const fetchWeeklyData = async () => {
+      try {
+        const res = await getSuperAdminWeeklyFinance(weekOffset);
+        if (res?.success && res?.data) {
+          setWeeklyFinance(res.data);
+        }
+      } catch (error) {
+        console.error('Error fetching weekly finance data:', error);
+      }
+    };
+    fetchWeeklyData();
+
+    // Polling interval for live real-time updates of the selected week
+    const interval = setInterval(fetchWeeklyData, 3000);
+    return () => clearInterval(interval);
+  }, [weekOffset]);
+
   const stats = [
-    { label: 'Total Branches', value: branchesCount.toString(), detail: 'Across all regions', icon: businessOutline, route: ROUTES.SUPER_ADMIN.BRANCHES },
-    { label: 'Total Patients', value: patientsCount.toString(), detail: 'Organization-wide', icon: peopleOutline, route: ROUTES.SUPER_ADMIN.PATIENTS },
-    { label: 'Healer Count', value: healersCount.toString(), detail: 'Certified practitioners', icon: medkitOutline, route: ROUTES.SUPER_ADMIN.HEALERS },
-    { label: 'Daily Visitors', value: visitorsCount.toString(), detail: "Today's footfall", icon: eyeOutline, route: ROUTES.SUPER_ADMIN.VISITOR_LOG },
-    { label: 'Active Sessions', value: '142', detail: 'Live now', icon: flashOutline, route: '#', accentColor: '#ff9f00', trendColor: '#ff9f00' },
+    { label: 'Total Branches', value: (dashboardStats?.totalBranches ?? 0).toString(), detail: 'Across all regions', icon: businessOutline, route: ROUTES.SUPER_ADMIN.BRANCHES },
+    { label: 'Total Patients', value: (dashboardStats?.totalPatients ?? 0).toString(), detail: 'Organization-wide', icon: peopleOutline, route: ROUTES.SUPER_ADMIN.PATIENTS },
+    { label: 'Healer Count', value: (dashboardStats?.healerCount ?? 0).toString(), detail: 'Certified practitioners', icon: medkitOutline, route: ROUTES.SUPER_ADMIN.HEALERS },
+    { label: 'Daily Visitors', value: (dashboardStats?.dailyVisitors ?? 0).toString(), detail: "Today's footfall", icon: eyeOutline, route: ROUTES.SUPER_ADMIN.VISITOR_LOG },
+    { label: 'Active Sessions', value: (dashboardStats?.activeSessions ?? 0).toString(), detail: 'Live now', icon: flashOutline, route: '#', accentColor: '#ff9f00', trendColor: '#ff9f00' },
   ];
 
-  const weeklyFinanceData = [
-    { day: 'Mon', current: { income: 12000, expense: 4500 }, previous: { income: 10500, expense: 5000 } },
-    { day: 'Tue', current: { income: 15500, expense: 6200 }, previous: { income: 14000, expense: 5500 } },
-    { day: 'Wed', current: { income: 10800, expense: 7100 }, previous: { income: 12000, expense: 6800 } },
-    { day: 'Thu', current: { income: 14200, expense: 5800 }, previous: { income: 13500, expense: 6000 } },
-    { day: 'Fri', current: { income: 18000, expense: 4900 }, previous: { income: 16000, expense: 5200 } },
-    { day: 'Sat', current: { income: 16500, expense: 3200 }, previous: { income: 15000, expense: 3500 } },
-    { day: 'Sun', current: { income: 9500, expense: 2100 }, previous: { income: 8000, expense: 2500 } },
+  const weeklyFinanceData = weeklyFinance?.weeklyFinanceData || [
+    { day: 'Mon', income: 0, expense: 0 },
+    { day: 'Tue', income: 0, expense: 0 },
+    { day: 'Wed', income: 0, expense: 0 },
+    { day: 'Thu', income: 0, expense: 0 },
+    { day: 'Fri', income: 0, expense: 0 },
+    { day: 'Sat', income: 0, expense: 0 },
+    { day: 'Sun', income: 0, expense: 0 },
   ];
 
-  const maxVal = 20000;
+  const maxVal = Math.max(
+    ...weeklyFinanceData.map((d: any) => Math.max(d.income, d.expense)),
+    20000
+  );
   const scale = 180 / maxVal;
 
   return (
@@ -114,7 +120,7 @@ const DashboardPage: React.FC = () => {
         <div className="sa-page__body">
           {/* Subtitle */}
           <p className="sa-page__subtitle" style={{ marginBottom: 20 }}>
-            Monitoring {branchesCount} sanctuaries across the organization.
+            Monitoring {dashboardStats?.totalBranches ?? 0} sanctuaries across the organization.
           </p>
 
           {/* Stat Cards */}
@@ -155,80 +161,82 @@ const DashboardPage: React.FC = () => {
                   <h2 className="sa-section__title">Consolidated Daily Finance</h2>
                   <p className="sa-section__subtitle">Income vs Expenses across all branches</p>
                 </div>
-                <button className="sa-btn sa-btn--outline sa-btn--sm">View Detailed Report</button>
+                <button className="sa-btn sa-btn--outline sa-btn--sm" onClick={() => history.push(ROUTES.SUPER_ADMIN.DAILY_FINANCE)}>View Detailed Report</button>
+              </div>
+
+              {/* Weekly Navigation Controls */}
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', margin: '16px 0', background: 'rgba(var(--color-primary-rgb), 0.05)', padding: '10px', borderRadius: '8px' }}>
+                <button 
+                  className="sa-btn sa-btn--outline" 
+                  style={{ margin: 0, padding: '4px 12px', minHeight: '36px' }}
+                  onClick={() => setWeekOffset(prev => prev - 1)}
+                >
+                  &lt; Previous Week
+                </button>
+                <span style={{ fontWeight: 600, fontSize: '15px', color: '#374151' }}>
+                  Week: {weeklyFinance?.weekRange || 'Loading...'}
+                </span>
+                <button 
+                  className="sa-btn sa-btn--outline" 
+                  style={{ margin: 0, padding: '4px 12px', minHeight: '36px' }}
+                  onClick={() => setWeekOffset(prev => prev + 1)}
+                >
+                  Next Week &gt;
+                </button>
               </div>
 
               <div className="sa-finance-grid">
                 <div className="sa-finance-card">
                   <div className="sa-finance-card__label">Total Daily Income</div>
-                  <div className="sa-finance-card__value">₹8,000</div>
+                  <div className="sa-finance-card__value">₹{(weeklyFinance?.totalIncome ?? 0).toLocaleString()}</div>
                 </div>
                 <div className="sa-finance-card">
                   <div className="sa-finance-card__label">Total Daily Expenses</div>
-                  <div className="sa-finance-card__value" style={{ color: '#dc2626' }}>₹3,700</div>
+                  <div className="sa-finance-card__value" style={{ color: '#dc2626' }}>₹{(weeklyFinance?.totalExpense ?? 0).toLocaleString()}</div>
                 </div>
               </div>
 
               {/* Weekly Comparison Chart */}
               <div className="sa-chart-container">
                 <div className="sa-chart-plot-area">
-                  {weeklyFinanceData.map((data, i) => (
+                  {weeklyFinanceData.map((data: any, i: number) => (
                     <div className="sa-chart-day-group sa-chart-group" key={i}>
                       <div className="sa-chart-bars-row">
-                        {/* Income Pair */}
+                        {/* Income Bar */}
                         <div className="sa-chart-bar-pair">
-                          <div 
-                            className="sa-chart-bar sa-chart-bar--income-prev" 
-                            style={{ height: `${data.previous.income * scale}px` }} 
-                            title="Prev Week Income"
-                          />
                           <div 
                             className="sa-chart-bar sa-chart-bar--income-current" 
-                            style={{ height: `${data.current.income * scale}px` }} 
-                            title="This Week Income"
+                            style={{ height: `${data.income * scale}px` }} 
+                            title="Daily Income"
                           />
                         </div>
-                        {/* Expense Pair */}
+                        {/* Expense Bar */}
                         <div className="sa-chart-bar-pair">
                           <div 
-                            className="sa-chart-bar sa-chart-bar--expense-prev" 
-                            style={{ height: `${data.previous.expense * scale}px` }} 
-                            title="Prev Week Expense"
-                          />
-                          <div 
                             className="sa-chart-bar sa-chart-bar--expense-current" 
-                            style={{ height: `${data.current.expense * scale}px` }} 
-                            title="This Week Expense"
+                            style={{ height: `${data.expense * scale}px`, backgroundColor: '#dc2626' }} 
+                            title="Daily Expense"
                           />
                         </div>
                       </div>
                       
-                      {/* Comparison Tooltip */}
+                      {/* Details Tooltip */}
                       <div className="sa-chart-tooltip">
                         <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '4px' }}>
-                          {data.day} Comparison
+                          {data.day} Details
                         </div>
                         <div className="sa-chart-tooltip-grid">
                           <div className="sa-chart-tooltip-section">
-                            <div className="sa-chart-tooltip-title">This Week</div>
                             <div className="sa-chart-tooltip-item">
                               <div className="sa-chart-tooltip-dot" style={{ background: '#10b981' }} />
-                              <span>₹{data.current.income.toLocaleString()}</span>
+                              <span>Income: ₹{data.income.toLocaleString()}</span>
                             </div>
-                            <div className="sa-chart-tooltip-item">
+                            <div className="sa-chart-tooltip-item" style={{ marginTop: '4px' }}>
                               <div className="sa-chart-tooltip-dot" style={{ background: '#ef4444' }} />
-                              <span>₹{data.current.expense.toLocaleString()}</span>
+                              <span>Expense: ₹{data.expense.toLocaleString()}</span>
                             </div>
-                          </div>
-                          <div className="sa-chart-tooltip-section">
-                            <div className="sa-chart-tooltip-title">Prev Week</div>
-                            <div className="sa-chart-tooltip-item">
-                              <div className="sa-chart-tooltip-dot" style={{ background: '#a7f3d0' }} />
-                              <span>₹{data.previous.income.toLocaleString()}</span>
-                            </div>
-                            <div className="sa-chart-tooltip-item">
-                              <div className="sa-chart-tooltip-dot" style={{ background: '#fecaca' }} />
-                              <span>₹{data.previous.expense.toLocaleString()}</span>
+                            <div className="sa-chart-tooltip-item" style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px', fontWeight: 600 }}>
+                              <span>Net: ₹{(data.income - data.expense).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -237,7 +245,7 @@ const DashboardPage: React.FC = () => {
                   ))}
                 </div>
                 <div className="sa-chart-x-axis">
-                  {weeklyFinanceData.map((data, i) => (
+                  {weeklyFinanceData.map((data: any, i: number) => (
                     <div key={i} className="sa-chart-day-group">
                       <span className="sa-chart-label">{data.day}</span>
                     </div>

@@ -57,9 +57,9 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
     );
   }
 
-  // const handleEdit = () => {
-  //   history.push(ROUTES.SUPER_ADMIN.EDIT_TREATMENT_TYPE.replace(':id', id));
-  // };
+  const handleEdit = () => {
+    history.push(ROUTES.SUPER_ADMIN.EDIT_TREATMENT_TYPE.replace(':id', id));
+  };
 
   return (
     <IonPage className="sa-page">
@@ -73,7 +73,7 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
             <button 
               className="sa-btn sa-btn--primary sa-btn--sm" 
               style={{ marginRight: '16px' }}
-              // onClick={handleEdit}
+              onClick={handleEdit}
             >
               <IonIcon icon={createOutline} slot="start" /> Edit Treatment
             </button>
@@ -89,79 +89,78 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
           </div>
 
           <div className="sa-form-layout">
-            {/* Core Information Section */}
-            <div className="sa-section" style={{ marginBottom: '32px' }}>
-              <div className="sa-section__header">
-                <div>
-                  <h2 className="sa-section__title">Core Information</h2>
-                  <p className="sa-section__subtitle">Primary identification and current status</p>
-                </div>
-                <span className={`sa-badge ${treatment.status === 'Active' ? 'sa-badge--active' : 'sa-badge--inactive'}`} style={{ padding: '6px 16px', fontSize: '13px' }}>
-                  {treatment.status}
-                </span>
-              </div>
-
-              <div className="sa-settings__form" style={{ marginTop: '20px' }}>
-                <div className="sa-form-grid">
-                  <div className="sa-detail-item">
-                    <div className="sa-detail-label">
-                      <IonIcon icon={medkitOutline} style={{ marginRight: '8px' }} />
-                      Treatment Name
+            <div className="sa-details-grid">
+              {/* Left Column: Core Information */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="sa-section" style={{ height: '100%', marginBottom: 0 }}>
+                  <div className="sa-section__header">
+                    <div>
+                      <h2 className="sa-section__title">Core Information</h2>
+                      <p className="sa-section__subtitle">Primary identification and current status</p>
                     </div>
-                    <div className="sa-detail-value">{treatment.name}</div>
+                    <span className={`sa-badge ${treatment.status === 'Active' ? 'sa-badge--active' : 'sa-badge--inactive'}`} style={{ padding: '6px 16px', fontSize: '13px' }}>
+                      {treatment.status}
+                    </span>
                   </div>
 
-                  <div className="sa-detail-item">
-                    <div className="sa-detail-label">
-                      <IonIcon icon={gridOutline} style={{ marginRight: '8px' }} />
-                      Category
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', marginTop: '20px' }}>
+                    <div className="sa-detail-item">
+                      <div className="sa-detail-label">
+                        <IonIcon icon={medkitOutline} style={{ marginRight: '8px' }} />
+                        Treatment Name
+                      </div>
+                      <div className="sa-detail-value">{treatment.name}</div>
                     </div>
-                    <div className="sa-detail-value">{treatment.category}</div>
-                  </div>
 
-                  <div className="sa-detail-item">
-                    <div className="sa-detail-label">
-                      <IonIcon icon={codeOutline} style={{ marginRight: '8px' }} />
-                      Treatment Code
+                    <div className="sa-detail-item">
+                      <div className="sa-detail-label">
+                        <IonIcon icon={gridOutline} style={{ marginRight: '8px' }} />
+                        Category
+                      </div>
+                      <div className="sa-detail-value">{treatment.category}</div>
                     </div>
-                    <div className="sa-detail-value">{treatment.code || 'Not Assigned'}</div>
-                  </div>
 
-                  <div className="sa-detail-item">
-                    <div className="sa-detail-label">
-                      <IonIcon icon={calendarOutline} style={{ marginRight: '8px' }} />
-                      Created On
+                    <div className="sa-detail-item">
+                      <div className="sa-detail-label">
+                        <IonIcon icon={codeOutline} style={{ marginRight: '8px' }} />
+                        Treatment Code
+                      </div>
+                      <div className="sa-detail-value">{treatment.code || 'Not Assigned'}</div>
                     </div>
-                    <div className="sa-detail-value">{new Date(treatment.createdAt || treatment.createdDate).toLocaleDateString()} at {new Date(treatment.createdAt || treatment.createdTime).toLocaleTimeString()}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Layout Grid for Description and Session Details */}
-            <div className="sa-form-grid" style={{ alignItems: 'start' }}>
-              {/* Description Section */}
-              <div className="sa-section" style={{ height: '100%', marginBottom: 0 }}>
-                <div className="sa-section__header">
-                  <div>
-                    <h2 className="sa-section__title">Description</h2>
-                    <p className="sa-section__subtitle">Healing method overview</p>
-                  </div>
-                </div>
-                <div className="sa-detail-item" style={{ marginTop: '20px' }}>
-                  <div className="sa-detail-label">
-                    <IonIcon icon={documentTextOutline} style={{ marginRight: '8px' }} />
-                    Protocol Notes
-                  </div>
-                  <div className="sa-detail-value" style={{ lineHeight: '1.6', color: '#4b5563', whiteSpace: 'pre-wrap' }}>
-                    {treatment.description || 'No description provided for this treatment type.'}
+                    <div className="sa-detail-item" style={{ marginBottom: 0 }}>
+                      <div className="sa-detail-label">
+                        <IonIcon icon={calendarOutline} style={{ marginRight: '8px' }} />
+                        Created On
+                      </div>
+                      <div className="sa-detail-value">{new Date(treatment.createdAt || treatment.createdDate).toLocaleDateString()} at {new Date(treatment.createdAt || treatment.createdTime).toLocaleTimeString()}</div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Sessions and Usage */}
+              {/* Right Column: Description, Session Details & Usage Statistics */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {/* Session Technicalities Section */}
+                {/* Description Section */}
+                <div className="sa-section" style={{ marginBottom: 0 }}>
+                  <div className="sa-section__header">
+                    <div>
+                      <h2 className="sa-section__title">Description</h2>
+                      <p className="sa-section__subtitle">Healing method overview</p>
+                    </div>
+                  </div>
+                  <div className="sa-detail-item" style={{ marginTop: '20px', marginBottom: 0 }}>
+                    <div className="sa-detail-label">
+                      <IonIcon icon={documentTextOutline} style={{ marginRight: '8px' }} />
+                      Protocol Notes
+                    </div>
+                    <div className="sa-detail-value" style={{ lineHeight: '1.6', color: '#4b5563', whiteSpace: 'pre-wrap' }}>
+                      {treatment.description || 'No description provided for this treatment type.'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Session Details Section */}
                 <div className="sa-section" style={{ marginBottom: 0 }}>
                   <div className="sa-section__header">
                     <div>
@@ -180,7 +179,7 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="sa-detail-item" style={{ marginTop: '20px', marginBottom: 0 }}>
+                    <div className="sa-detail-item" style={{ marginBottom: 0 }}>
                       <div className="sa-detail-label">
                         <IonIcon icon={personOutline} style={{ marginRight: '8px' }} />
                         Created By
@@ -190,7 +189,7 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Patient Usage Section */}
+                {/* Usage Statistics Section */}
                 <div className="sa-section" style={{ marginBottom: 0, borderLeft: '4px solid var(--color-primary)' }}>
                   <div className="sa-section__header">
                     <div>
@@ -212,7 +211,7 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
                         Patients currently assigned
                       </div>
                     </div>
-                    <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px', fontStyle: 'italic' }}>
+                    <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px', fontStyle: 'italic', marginBottom: 0 }}>
                       * Based on active healing sessions in the last 30 days
                     </p>
                   </div>

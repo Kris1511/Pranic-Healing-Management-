@@ -15,19 +15,20 @@ import {
   closeOutline,
   refreshOutline,
   medkitOutline,
-  gridOutline,
   codeOutline,
   documentTextOutline,
   timeOutline,
   checkmarkCircleOutline,
 } from 'ionicons/icons';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
-import { createTreatmentType } from '../../api/treatmentType.api';
+import { getTreatmentTypeById, updateTreatmentType } from '../../api/treatmentType.api';
 import './super-admin.css';
 
-const SACreateTreatmentTypePage: React.FC = () => {
+const SAEditTreatmentTypePage: React.FC = () => {
   const history = useHistory();
+  const { id } = useParams<{ id: string }>();
+
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastColor, setToastColor] = useState('success');
@@ -42,7 +43,41 @@ const SACreateTreatmentTypePage: React.FC = () => {
   });
   const [isCustomDuration, setIsCustomDuration] = useState(false);
 
-  const [treatments, setTreatments] = useState<any[]>([]);
+  // Store the original loaded details to reset back to them
+  const [initialData, setInitialData] = useState<any>(null);
+
+  useEffect(() => {
+    const loadTreatmentType = async () => {
+      try {
+        const response = await getTreatmentTypeById(id);
+        if (response.success && response.data) {
+          const typeData = response.data;
+          const loadedForm = {
+            name: typeData.name || '',
+            category: typeData.category || 'General',
+            code: typeData.code || '',
+            status: typeData.status || 'Active',
+            description: typeData.description || '',
+            sessionDuration: typeData.sessionDuration || typeData.duration || '30 min',
+          };
+          setFormData(loadedForm);
+          setInitialData(loadedForm);
+
+          // Check if sessionDuration is a custom duration preset
+          const presets = ['30 min', '45 min', '1 hr'];
+          if (loadedForm.sessionDuration && !presets.includes(loadedForm.sessionDuration)) {
+            setIsCustomDuration(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load treatment details', error);
+        setToastMessage('Failed to load treatment details');
+        setToastColor('danger');
+        setShowToast(true);
+      }
+    };
+    loadTreatmentType();
+  }, [id]);
 
   const handleSave = async () => {
     // 1. Mandatory Checks
@@ -54,8 +89,8 @@ const SACreateTreatmentTypePage: React.FC = () => {
     }
 
     try {
-      await createTreatmentType(formData);
-      setToastMessage('Treatment Type saved successfully!');
+      await updateTreatmentType(id, formData);
+      setToastMessage('Treatment Type updated successfully!');
       setToastColor('success');
       setShowToast(true);
 
@@ -63,29 +98,35 @@ const SACreateTreatmentTypePage: React.FC = () => {
         history.push(ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST);
       }, 1500);
     } catch (error: any) {
-      setToastMessage(error.response?.data?.message || 'Failed to save treatment type');
+      setToastMessage(error.response?.data?.message || 'Failed to update treatment type');
       setToastColor('danger');
       setShowToast(true);
     }
   };
 
   const handleReset = () => {
-    setFormData({
-      name: '',
-      category: 'General',
-      code: '',
-      status: 'Active',
-      description: '',
-      sessionDuration: '30 min',
-    });
-    setIsCustomDuration(false);
+    if (initialData) {
+      setFormData(initialData);
+      const presets = ['30 min', '45 min', '1 hr'];
+      setIsCustomDuration(initialData.sessionDuration && !presets.includes(initialData.sessionDuration));
+    }
   };
 
   const handleCancel = () => {
     history.push(ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST);
   };
 
-
+  if (!initialData) {
+    return (
+      <IonPage>
+        <IonContent>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <p>Loading treatment details...</p>
+          </div>
+        </IonContent>
+      </IonPage>
+    );
+  }
 
   return (
     <IonPage className="sa-page">
@@ -94,15 +135,15 @@ const SACreateTreatmentTypePage: React.FC = () => {
           <IonButtons slot="start">
             <IonBackButton defaultHref={ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST} text="" />
           </IonButtons>
-          <IonTitle className="sa-page__toolbar-title">Add Treatment Type</IonTitle>
+          <IonTitle className="sa-page__toolbar-title">Edit Treatment Type</IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="sa-page__content">
         <div className="sa-page__body">
           <div className="sa-page__header">
-            <h1 className="sa-page__title">Create New Treatment</h1>
-            <p className="sa-page__subtitle">Configure a new healing method and its specific protocols</p>
+            <h1 className="sa-page__title">Edit Treatment</h1>
+            <p className="sa-page__subtitle">Update the healing method configurations and protocols</p>
           </div>
 
           <div className="sa-form-layout">
@@ -127,7 +168,6 @@ const SACreateTreatmentTypePage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </div>
-
 
                 <div className="sa-settings__form-group">
                   <label className="sa-settings__label">
@@ -235,7 +275,7 @@ const SACreateTreatmentTypePage: React.FC = () => {
                 <IonIcon icon={closeOutline} /> Cancel
               </button>
               <button className="sa-btn sa-btn--primary" onClick={handleSave} style={{ minWidth: '160px' }}>
-                <IonIcon icon={saveOutline} /> Save Treatment
+                <IonIcon icon={saveOutline} /> Save Changes
               </button>
             </div>
           </div>
@@ -254,4 +294,4 @@ const SACreateTreatmentTypePage: React.FC = () => {
   );
 };
 
-export default SACreateTreatmentTypePage;
+export default SAEditTreatmentTypePage;

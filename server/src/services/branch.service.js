@@ -68,6 +68,12 @@ class BranchService {
   }
 
   async deleteBranch(id) {
+    const { Patient, Healer, User } = require('../models');
+    
+    await Patient.update({ branchId: null }, { where: { branchId: id } });
+    await Healer.update({ branchId: null }, { where: { branchId: id } });
+    await User.update({ branchId: null }, { where: { branchId: id } });
+
     const branch = await branchRepository.delete(id);
     if (!branch) {
       throw new ApiError(404, 'Branch not found.');

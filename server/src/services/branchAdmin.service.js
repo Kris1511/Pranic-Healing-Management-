@@ -83,15 +83,65 @@ class BranchAdminService {
 
     let healersCount = 0;
     let patientsCount = 0;
+    let sessionsCount = 0;
+    let totalRevenue = 0;
+    let healersList = [];
+    let patientsList = [];
+    let sessionsList = [];
+    let financesList = [];
+
     if (profile.branchId) {
-      const { Healer, Patient } = require('../models');
+      const { Healer, Patient, Session, Finance } = require('../models');
+      const { Op } = require('sequelize');
+
       healersCount = await Healer.count({ where: { branchId: profile.branchId } });
       patientsCount = await Patient.count({ where: { branchId: profile.branchId } });
+      sessionsCount = await Session.count({ where: { branchId: profile.branchId } });
+      
+      const revenueSum = await Finance.sum('amount', {
+        where: {
+          branchId: profile.branchId,
+          type: {
+            [Op.in]: ['Income', 'income', 'INCOME']
+          }
+        }
+      });
+      totalRevenue = parseFloat(revenueSum) || 0;
+
+      healersList = await Healer.findAll({
+        where: { branchId: profile.branchId },
+        order: [['created_at', 'DESC']]
+      });
+
+      patientsList = await Patient.findAll({
+        where: { branchId: profile.branchId },
+        order: [['created_at', 'DESC']]
+      });
+
+      sessionsList = await Session.findAll({
+        where: { branchId: profile.branchId },
+        include: [
+          { model: Patient, as: 'patient' },
+          { model: Healer, as: 'healer' }
+        ],
+        order: [['sessionDate', 'DESC'], ['created_at', 'DESC']]
+      });
+
+      financesList = await Finance.findAll({
+        where: { branchId: profile.branchId },
+        order: [['date', 'DESC'], ['created_at', 'DESC']]
+      });
     }
 
     const profileData = profile.toJSON ? profile.toJSON() : { ...profile };
     profileData.healersCount = healersCount;
     profileData.patientsCount = patientsCount;
+    profileData.sessionsCount = sessionsCount;
+    profileData.totalRevenue = totalRevenue;
+    profileData.healersList = healersList;
+    profileData.patientsList = patientsList;
+    profileData.sessionsList = sessionsList;
+    profileData.financesList = financesList;
 
     return profileData;
   }

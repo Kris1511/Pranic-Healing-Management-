@@ -30,12 +30,24 @@ export const deleteFinanceTransaction = async (id: number | string) => {
   return response.data;
 };
 
-export const getSuperAdminRevenueFinance = async () => {
-  const response = await axiosInstance.get('/finance/super-admin/revenue');
+export const getSuperAdminRevenueFinance = async (params?: any) => {
+  const response = await axiosInstance.get('/finance/super-admin/revenue', { params });
   return response.data;
 };
 
 export const getBranchDashboardStats = async () => {
   const response = await axiosInstance.get('/finance/dashboard-stats');
+  return response.data;
+};
+
+export const getSuperAdminDashboardStats = async () => {
+  const response = await axiosInstance.get('/finance/super-admin/dashboard-stats');
+  return response.data;
+};
+
+export const getSuperAdminWeeklyFinance = async (weekOffset: number) => {
+  const response = await axiosInstance.get('/super-admin/dashboard/weekly-finance', {
+    params: { weekOffset }
+  });
   return response.data;
 };

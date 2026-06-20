@@ -112,20 +112,44 @@ class FinanceService {
     const { Finance, Branch, Payment, Session, Patient, sequelize } = require('../models');
     const { Op } = require('sequelize');
 
-    // 1. Fetch daily manual finance records
-    const financeRecords = await Finance.findAll({
-      where: sequelize.where(
+    // 1. Default to Today if no date is provided
+    const localToday = new Date();
+    const offset = localToday.getTimezoneOffset();
+    const todayStr = new Date(localToday.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+    const targetDate = date || todayStr;
+
+    const financeWhere = {};
+    const sessionWhere = {};
+    const paymentWhere = {};
+
+    financeWhere[Op.and] = [
+      sequelize.where(
         sequelize.fn('DATE', sequelize.col('date')),
-        date
-      ),
+        targetDate
+      )
+    ];
+    sessionWhere[Op.and] = [
+      sequelize.where(
+        sequelize.fn('DATE', sequelize.col('session_date')),
+        targetDate
+      )
+    ];
+    paymentWhere[Op.and] = [
+      sequelize.where(
+        sequelize.fn('DATE', sequelize.col('payment_date')),
+        targetDate
+      )
+    ];
+
+    // 2. Fetch manual finance records for target date
+    const financeRecords = await Finance.findAll({
+      where: financeWhere,
       include: [{ model: Branch, as: 'branch' }]
     });
 
-    // 2. Fetch sessions conducted on the selected date (to calculate paid, pending, partial patient payments)
+    // 3. Fetch sessions conducted on the target date
     const sessionsOnDate = await Session.findAll({
-      where: {
-        sessionDate: date
-      },
+      where: sessionWhere,
       include: [
         { model: Patient, as: 'patient', attributes: ['name'] },
         { model: Branch, as: 'branch', attributes: ['name'] },
@@ -133,7 +157,7 @@ class FinanceService {
       ]
     });
 
-    // 3. Map manual finance records (Income/Expense)
+    // 4. Map manual finance records
     const mappedFinance = financeRecords.map(r => {
       const isIncome = r.type && r.type.toLowerCase() === 'income';
       const defaultTitle = isIncome ? 'Manual Income' : 'Manual Expense';
@@ -144,11 +168,11 @@ class FinanceService {
         category: r.category || (isIncome ? 'Income' : 'Expense'),
         branch: r.branch ? r.branch.name : 'Unknown Branch',
         amount: parseFloat(r.amount),
-        date: r.date ? new Date(r.date).toISOString().split('T')[0] : date
+        date: r.date ? new Date(r.date).toISOString().split('T')[0] : targetDate
       };
     });
 
-    // 4. Map session-based patient payments on this date
+    // 5. Map sessions
     const mappedSessions = sessionsOnDate.map(s => {
       const patientName = s.patient ? s.patient.name : 'Unknown Patient';
       const branchName = s.branch ? s.branch.name : 'Unknown Branch';
@@ -182,7 +206,7 @@ class FinanceService {
         category: 'Session Fee',
         branch: branchName,
         amount: type === 'Partial' ? paid : totalBilled,
-        date: s.sessionDate,
+        date: targetDate,
         paid,
         outstanding: Math.max(0, totalBilled - paid)
       };
@@ -190,7 +214,7 @@ class FinanceService {
 
     const combinedRecords = [...mappedFinance, ...mappedSessions];
 
-    // 5. Calculate daily stats based on actual cash flow
+    // 6. Calculate stats
     const dailyManualIncome = mappedFinance
       .filter(r => r.type === 'Income')
       .reduce((sum, r) => sum + r.amount, 0);
@@ -206,115 +230,20 @@ class FinanceService {
     const totalDailyExpense = dailyManualExpense;
     const closingBalance = totalDailyIncome - totalDailyExpense;
 
-    // 6. Daily calculations (all branches, filtered by selected date) for Dashboard Summary Cards
-    const allManualFinance = await Finance.findAll({
-      where: sequelize.where(
-        sequelize.fn('DATE', sequelize.col('date')),
-        date
-      )
-    });
-    const totalManualIncome = allManualFinance
-      .filter(f => f.type && f.type.toLowerCase() === 'income')
-      .reduce((sum, f) => sum + parseFloat(f.amount), 0);
-
-    const totalManualExpense = allManualFinance
-      .filter(f => f.type && f.type.toLowerCase() === 'expense')
-      .reduce((sum, f) => sum + parseFloat(f.amount), 0);
-
-    const allSessions = await Session.findAll({
-      where: {
-        sessionDate: date
-      },
-      include: [{ model: Payment, as: 'payment' }]
-    });
-
+    // Calculate payments status counts for the selected date only
     let pendingCount = 0;
     let partialCount = 0;
     let paidCount = 0;
-    let outstandingBalance = 0;
-    let totalRevenue = 0;
 
-    allSessions.forEach(s => {
-      const fee = s.sessionFee !== null && s.sessionFee !== undefined
-        ? parseFloat(s.sessionFee)
-        : (parseFloat(s.totalAmount) || 0);
-
-      totalRevenue += fee;
-
-      const paid = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
-      const outstanding = Math.max(0, fee - paid);
-
-      const rawStatus = (s.paymentStatus || 'pending').toLowerCase();
-      let type = 'Pending';
-      if (rawStatus === 'paid') {
-        type = 'Paid';
-      } else if (rawStatus === 'partial' || (paid > 0 && paid < fee)) {
-        type = 'Partial';
-      } else if (paid >= fee && fee > 0) {
-        type = 'Paid';
-      }
-
-      if (type === 'Pending') {
+    mappedSessions.forEach(s => {
+      if (s.type === 'Pending') {
         pendingCount++;
-      } else if (type === 'Partial') {
+      } else if (s.type === 'Partial') {
         partialCount++;
-      } else if (type === 'Paid') {
+      } else if (s.type === 'Paid') {
         paidCount++;
       }
-
-      outstandingBalance += outstanding;
     });
-
-    const allPayments = await Payment.findAll({
-      where: sequelize.where(
-        sequelize.fn('DATE', sequelize.col('payment_date')),
-        date
-      )
-    });
-    const totalPaymentsPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-    const totalCollections = totalPaymentsPaid + totalManualIncome;
-
-    // 7. Monthly Revenue breakdown (Consolidated Collections)
-    const monthlyRevenueMap = {};
-    allPayments.forEach(p => {
-      const month = p.paymentDate.toISOString().substring(0, 7); // YYYY-MM
-      monthlyRevenueMap[month] = (monthlyRevenueMap[month] || 0) + parseFloat(p.amount);
-    });
-    allManualFinance.filter(f => f.type && f.type.toLowerCase() === 'income').forEach(f => {
-      const month = f.date.toISOString().substring(0, 7);
-      monthlyRevenueMap[month] = (monthlyRevenueMap[month] || 0) + parseFloat(f.amount);
-    });
-
-    const monthlyRevenue = Object.entries(monthlyRevenueMap).map(([month, amount]) => ({
-      month,
-      amount
-    })).sort((a, b) => b.month.localeCompare(a.month));
-
-    // 8. Branch-wise Revenue breakdown
-    const branchesList = await Branch.findAll();
-    const branchMap = {};
-    branchesList.forEach(b => {
-      branchMap[b.id] = b.name;
-    });
-
-    const branchRevenueMap = {};
-    branchesList.forEach(b => {
-      branchRevenueMap[b.name] = 0;
-    });
-
-    allPayments.forEach(p => {
-      const branchName = branchMap[p.branchId] || 'Unknown Branch';
-      branchRevenueMap[branchName] = (branchRevenueMap[branchName] || 0) + parseFloat(p.amount);
-    });
-    allManualFinance.filter(f => f.type && f.type.toLowerCase() === 'income').forEach(f => {
-      const branchName = branchMap[f.branchId] || 'Unknown Branch';
-      branchRevenueMap[branchName] = (branchRevenueMap[branchName] || 0) + parseFloat(f.amount);
-    });
-
-    const branchWiseRevenue = Object.entries(branchRevenueMap).map(([branchName, amount]) => ({
-      branchName,
-      amount
-    }));
 
     return {
       records: combinedRecords,
@@ -324,56 +253,125 @@ class FinanceService {
         closingBalance
       },
       systemStats: {
-        totalRevenue,
-        totalCollections,
-        outstandingBalance,
-        dailyTransactionsCount: combinedRecords.length,
-        monthlyRevenue,
-        branchWiseRevenue,
         patientPaymentStats: {
           paidCount,
           partialCount,
           pendingCount
-        },
-        totalIncome: totalManualIncome,
-        totalExpense: totalManualExpense
+        }
       }
     };
   }
 
-  async getSuperAdminRevenue() {
-    const { Finance, Branch, Payment, Session, Patient } = require('../models');
+  async getSuperAdminRevenue(query = {}) {
+    const { Finance, Branch, Payment, Session, Patient, sequelize } = require('../models');
     const { Op } = require('sequelize');
 
-    // 1. Fetch all manual expense records (type === 'expense')
-    const expenseRecords = await Finance.findAll({
-      where: {
-        type: {
-          [Op.in]: ['expense', 'EXPENSE']
-        }
-      },
-      include: [{ model: Branch, as: 'branch' }]
-    });
+    // 1. Build date conditions
+    let dateCondition = {};
+    if (query.period && query.period !== 'all' && query.period !== 'All' && query.period !== 'All Time') {
+      const now = new Date();
+      let startDate;
+      if (query.period === '1week' || query.period === 'Last 1 Week') {
+        startDate = new Date(now.setDate(now.getDate() - 7));
+      } else if (query.period === '2weeks' || query.period === 'Last 2 Weeks') {
+        startDate = new Date(now.setDate(now.getDate() - 14));
+      } else if (query.period === '1month' || query.period === 'Last 1 Month') {
+        startDate = new Date(now.setMonth(now.getMonth() - 1));
+      } else if (query.period === '2months' || query.period === 'Last 2 Months') {
+        startDate = new Date(now.setMonth(now.getMonth() - 2));
+      }
+      if (startDate) {
+        dateCondition = { [Op.gte]: startDate };
+      }
+    } else if (query.fromDate || query.toDate) {
+      dateCondition = {};
+      if (query.fromDate && query.toDate) {
+        const start = new Date(query.fromDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(query.toDate);
+        end.setHours(23, 59, 59, 999);
+        dateCondition[Op.between] = [start, end];
+      } else if (query.fromDate) {
+        const start = new Date(query.fromDate);
+        start.setHours(0, 0, 0, 0);
+        dateCondition[Op.gte] = start;
+      } else if (query.toDate) {
+        const end = new Date(query.toDate);
+        end.setHours(23, 59, 59, 999);
+        dateCondition[Op.lte] = end;
+      }
+    }
 
-    // 2. Fetch all manual income records (type === 'income')
-    const incomeRecords = await Finance.findAll({
-      where: {
-        type: {
-          [Op.in]: ['income', 'INCOME']
-        }
-      },
-      include: [{ model: Branch, as: 'branch' }]
-    });
+    const financeWhere = {};
+    const sessionWhere = {};
 
-    // 3. Fetch all sessions with payments and patient details
-    const allSessions = await Session.findAll({
-      include: [
-        { model: Patient, as: 'patient', attributes: ['name', 'id'] },
-        { model: Branch, as: 'branch', attributes: ['name'] },
-        { model: Payment, as: 'payment' }
-      ]
-    });
+    if (Object.keys(dateCondition).length > 0) {
+      financeWhere.date = dateCondition;
+      sessionWhere.sessionDate = dateCondition;
+    }
 
+    // 2. Build branch conditions
+    if (query.branchId && query.branchId !== 'all' && query.branchId !== 'All' && query.branchId !== 'All Branches') {
+      financeWhere.branchId = query.branchId;
+      sessionWhere.branchId = query.branchId;
+    }
+
+    // 3. Conditional fetching flags based on category and type
+    let fetchExpenses = true;
+    let fetchIncomes = true;
+    let fetchSessions = true;
+
+    if (query.type === 'Income') {
+      fetchExpenses = false;
+    } else if (query.type === 'Expense') {
+      fetchIncomes = false;
+      fetchSessions = false;
+    }
+
+    if (query.category && query.category !== 'all' && query.category !== 'All' && query.category !== 'All Categories') {
+      if (query.category === 'Session Fee') {
+        fetchIncomes = false;
+        fetchExpenses = false;
+      } else {
+        fetchSessions = false;
+        financeWhere.category = query.category;
+      }
+    }
+
+    // 4. Fetch expense records
+    let expenseRecords = [];
+    if (fetchExpenses) {
+      const expenseWhere = { ...financeWhere, type: { [Op.in]: ['expense', 'EXPENSE'] } };
+      expenseRecords = await Finance.findAll({
+        where: expenseWhere,
+        include: [{ model: Branch, as: 'branch' }]
+      });
+    }
+
+    // 5. Fetch income records
+    let incomeRecords = [];
+    if (fetchIncomes) {
+      const incomeWhere = { ...financeWhere, type: { [Op.in]: ['income', 'INCOME'] } };
+      incomeRecords = await Finance.findAll({
+        where: incomeWhere,
+        include: [{ model: Branch, as: 'branch' }]
+      });
+    }
+
+    // 6. Fetch sessions
+    let allSessions = [];
+    if (fetchSessions) {
+      allSessions = await Session.findAll({
+        where: sessionWhere,
+        include: [
+          { model: Patient, as: 'patient', attributes: ['name', 'id'] },
+          { model: Branch, as: 'branch', attributes: ['name'] },
+          { model: Payment, as: 'payment' }
+        ]
+      });
+    }
+
+    // 7. Map sessions
     const mappedSessions = allSessions.map(s => {
       const patientName = s.patient ? s.patient.name : 'Unknown Patient';
       const fee = s.sessionFee !== null && s.sessionFee !== undefined
@@ -415,6 +413,7 @@ class FinanceService {
       };
     });
 
+    // 8. Map manual income
     const mappedManualIncome = incomeRecords.map(e => {
       const dateStr = e.date ? new Date(e.date).toISOString().split('T')[0] : '—';
       const rawTitle = e.remarks || e.description || e.category || 'Manual Income';
@@ -431,6 +430,7 @@ class FinanceService {
       };
     });
 
+    // 9. Map manual expenses
     const mappedExpenses = expenseRecords.map(e => {
       const dateStr = e.date ? new Date(e.date).toISOString().split('T')[0] : '—';
       const rawTitle = e.remarks || e.description || e.category || 'Manual Expense';
@@ -447,16 +447,43 @@ class FinanceService {
       };
     });
 
-    const combinedRecords = [...mappedSessions, ...mappedManualIncome, ...mappedExpenses];
+    // 10. Filter results by status if requested
+    let finalSessions = mappedSessions;
+    let finalManualIncome = mappedManualIncome;
+    let finalExpenses = mappedExpenses;
 
-    const totalIncome = mappedManualIncome.reduce((sum, item) => sum + item.amount, 0) +
-                        mappedSessions.reduce((sum, item) => sum + item.paid, 0);
+    if (query.status && query.status !== 'all' && query.status !== 'All' && query.status !== 'All Status') {
+      finalSessions = mappedSessions.filter(s => s.type === query.status);
+      if (query.status !== 'Paid') {
+        finalManualIncome = [];
+        finalExpenses = [];
+      }
+    }
 
-    const totalExpenses = mappedExpenses.reduce((sum, item) => sum + item.amount, 0);
+    const combinedRecords = [...finalSessions, ...finalManualIncome, ...finalExpenses];
 
-    const totalPending = mappedSessions.reduce((sum, item) => sum + item.outstanding, 0);
+    const totalIncome = finalManualIncome.reduce((sum, item) => sum + item.amount, 0) +
+                        finalSessions.reduce((sum, item) => sum + item.paid, 0);
+
+    const totalExpenses = finalExpenses.reduce((sum, item) => sum + item.amount, 0);
+
+    const totalPending = finalSessions.reduce((sum, item) => sum + item.outstanding, 0);
 
     const netProfit = totalIncome - totalExpenses;
+
+    // 11. Fetch distinct categories dynamically
+    const distinctCategories = await Finance.findAll({
+      attributes: [
+        [sequelize.fn('DISTINCT', sequelize.col('category')), 'category']
+      ],
+      raw: true
+    });
+    
+    const dbCategories = distinctCategories
+      .map(c => c.category)
+      .filter(c => c && c.toLowerCase() !== 'session fee');
+
+    const categories = ['Session Fee', ...dbCategories];
 
     return {
       records: combinedRecords,
@@ -465,7 +492,8 @@ class FinanceService {
         totalExpenses,
         netProfit,
         totalPending
-      }
+      },
+      categories
     };
   }
 
@@ -697,6 +725,287 @@ class FinanceService {
       weeklyFinanceData,
       totalThisWeekIncome,
       totalThisWeekExpense
+    };
+  }
+
+  async getSuperAdminDashboardStats() {
+    const { Branch, Patient, Healer, Visitor, Session, Finance, Payment, sequelize } = require('../models');
+    const { Op } = require('sequelize');
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Total Branches
+    const totalBranches = await Branch.count();
+
+    // 2. Total Patients
+    const totalPatients = await Patient.count();
+
+    // 3. Healer Count
+    const healerCount = await Healer.count();
+
+    // 4. Daily Visitors
+    const dailyVisitors = await Visitor.count({
+      where: sequelize.where(
+        sequelize.fn('DATE', sequelize.col('created_at')),
+        todayStr
+      )
+    });
+
+    // 5. Active Sessions
+    const activeSessions = await Session.count({
+      where: {
+        status: {
+          [Op.in]: ['Scheduled', 'In Progress', 'scheduled', 'in progress', 'in_progress', 'IN PROGRESS', 'SCHEDULED']
+        }
+      }
+    });
+
+    // 6. Today's Consolidated Income and Expense
+    // Daily manual income
+    const manualIncomeToday = parseFloat(await Finance.sum('amount', {
+      where: {
+        type: {
+          [Op.in]: ['income', 'Income', 'INCOME']
+        },
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('date')), todayStr)
+        ]
+      }
+    })) || 0;
+
+    // Daily payment income
+    const paymentsToday = parseFloat(await Payment.sum('amount', {
+      where: sequelize.where(
+        sequelize.fn('DATE', sequelize.col('payment_date')),
+        todayStr
+      )
+    })) || 0;
+
+    const totalDailyIncome = manualIncomeToday + paymentsToday;
+
+    // Daily expense
+    const totalDailyExpense = parseFloat(await Finance.sum('amount', {
+      where: {
+        type: {
+          [Op.in]: ['expense', 'Expense', 'EXPENSE']
+        },
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('date')), todayStr)
+        ]
+      }
+    })) || 0;
+
+    // 7. Weekly Consolidated Comparison data (for the chart)
+    const today = new Date();
+    const currentDay = today.getDay();
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+
+    const startOfThisWeek = new Date(today);
+    startOfThisWeek.setDate(today.getDate() + distanceToMonday);
+    startOfThisWeek.setHours(0, 0, 0, 0);
+
+    const endOfThisWeek = new Date(startOfThisWeek);
+    endOfThisWeek.setDate(startOfThisWeek.getDate() + 6);
+    endOfThisWeek.setHours(23, 59, 59, 999);
+
+    const startOfPrevWeek = new Date(startOfThisWeek);
+    startOfPrevWeek.setDate(startOfThisWeek.getDate() - 7);
+    startOfPrevWeek.setHours(0, 0, 0, 0);
+
+    const endOfPrevWeek = new Date(startOfPrevWeek);
+    endOfPrevWeek.setDate(startOfPrevWeek.getDate() + 6);
+    endOfPrevWeek.setHours(23, 59, 59, 999);
+
+    const financeRecords = await Finance.findAll({
+      where: {
+        date: {
+          [Op.between]: [startOfPrevWeek, endOfThisWeek]
+        }
+      }
+    });
+
+    const paymentRecords = await Payment.findAll({
+      where: {
+        paymentDate: {
+          [Op.between]: [startOfPrevWeek, endOfThisWeek]
+        }
+      }
+    });
+
+    const weeklyFinanceData = [
+      { day: 'Mon', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Tue', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Wed', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Thu', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Fri', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Sat', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Sun', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+    ];
+
+    const getDayIndex = (d) => {
+      const day = d.getDay();
+      return day === 0 ? 6 : day - 1;
+    };
+
+    financeRecords.forEach(r => {
+      const amt = parseFloat(r.amount) || 0;
+      const type = (r.type || '').toLowerCase();
+      const recordDate = new Date(r.date);
+      const recordTime = recordDate.getTime();
+      const dayIdx = getDayIndex(recordDate);
+
+      if (dayIdx >= 0 && dayIdx < 7) {
+        if (recordTime >= startOfThisWeek.getTime() && recordTime <= endOfThisWeek.getTime()) {
+          if (type === 'income') {
+            weeklyFinanceData[dayIdx].current.income += amt;
+          } else if (type === 'expense') {
+            weeklyFinanceData[dayIdx].current.expense += amt;
+          }
+        } else if (recordTime >= startOfPrevWeek.getTime() && recordTime <= endOfPrevWeek.getTime()) {
+          if (type === 'income') {
+            weeklyFinanceData[dayIdx].previous.income += amt;
+          } else if (type === 'expense') {
+            weeklyFinanceData[dayIdx].previous.expense += amt;
+          }
+        }
+      }
+    });
+
+    paymentRecords.forEach(p => {
+      const amt = parseFloat(p.amount) || 0;
+      const recordDate = new Date(p.paymentDate);
+      const recordTime = recordDate.getTime();
+      const dayIdx = getDayIndex(recordDate);
+
+      if (dayIdx >= 0 && dayIdx < 7) {
+        if (recordTime >= startOfThisWeek.getTime() && recordTime <= endOfThisWeek.getTime()) {
+          weeklyFinanceData[dayIdx].current.income += amt;
+        } else if (recordTime >= startOfPrevWeek.getTime() && recordTime <= endOfPrevWeek.getTime()) {
+          weeklyFinanceData[dayIdx].previous.income += amt;
+        }
+      }
+    });
+
+    return {
+      totalBranches,
+      totalPatients,
+      healerCount,
+      dailyVisitors,
+      activeSessions,
+      totalDailyIncome,
+      totalDailyExpense,
+      weeklyFinanceData
+    };
+  }
+
+  async getWeeklyFinance(weekOffset) {
+    const { Finance, Branch, Payment, Session, Patient, sequelize } = require('../models');
+    const { Op } = require('sequelize');
+
+    const today = new Date();
+    const currentDay = today.getDay();
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+
+    const startOfThisWeek = new Date(today);
+    startOfThisWeek.setDate(today.getDate() + distanceToMonday + (weekOffset * 7));
+    startOfThisWeek.setHours(0, 0, 0, 0);
+
+    const endOfThisWeek = new Date(startOfThisWeek);
+    endOfThisWeek.setDate(startOfThisWeek.getDate() + 6);
+    endOfThisWeek.setHours(23, 59, 59, 999);
+
+    const formatDate = (date) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    };
+
+    const weekRange = `${formatDate(startOfThisWeek)} to ${formatDate(endOfThisWeek)}`;
+
+    // Query manual Finance (income/expense)
+    const financeRecords = await Finance.findAll({
+      where: {
+        date: {
+          [Op.between]: [startOfThisWeek, endOfThisWeek]
+        }
+      }
+    });
+
+    // Query patient Payments
+    const paymentRecords = await Payment.findAll({
+      where: {
+        paymentDate: {
+          [Op.between]: [startOfThisWeek, endOfThisWeek]
+        }
+      }
+    });
+
+    // Query Sessions (for matching patients/branches if needed, and satisfying data source requirement)
+    const sessions = await Session.findAll({
+      where: {
+        sessionDate: {
+          [Op.between]: [
+            startOfThisWeek.toISOString().split('T')[0],
+            endOfThisWeek.toISOString().split('T')[0]
+          ]
+        }
+      },
+      include: [
+        { model: Patient, as: 'patient' },
+        { model: Branch, as: 'branch' }
+      ]
+    });
+
+    const weeklyFinanceData = [
+      { day: 'Mon', income: 0, expense: 0 },
+      { day: 'Tue', income: 0, expense: 0 },
+      { day: 'Wed', income: 0, expense: 0 },
+      { day: 'Thu', income: 0, expense: 0 },
+      { day: 'Fri', income: 0, expense: 0 },
+      { day: 'Sat', income: 0, expense: 0 },
+      { day: 'Sun', income: 0, expense: 0 },
+    ];
+
+    const getDayIndex = (d) => {
+      const day = d.getDay();
+      return day === 0 ? 6 : day - 1;
+    };
+
+    financeRecords.forEach(r => {
+      const amt = parseFloat(r.amount) || 0;
+      const type = (r.type || '').toLowerCase();
+      const recordDate = new Date(r.date);
+      const dayIdx = getDayIndex(recordDate);
+
+      if (dayIdx >= 0 && dayIdx < 7) {
+        if (type === 'income') {
+          weeklyFinanceData[dayIdx].income += amt;
+        } else if (type === 'expense') {
+          weeklyFinanceData[dayIdx].expense += amt;
+        }
+      }
+    });
+
+    paymentRecords.forEach(p => {
+      const amt = parseFloat(p.amount) || 0;
+      const recordDate = new Date(p.paymentDate);
+      const dayIdx = getDayIndex(recordDate);
+
+      if (dayIdx >= 0 && dayIdx < 7) {
+        weeklyFinanceData[dayIdx].income += amt;
+      }
+    });
+
+    // Calculate totals for summary cards based on the selected week
+    const totalWeeklyIncome = weeklyFinanceData.reduce((sum, d) => sum + d.income, 0);
+    const totalWeeklyExpense = weeklyFinanceData.reduce((sum, d) => sum + d.expense, 0);
+
+    return {
+      weekRange,
+      totalIncome: totalWeeklyIncome,
+      totalExpense: totalWeeklyExpense,
+      weeklyFinanceData
     };
   }
 }

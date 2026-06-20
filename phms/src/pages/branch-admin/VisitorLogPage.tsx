@@ -349,23 +349,28 @@ import './branch-admin.css';
 import './visitor-log.css';
 
 interface Visitor {
-  id: number;
+  id: string | number;
   visitorId: string; // VIS-0001
   name: string;
-  type: 'Walk-in' | 'Meditation' | 'Session' | 'Camp' | 'Healer';
+  type: 'Walk-in' | 'Meditation' | 'Session' | 'Camp' | 'Healer' | 'Conversion';
   contact: string;
   entry: string;
   exit: string;
   duration: string;
   status: 'Inside' | 'Exited';
   dateStr: string;
+  gender?: string;
+  idProof?: string;
+  address?: string;
+  notes?: string;
+  referenceSource?: string[];
+  referralName?: string;
 }
 
 const VisitorLogPage: React.FC = () => {
   const { user, token } = useAuthStore();
   const history = useHistory();
   const [showCheckInModal, setShowCheckInModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
 
   // Advanced Search & Filter States
@@ -418,6 +423,12 @@ const VisitorLogPage: React.FC = () => {
              duration: '—', // Could calculate if needed
              status: v.checkOut ? 'Exited' : 'Inside',
              dateStr: isNaN(checkInDate.getTime()) ? '' : checkInDate.toLocaleDateString('en-CA'),
+             gender: v.gender || 'Male',
+             idProof: v.idProof || '',
+             address: v.address || '',
+             notes: v.purpose || '',
+             referenceSource: Array.isArray(v.referenceSource) ? v.referenceSource : [],
+             referralName: v.referralName || ''
            };
         });
         
@@ -431,6 +442,7 @@ const VisitorLogPage: React.FC = () => {
     }
   };
 
+
   useIonViewWillEnter(() => {
     fetchVisitors();
   });
@@ -443,7 +455,7 @@ const VisitorLogPage: React.FC = () => {
   const [newVisitor, setNewVisitor] = useState({
     name: '',
     contact: '',
-    type: 'Session' as 'Walk-in' | 'Meditation' | 'Session' | 'Camp' | 'Healer',
+    type: 'Session' as 'Walk-in' | 'Meditation' | 'Session' | 'Camp' | 'Healer' | 'Conversion',
   });
 
   // const handleCheckIn = () => {
@@ -528,6 +540,7 @@ const VisitorLogPage: React.FC = () => {
   const countSessions = visitors.filter(v => v.type === 'Session').length;
   const countCamp = visitors.filter(v => v.type === 'Camp').length;
   const countHealers = visitors.filter(v => v.type === 'Healer').length;
+  const countConversion = visitors.filter(v => v.type === 'Conversion').length;
 
   // Advanced query filtering logic
   const filteredVisitors = visitors.filter((v) => {
@@ -671,6 +684,17 @@ const VisitorLogPage: React.FC = () => {
                 <IonIcon icon={radioOutline} />
               </div>
             </div>
+
+            {/* Card 6: Conversion */}
+            <div className="vl-stat-card vl-stat-card--conversion">
+              <div className="vl-stat-info">
+                <div className="vl-stat-label">CONVERSION</div>
+                <div className="vl-stat-value">{countConversion}</div>
+              </div>
+              <div className="vl-stat-icon-wrapper">
+                <IonIcon icon={checkmarkCircleOutline} />
+              </div>
+            </div>
           </div>
 
           {/* Spacious Main Grid Layout */}
@@ -714,6 +738,7 @@ const VisitorLogPage: React.FC = () => {
                         <option value="Session">Session</option>
                         <option value="Camp">Camp</option>
                         <option value="Healer">Healer</option>
+                        <option value="Conversion">Conversion</option>
                       </select>
                     </div>
 
@@ -799,13 +824,13 @@ const VisitorLogPage: React.FC = () => {
                             <td>
                               <span 
                                 className={`vl-badge-type vl-badge-type--${
-                                  visitor.type === 'Meditation' ? 'meditation' : visitor.type === 'Session' ? 'session' : visitor.type === 'Walk-in' ? 'walkin' : visitor.type === 'Camp' ? 'camp' : 'healer'
+                                  visitor.type === 'Meditation' ? 'meditation' : visitor.type === 'Session' ? 'session' : visitor.type === 'Walk-in' ? 'walkin' : visitor.type === 'Camp' ? 'camp' : visitor.type === 'Conversion' ? 'conversion' : 'healer'
                                 }`}
                                 style={{
                                   textTransform: 'uppercase', fontSize: '9px', padding: '2px 8px', borderRadius: '12px', fontWeight: 800,
-                                  background: visitor.type === 'Session' ? '#eff6ff' : visitor.type === 'Walk-in' ? '#ecfdf5' : visitor.type === 'Meditation' ? '#fffbeb' : visitor.type === 'Camp' ? '#fdf4ff' : '#ecfeff',
-                                  color: visitor.type === 'Session' ? '#2563eb' : visitor.type === 'Walk-in' ? '#10b981' : visitor.type === 'Meditation' ? '#d97706' : visitor.type === 'Camp' ? '#c084fc' : '#0891b2',
-                                  border: `1px solid ${visitor.type === 'Session' ? '#bfdbfe' : visitor.type === 'Walk-in' ? '#a7f3d0' : visitor.type === 'Meditation' ? '#fde68a' : visitor.type === 'Camp' ? '#f3e8ff' : '#cffafe'}`
+                                  background: visitor.type === 'Session' ? '#eff6ff' : visitor.type === 'Walk-in' ? '#ecfdf5' : visitor.type === 'Meditation' ? '#fffbeb' : visitor.type === 'Camp' ? '#fdf4ff' : visitor.type === 'Conversion' ? '#f0fdf4' : '#ecfeff',
+                                  color: visitor.type === 'Session' ? '#2563eb' : visitor.type === 'Walk-in' ? '#10b981' : visitor.type === 'Meditation' ? '#d97706' : visitor.type === 'Camp' ? '#c084fc' : visitor.type === 'Conversion' ? '#15803d' : '#0891b2',
+                                  border: `1px solid ${visitor.type === 'Session' ? '#bfdbfe' : visitor.type === 'Walk-in' ? '#a7f3d0' : visitor.type === 'Meditation' ? '#fde68a' : visitor.type === 'Camp' ? '#f3e8ff' : visitor.type === 'Conversion' ? '#bbf7d0' : '#cffafe'}`
                                 }}
                               >
                                 {visitor.type}
@@ -829,11 +854,11 @@ const VisitorLogPage: React.FC = () => {
                               </span>
                             </td>
                             <td>
-                              <div className="sa-table__actions">
+                              <div className="sa-table__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 {visitor.status === 'Inside' ? (
                                   <button
                                     className="sa-btn sa-btn--sm sa-btn--primary"
-                                    onClick={() => handleCheckOut(visitor.id)}
+                                    onClick={() => handleCheckOut(visitor.id as number)}
                                   >
                                     <IonIcon icon={logOutOutline} style={{ marginRight: '4px' }} /> Check-Out
                                   </button>
@@ -845,6 +870,20 @@ const VisitorLogPage: React.FC = () => {
                                     Exited
                                   </button>
                                 )}
+                                <button 
+                                  className="sa-btn sa-btn--sm sa-btn--outline" 
+                                  onClick={() => history.push(`/branch-admin/visitor-log/details/${visitor.id}`)}
+                                  style={{ minWidth: '40px', padding: '0 8px' }}
+                                >
+                                  Details
+                                </button>
+                                 <button 
+                                   className="sa-btn sa-btn--sm sa-btn--outline" 
+                                   onClick={() => history.push(`/branch-admin/visitor-log/edit/${visitor.id}`)}
+                                   style={{ minWidth: '40px', padding: '0 8px' }}
+                                 >
+                                   Edit
+                                 </button>
                               </div>
                             </td>
                           </tr>
@@ -879,6 +918,10 @@ const VisitorLogPage: React.FC = () => {
 
             </div>
           </div>
+
+
+
+
         </div>
       </IonContent>
 

@@ -15,8 +15,23 @@ fs.readdirSync(modelsPath)
     );
   })
   .forEach((file) => {
-    const model = require(path.join(modelsPath, file))(sequelize, DataTypes);
-    db[model.name] = model;
+    console.log("Loading:", file);
+    try {
+      const imported = require(path.join(modelsPath, file));
+      console.log("Type:", typeof imported);
+      
+      if (typeof imported !== 'function') {
+        console.log("Loading status: FAILED (Not a function)");
+        return;
+      }
+      
+      const model = imported(sequelize, DataTypes);
+      db[model.name] = model;
+      console.log("Loading status: SUCCESS");
+    } catch (err) {
+      console.log("Loading status: FAILED with error:", err.message);
+      throw err;
+    }
   });
 
 Object.keys(db).forEach((modelName) => {
@@ -29,3 +44,4 @@ db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
 module.exports = db;
+

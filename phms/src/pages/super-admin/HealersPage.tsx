@@ -20,12 +20,16 @@ import {
   medkitOutline,
   ribbonOutline,
   peopleOutline,
+  eyeOutline,
 } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
 import { getHealers, updateHealer, deleteHealer, createHealer } from '../../api/healer.api';
 import { getBranches } from '../../api/branch.api';
+import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './super-admin.css';
 
 const HealersPage: React.FC = () => {
+  const history = useHistory();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -35,12 +39,32 @@ const HealersPage: React.FC = () => {
   
   const [healers, setHealers] = useState<any[]>([]);
   const [availableBranches, setAvailableBranches] = useState<any[]>([]);
+  const [availableSpecialties, setAvailableSpecialties] = useState<any[]>([]);
+
+  const [selectedSpecialty, setSelectedSpecialty] = useState('All Specialties');
+  const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
 
   useEffect(() => {
-    const fetchHealers = async () => {
+    let intervalId: any;
+
+    const fetchAllData = async () => {
       try {
-        const response = await getHealers();
-        const apiHealers = Array.isArray(response) ? response : (response.data || response);
+        const specialtiesResponse = await getTreatmentTypes();
+        const specialtiesData = specialtiesResponse.data || specialtiesResponse || [];
+        setAvailableSpecialties(specialtiesData);
+
+        const branchesResponse = await getBranches();
+        const branchesData = branchesResponse.data || branchesResponse || [];
+        setAvailableBranches(branchesData);
+
+        const params: any = {};
+        if (selectedSpecialty !== 'All Specialties') params.specialty = selectedSpecialty;
+        if (selectedBranch !== 'All Branches') params.branchId = selectedBranch;
+        if (selectedStatus !== 'All Status') params.status = selectedStatus;
+
+        const healersResponse = await getHealers(params);
+        const apiHealers = Array.isArray(healersResponse) ? healersResponse : (healersResponse.data || healersResponse);
         if (Array.isArray(apiHealers)) {
           const formattedHealers = apiHealers.map((h: any) => ({
             id: h.id,
@@ -56,30 +80,31 @@ const HealersPage: React.FC = () => {
           setHealers(formattedHealers);
         }
       } catch (error) {
-        console.error('Error fetching healers:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    const fetchBranches = async () => {
-      try {
-        const response = await getBranches();
-        setAvailableBranches(response.data || []);
-      } catch (error) {
-        console.error('Error fetching branches:', error);
-      }
-    };
+    fetchAllData();
+    intervalId = setInterval(fetchAllData, 4000);
 
-    fetchHealers();
-    fetchBranches();
-  }, []);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [selectedSpecialty, selectedBranch, selectedStatus]);
 
   const [newHealer, setNewHealer] = useState({
     name: '',
     email: '',
-    specialty: 'Advanced Pranic Healing',
+    specialty: '',
     branchId: '',
     experience: 0,
   });
+
+  useEffect(() => {
+    if (availableSpecialties.length > 0 && !newHealer.specialty) {
+      setNewHealer(prev => ({ ...prev, specialty: availableSpecialties[0].name }));
+    }
+  }, [availableSpecialties, newHealer.specialty]);
 
   const handleAddHealer = async () => {
     if (!newHealer.name || !newHealer.email || !newHealer.branchId) {
@@ -120,8 +145,7 @@ const HealersPage: React.FC = () => {
   };
 
   const handleEditClick = (healer: any) => {
-    setSelectedHealer({ ...healer });
-    setShowEditModal(true);
+    history.push(`/super-admin/healers/edit/${healer.id}`);
   };
 
   const handleUpdateHealer = async () => {
@@ -260,14 +284,92 @@ const HealersPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sa-section-header">
-            <div className="sa-search">
-              <IonIcon icon={searchOutline} />
-              <input 
-                placeholder="Search by name, specialty or branch..." 
-                value={searchQuery}
-                onChange={handleSearchChange}
-              />
+          <div className="sa-section-header" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div className="sa-search" style={{ margin: 0, flex: '1 1 300px', maxWidth: '400px' }}>
+                <IonIcon icon={searchOutline} />
+                <input 
+                  placeholder="Search by name, specialty or branch..." 
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                {/* Specialty Filter */}
+                {/* <select 
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    background: '#f5f6fa',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-primary)',
+                    cursor: 'pointer',
+                    minWidth: '150px'
+                  }}
+                  value={selectedSpecialty}
+                  onChange={(e) => {
+                    setSelectedSpecialty(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="All Specialties">All Specialties</option>
+                  {availableSpecialties.map((spec: any) => (
+                    <option key={spec.id} value={spec.name}>{spec.name}</option>
+                  ))}
+                </select> */}
+
+                {/* Branch Filter */}
+                <select 
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    background: '#f5f6fa',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-primary)',
+                    cursor: 'pointer',
+                    minWidth: '150px'
+                  }}
+                  value={selectedBranch}
+                  onChange={(e) => {
+                    setSelectedBranch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="All Branches">All Branches</option>
+                  {availableBranches.map((branch: any) => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
+                </select>
+
+                {/* Status Filter */}
+                <select 
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    background: '#f5f6fa',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-primary)',
+                    cursor: 'pointer',
+                    minWidth: '130px'
+                  }}
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    setSelectedStatus(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="All Status">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -327,6 +429,9 @@ const HealersPage: React.FC = () => {
                     </td>
                     <td>
                       <div className="sa-table__actions">
+                        <button className="sa-table__action-btn" onClick={() => history.push(`/super-admin/healers/details/${healer.id}`)} title="View Details">
+                          <IonIcon icon={eyeOutline} />
+                        </button>
                         <button className="sa-table__action-btn" onClick={() => handleEditClick(healer)}>
                           <IonIcon icon={createOutline} />
                         </button>
@@ -409,10 +514,9 @@ const HealersPage: React.FC = () => {
                 value={newHealer.specialty}
                 onChange={(e) => setNewHealer({ ...newHealer, specialty: e.target.value })}
               >
-                <option>Basic Pranic Healing</option>
-                <option>Advanced Pranic Healing</option>
-                <option>Pranic Psychotherapy</option>
-                <option>Crystal Healing</option>
+                {availableSpecialties.map((spec: any) => (
+                  <option key={spec.id} value={spec.name}>{spec.name}</option>
+                ))}
               </select>
             </div>
             <div className="sa-settings__form-row">
@@ -472,10 +576,9 @@ const HealersPage: React.FC = () => {
                     value={selectedHealer.specialty}
                     onChange={(e) => setSelectedHealer({ ...selectedHealer, specialty: e.target.value })}
                   >
-                    <option>Basic Pranic Healing</option>
-                    <option>Advanced Pranic Healing</option>
-                    <option>Pranic Psychotherapy</option>
-                    <option>Crystal Healing</option>
+                    {availableSpecialties.map((spec: any) => (
+                      <option key={spec.id} value={spec.name}>{spec.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="sa-settings__form-group">

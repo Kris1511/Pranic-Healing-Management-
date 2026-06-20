@@ -23,6 +23,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getHealers } from '../../api/healer.api';
 import { getSessionById, updateSession } from '../../api/session.api';
+import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './branch-admin.css';
 
 interface Patient {
@@ -240,6 +241,8 @@ export default function EditSessionsPages() {
     comment: '',
   });
 
+  const [treatmentTypes, setTreatmentTypes] = useState<any[]>([]);
+
   // Load and pre-populate target session data
   useEffect(() => {
     const fetchData = async () => {
@@ -247,6 +250,11 @@ export default function EditSessionsPages() {
         const healersRes = await getHealers();
         if (healersRes.success) {
           setRegisteredHealers(healersRes.data);
+        }
+
+        const treatmentRes = await getTreatmentTypes({ status: 'Active' });
+        if (treatmentRes.success && Array.isArray(treatmentRes.data)) {
+          setTreatmentTypes(treatmentRes.data);
         }
 
         const sessionRes = await getSessionById(id);
@@ -735,10 +743,10 @@ export default function EditSessionsPages() {
                                 value={formData.type}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                               >
-                                <option>Basic Pranic Healing</option>
-                                <option>Advanced Pranic Healing</option>
-                                <option>Pranic Psychotherapy</option>
-                                <option>Crystal Healing</option>
+                                <option value="">Select Treatment Type</option>
+                                {treatmentTypes.map(t => (
+                                  <option key={t.id} value={t.name}>{t.name}</option>
+                                ))}
                               </select>
                             </div>
 

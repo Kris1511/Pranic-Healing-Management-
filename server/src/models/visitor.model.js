@@ -25,13 +25,40 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    email: {
-      type: DataTypes.STRING,
+    referenceSource: {
+      type: DataTypes.TEXT,
       allowNull: true,
+      field: 'reference_source',
+      get() {
+        const rawValue = this.getDataValue('referenceSource');
+        if (!rawValue) return [];
+        try {
+          if (rawValue.startsWith('[') && rawValue.endsWith(']')) {
+            return JSON.parse(rawValue);
+          }
+          return rawValue.split(',').map(s => s.trim()).filter(Boolean);
+        } catch (e) {
+          return rawValue ? [rawValue] : [];
+        }
+      },
+      set(value) {
+        if (Array.isArray(value)) {
+          this.setDataValue('referenceSource', JSON.stringify(value));
+        } else if (typeof value === 'string') {
+          this.setDataValue('referenceSource', value);
+        } else {
+          this.setDataValue('referenceSource', null);
+        }
+      }
     },
     gender: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    referralName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'reference_name',
     },
     idProof: {
       type: DataTypes.STRING,

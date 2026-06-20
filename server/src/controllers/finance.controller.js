@@ -44,10 +44,7 @@ class FinanceController {
 
   getSuperAdminDaily = async (req, res) => {
     let { date } = req.query;
-    if (!date) {
-      date = new Date().toISOString().split('T')[0];
-    }
-    const data = await financeService.getSuperAdminDaily(date);
+    const data = await financeService.getSuperAdminDaily(date || null);
     return sendResponse(res, 200, 'Super Admin Daily Finance retrieved successfully', data);
   };
 
@@ -78,8 +75,19 @@ class FinanceController {
   };
 
   getSuperAdminRevenue = async (req, res) => {
-    const data = await financeService.getSuperAdminRevenue();
+    const data = await financeService.getSuperAdminRevenue(req.query);
     return sendResponse(res, 200, 'Super Admin Revenue Details retrieved successfully', data);
+  };
+
+  getSuperAdminDashboardStats = async (req, res) => {
+    const data = await financeService.getSuperAdminDashboardStats();
+    return sendResponse(res, 200, 'Super Admin Dashboard statistics retrieved successfully', data);
+  };
+
+  getWeeklyFinance = async (req, res) => {
+    const weekOffset = parseInt(req.query.weekOffset) || 0;
+    const data = await financeService.getWeeklyFinance(weekOffset);
+    return sendResponse(res, 200, 'Weekly finance data retrieved successfully', data);
   };
 }
 

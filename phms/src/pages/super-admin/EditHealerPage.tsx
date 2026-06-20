@@ -16,7 +16,6 @@ import {
   documentTextOutline,
   cloudUploadOutline,
   checkmarkCircleOutline,
-  closeCircleOutline,
   trashOutline,
   cameraOutline,
   shieldCheckmarkOutline,
@@ -26,15 +25,15 @@ import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getHealerById, updateHealer } from '../../api/healer.api';
 import { getTreatmentTypes } from '../../api/treatmentType.api';
-import './branch-admin.css';
+import '../branch-admin/branch-admin.css';
+import './super-admin.css';
 
-export default function BAEditHealerPage() {
+export default function SAEditHealerPage() {
   const history = useHistory();
-  const { id } = useParams<{ id: string }>();
+  const { healerId } = useParams<{ healerId: string }>();
   const { user } = useAuthStore();
-  const isBranchAdmin = user?.role === 'BRANCH_ADMIN';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  // Current Date display
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -54,7 +53,6 @@ export default function BAEditHealerPage() {
   const [healer, setHealer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Form states pre-filled with loaded healer data
   const [formData, setFormData] = useState({
     name: '',
     gender: '',
@@ -82,7 +80,6 @@ export default function BAEditHealerPage() {
 
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  // Refs for file inputs
   const photoInputRef = React.useRef<HTMLInputElement>(null);
   const idProofInputRef = React.useRef<HTMLInputElement>(null);
   const certificationInputRef = React.useRef<HTMLInputElement>(null);
@@ -98,7 +95,7 @@ export default function BAEditHealerPage() {
           setTreatmentTypes(treatmentRes.data);
         }
 
-        const response = await getHealerById(id);
+        const response = await getHealerById(healerId);
         const h = response.data || response;
         if (h) {
           setHealer(h);
@@ -133,12 +130,12 @@ export default function BAEditHealerPage() {
         setLoading(false);
       }
     };
-    if (id && isBranchAdmin) {
+    if (healerId && isSuperAdmin) {
       fetchHealer();
     }
-  }, [id, isBranchAdmin]);
+  }, [healerId, isSuperAdmin]);
 
-  if (!isBranchAdmin) {
+  if (!isSuperAdmin) {
     return (
       <IonPage className="sa-page">
         <IonContent className="sa-page__content" fullscreen>
@@ -148,9 +145,9 @@ export default function BAEditHealerPage() {
                 <IonIcon icon={alertCircleOutline} />
               </div>
               <div className="db-access-restricted-details">
-                <span className="db-access-restricted-title">Unauthorized Node Access</span>
+                <span className="db-access-restricted-title">Unauthorized Access</span>
                 <p className="db-access-restricted-desc">
-                  Access Denied. Healer profile editing is restricted exclusively to authorized Branch Admin users.
+                  Access Denied. Only system Super Administrators are permitted to view and modify these practitioner records.
                 </p>
               </div>
             </div>
@@ -167,7 +164,7 @@ export default function BAEditHealerPage() {
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b' }}>Loading Healer Profile...</h3>
             <p style={{ color: '#64748b', fontSize: '14px' }}>
-              Fetching professional records from the branch registry database.
+              Fetching professional records from the system directory.
             </p>
           </div>
         </IonContent>
@@ -187,7 +184,7 @@ export default function BAEditHealerPage() {
             </p>
             <button 
               className="st-btn st-btn--primary" 
-              onClick={() => history.push(ROUTES.BRANCH_ADMIN.HEALERS)}
+              onClick={() => history.push(ROUTES.SUPER_ADMIN.HEALERS)}
             >
               Back to Healers Registry
             </button>
@@ -197,13 +194,11 @@ export default function BAEditHealerPage() {
     );
   }
 
-  // Handle Input Changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Photo Upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -216,7 +211,6 @@ export default function BAEditHealerPage() {
     }
   };
 
-  // File Upload
   const handleFileChange = (
     field: "idProof" | "certification",
     e: React.ChangeEvent<HTMLInputElement>,
@@ -234,7 +228,6 @@ export default function BAEditHealerPage() {
     }
   };
 
-  // Clear Uploaded File
   const handleClearFile = (
     field: "idProof" | "certification",
     e: React.MouseEvent,
@@ -253,7 +246,6 @@ export default function BAEditHealerPage() {
     }
   };
 
-  // Handle Save
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -269,80 +261,47 @@ export default function BAEditHealerPage() {
       return;
     }
 
-    // DEBUG LOGS
-    console.log("[DEBUG] Updating Healer Profile. ID:", id);
-    console.log("[DEBUG] Frontend Form Data state:", formData);
-
     try {
       const data = new FormData();
       Object.keys(formData).forEach((key) => {
-        if (key === 'bio') {
-          console.log("[DEBUG] Skipping key 'bio' from payload as it is not allowed in Joi schema.");
-          return;
-        }
-
         let val = (formData as any)[key];
         if (val !== undefined && val !== null) {
           if (key === 'certificationLevel') {
-            console.log("[DEBUG] Mapping certificationLevel -> certLevel:", val);
             data.append('certLevel', val);
           } else if (key === 'phone') {
-            console.log("[DEBUG] Mapping phone -> mobile:", val);
             data.append('mobile', val);
           } else if (key === 'status') {
-            // Convert status case for backend Joi validation
             const statusVal = val === 'ACTIVE' ? 'Active' : (val === 'INACTIVE' ? 'Inactive' : val);
-            console.log("[DEBUG] Mapping status ->", statusVal);
             data.append('status', statusVal);
           } else {
-            console.log(`[DEBUG] Appending field ${key} ->`, val);
             data.append(key, val);
           }
         }
       });
 
-      // Handle profile photo
       if (profilePhotoFile) {
-        console.log("[DEBUG] Appending new profilePhoto file:", profilePhotoFile.name);
         data.append("profilePhoto", profilePhotoFile);
       } else if (!profilePhoto) {
-        console.log("[DEBUG] Cleared profilePhoto");
         data.append("profilePhoto", "");
       }
 
-      // Handle ID Proof
       if (idProofFile) {
-        console.log("[DEBUG] Appending new idProof file:", idProofFile.name);
         data.append("idProof", idProofFile);
       } else if (!existingIdProof) {
-        console.log("[DEBUG] Cleared idProof");
         data.append("idProof", "");
       }
 
-      // Handle Certification
       if (certificationFile) {
-        console.log("[DEBUG] Appending new certification file:", certificationFile.name);
         data.append("certification", certificationFile);
       } else if (!existingCertification) {
-        console.log("[DEBUG] Cleared certification");
         data.append("certification", "");
       }
 
-      // Log exact keys and values of FormData
-      const formDataObj: any = {};
-      data.forEach((value, key) => {
-        formDataObj[key] = value instanceof File ? `File: ${value.name}` : value;
-      });
-      console.log("[DEBUG] Exact FormData payload being sent:", formDataObj);
-      console.log("[DEBUG] Request headers: Content-Type: multipart/form-data");
-
-      await updateHealer(id, data);
+      await updateHealer(healerId, data);
       setShowSuccessToast(true);
     } catch (error: any) {
-      console.error('[DEBUG] Error updating healer profile (Full Error):', error);
+      console.error('Error updating healer profile:', error);
       if (error.response) {
-        console.error('[DEBUG] Backend response status:', error.response.status);
-        console.error('[DEBUG] Backend error details (error.response.data):', error.response.data);
         alert(`Failed to update healer profile. Error: ${error.response.data?.message || 'Bad Request (400)'}`);
       } else {
         alert('Failed to update healer profile. Please check your network connection.');
@@ -352,7 +311,7 @@ export default function BAEditHealerPage() {
 
   const closeAndRedirect = () => {
     setShowSuccessToast(false);
-    history.push(ROUTES.BRANCH_ADMIN.HEALERS);
+    history.push(ROUTES.SUPER_ADMIN.HEALERS);
   };
 
   const customStyles = {
@@ -445,12 +404,11 @@ export default function BAEditHealerPage() {
           
           <main className="db-corp-canvas">
             
-            {/* Horizontal Header Navbar */}
             <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button 
                   className="db-corp-nav-icon-btn" 
-                  onClick={() => history.push(ROUTES.BRANCH_ADMIN.HEALERS)} 
+                  onClick={() => history.push(ROUTES.SUPER_ADMIN.HEALERS)} 
                   title="Back to Healers Registry"
                   style={{
                     background: '#f1f5f9',
@@ -477,19 +435,17 @@ export default function BAEditHealerPage() {
               
               <div className="db-corp-navbar-right" style={{ display: 'flex', alignItems: 'center' }}>
                 <div className="db-corp-badge-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', position: 'relative', marginRight: '6px' }} />
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Editing Healer Profile: {healer?.healerId || healer?.id || id}</span>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Editing Healer Profile: {healer?.healerId || healer?.id || healerId}</span>
               </div>
             </header>
 
-            {/* Main Form Workspace */}
             <div className="db-hc-layout" style={{ padding: '28px' }}>
               
               <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 
-                {/* 2-Column Grid Layout */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
                   
-                  {/* LEFT COLUMN: Basic Information, Professional Details */}
+                  {/* LEFT COLUMN */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                     
                     {/* Card 1: Basic Information */}
@@ -502,13 +458,12 @@ export default function BAEditHealerPage() {
                         
                         <div className="st-form" style={{ gap: '18px' }}>
                           
-                          {/* Photo Upload Section */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                             <div style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid #cbd5e1' }}>
                               {profilePhoto ? (
                                 <img src={getPhotoUrl(profilePhoto) || ''} alt="Healer avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
-                                <span style={{ fontSize: '24px', fontWeight: 700, color: '#475569' }}>{healer?.initials || 'HE'}</span>
+                                <span style={{ fontSize: '24px', fontWeight: 700, color: '#475569' }}>{healer?.name?.split(' ').map((n: string) => n[0]).join('') || 'HE'}</span>
                               )}
                             </div>
                             <label className="sa-btn sa-btn--outline sa-btn--sm" style={{ cursor: 'pointer', margin: 0, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
@@ -660,7 +615,7 @@ export default function BAEditHealerPage() {
 
                   </div>
 
-                  {/* RIGHT COLUMN: Account Status, Verification */}
+                  {/* RIGHT COLUMN */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                     
                     {/* Card 3: Account Status */}
@@ -716,7 +671,6 @@ export default function BAEditHealerPage() {
                         </div>
                         
                         <div className="st-form" style={{ gap: '18px' }}>
-                          {/* 1. ID Proof */}
                           <div className="st-form-group">
                             <label style={customStyles.label}>ID PROOF FILE</label>
                             {uploadedIdProofMeta ? (
@@ -756,7 +710,6 @@ export default function BAEditHealerPage() {
                             )}
                           </div>
 
-                          {/* 2. Certification */}
                           <div className="st-form-group">
                             <label style={customStyles.label}>CERTIFICATION FILE</label>
                             {uploadedCertificationMeta ? (
@@ -803,39 +756,17 @@ export default function BAEditHealerPage() {
 
                 </div>
 
-                {/* Footer Buttons Block */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '12px', marginBottom: '28px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '12px' }}>
                   <button 
                     type="button" 
-                    onClick={() => history.push(ROUTES.BRANCH_ADMIN.HEALERS)} 
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '10px 24px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#475569',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
+                    className="sa-btn sa-btn--outline" 
+                    onClick={() => history.push(ROUTES.SUPER_ADMIN.HEALERS)}
                   >
                     Cancel
                   </button>
-
                   <button 
                     type="submit" 
-                    style={{
-                      background: '#0D5C46',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '10px 28px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#ffffff',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
+                    className="sa-btn sa-btn--primary"
                   >
                     Save Modifications
                   </button>
@@ -844,32 +775,64 @@ export default function BAEditHealerPage() {
               </form>
 
             </div>
-
           </main>
-
         </div>
-      </IonContent>
 
-      {/* Success Modal */}
-      {showSuccessToast && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className="db-corp-card" style={{ maxWidth: '420px', width: '90%', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', animation: 'scaleUp 0.3s ease-out' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <IonIcon icon={checkmarkCircleOutline} style={{ color: '#10b981', fontSize: '40px' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: '0 0 6px 0' }}>Profile Updated</h3>
-              <p style={{ fontSize: '13px', color: '#64748b', margin: '0', lineHeight: 1.5 }}>
-                Professional records for <strong>{formData.name}</strong> have been successfully updated in the database.
+        {/* Success Modal */}
+        {showSuccessToast && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(15, 23, 42, 0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '90%',
+              textAlign: 'center',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: '#f0fdf4',
+                color: '#10b981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
+                fontSize: '28px'
+              }}>
+                ✓
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '8px' }}>Profile Updated</h3>
+              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px', lineHeight: 1.5 }}>
+                Practitioner professional registry records have been successfully saved to the database.
               </p>
+              <button 
+                className="sa-btn sa-btn--primary" 
+                style={{ width: '100%' }}
+                onClick={closeAndRedirect}
+              >
+                Close & Return
+              </button>
             </div>
-
-            <button onClick={closeAndRedirect} className="sa-btn sa-btn--primary" style={{ width: '100%', justifyContent: 'center', margin: 0 }}>
-              Return to Healers Registry
-            </button>
           </div>
-        </div>
-      )}
+        )}
+
+      </IonContent>
     </IonPage>
   );
 }

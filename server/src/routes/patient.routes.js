@@ -30,4 +30,6 @@ router.route('/:id')
   )
   .delete(patientController.delete);
 
+router.post('/:id/documents', upload.single('file'), patientController.uploadDocument);
+
 module.exports = router;

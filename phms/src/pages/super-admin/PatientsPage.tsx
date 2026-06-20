@@ -26,9 +26,12 @@ import {
   callOutline,
   mailOutline,
   calendarOutline,
+  eyeOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { getPatients, updatePatient, deletePatient, createPatient } from '../../api/patient.api';
+import { getBranches } from '../../api/branch.api';
+import { getHealers } from '../../api/healer.api';
 import '../branch-admin/branch-admin.css';
 import './super-admin.css';
 
@@ -42,13 +45,43 @@ const PatientsPage: React.FC = () => {
   const [patientToDelete, setPatientToDelete] = useState<any>(null);
   const [isPageActive, setIsPageActive] = useState(true);
 
+  const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [availableBranches, setAvailableBranches] = useState<any[]>([]);
+  const [availableHealers, setAvailableHealers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const response = await getBranches();
+        setAvailableBranches(response.data || response || []);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
+    const fetchHealers = async () => {
+      try {
+        const response = await getHealers();
+        setAvailableHealers(response.data || response || []);
+      } catch (error) {
+        console.error('Error fetching healers:', error);
+      }
+    };
+    fetchBranches();
+    fetchHealers();
+  }, []);
+
   useIonViewWillEnter(() => setIsPageActive(true));
   useIonViewWillLeave(() => setIsPageActive(false));
 
   const { data: patientsRes, refetch } = useQuery({
-    queryKey: ['super-admin-patients'],
+    queryKey: ['super-admin-patients', selectedBranch, selectedStatus],
     queryFn: async () => {
-      const response = await getPatients();
+      const params: any = {};
+      if (selectedBranch !== 'All Branches') params.branchId = selectedBranch;
+      if (selectedStatus !== 'All Status') params.status = selectedStatus;
+
+      const response = await getPatients(params);
       const raw = Array.isArray(response) ? response : (response?.data || []);
       return raw.map((p: any) => ({
         id: p.id,
@@ -73,20 +106,44 @@ const PatientsPage: React.FC = () => {
     name: '',
     email: '',
     phone: '',
-    branch: 'Uptown Sanctuary',
-    healer: 'Dr. Aris Varma',
+    branchId: '',
+    healerId: '',
   });
 
+  useEffect(() => {
+    if (availableBranches.length > 0 && !newPatient.branchId) {
+      setNewPatient(prev => ({ ...prev, branchId: availableBranches[0].id }));
+    }
+  }, [availableBranches, newPatient.branchId]);
+
+  useEffect(() => {
+    if (availableHealers.length > 0 && !newPatient.healerId) {
+      setNewPatient(prev => ({ ...prev, healerId: availableHealers[0].id }));
+    }
+  }, [availableHealers, newPatient.healerId]);
+
   const handleAddPatient = async () => {
-    if (!newPatient.name || !newPatient.email) return;
+    if (!newPatient.name || !newPatient.email || !newPatient.branchId) {
+      alert('Please fill in all required fields.');
+      return;
+    }
     try {
       await createPatient({
         name: newPatient.name,
         email: newPatient.email,
         phone: newPatient.phone,
+        branchId: newPatient.branchId,
+        healerId: newPatient.healerId || null,
+        status: 'active'
       });
       refetch();
-      setNewPatient({ name: '', email: '', phone: '', branch: 'Uptown Sanctuary', healer: 'Dr. Aris Varma' });
+      setNewPatient({
+        name: '',
+        email: '',
+        phone: '',
+        branchId: availableBranches[0]?.id || '',
+        healerId: availableHealers[0]?.id || '',
+      });
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating patient:', error);
@@ -197,9 +254,9 @@ const PatientsPage: React.FC = () => {
                 <h1 className="sa-page__title">Patient Management</h1>
                 <p className="sa-page__subtitle">Track and manage patient records across all branches</p>
               </div>
-              {/* <button className="sa-btn sa-btn--primary" onClick={() => setShowAddModal(true)}>
+              <button className="sa-btn sa-btn--primary" onClick={() => setShowAddModal(true)}>
                 <IonIcon icon={personAddOutline} /> Add New Patient
-              </button> */}
+              </button>
             </div>
           </div>
 
@@ -233,14 +290,67 @@ const PatientsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sa-section-header">
-            <div className="sa-search">
-              <IonIcon icon={searchOutline} />
-              <input 
-                placeholder="Search by name, email, branch or healer..." 
-                value={searchQuery}
-                onChange={handleSearchChange}
-              />
+          <div className="sa-section-header" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div className="sa-search" style={{ margin: 0, flex: '1 1 300px', maxWidth: '400px' }}>
+                <IonIcon icon={searchOutline} />
+                <input 
+                  placeholder="Search by name, email, branch or healer..." 
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                {/* Branch Filter */}
+                <select 
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    background: '#f5f6fa',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-primary)',
+                    cursor: 'pointer',
+                    minWidth: '150px'
+                  }}
+                  value={selectedBranch}
+                  onChange={(e) => {
+                    setSelectedBranch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="All Branches">All Branches</option>
+                  {availableBranches.map((branch: any) => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
+                </select>
+
+                {/* Status Filter */}
+                <select 
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-border)',
+                    background: '#f5f6fa',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-primary)',
+                    cursor: 'pointer',
+                    minWidth: '130px'
+                  }}
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    setSelectedStatus(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="All Status">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -301,7 +411,10 @@ const PatientsPage: React.FC = () => {
                     </td>
                     <td>
                       <div className="sa-table__actions">
-                        <button className="sa-table__action-btn" onClick={() => handleEditClick(patient)}>
+                        <button className="sa-table__action-btn" onClick={() => history.push(`/super-admin/patients/details/${patient.id}`)} title="View Details">
+                          <IonIcon icon={eyeOutline} />
+                        </button>
+                        <button className="sa-table__action-btn" onClick={() => history.push(`/super-admin/patients/edit/${patient.id}`)} title="Edit Details">
                           <IonIcon icon={createOutline} />
                         </button>
                         <button className="sa-table__action-btn sa-table__action-btn--danger" onClick={() => handleDeleteClick(patient)}>
@@ -387,29 +500,29 @@ const PatientsPage: React.FC = () => {
             </div>
             <div className="sa-settings__form-row">
               <div className="sa-settings__form-group">
-                <label className="sa-settings__label">Assigned Branch</label>
+                <label className="sa-settings__label">Assigned Branch *</label>
                 <select 
                   className="sa-settings__input"
-                  value={newPatient.branch}
-                  onChange={(e) => setNewPatient({ ...newPatient, branch: e.target.value })}
+                  value={newPatient.branchId}
+                  onChange={(e) => setNewPatient({ ...newPatient, branchId: e.target.value })}
                 >
-                  <option>Uptown Sanctuary</option>
-                  <option>Coastal Healing Center</option>
-                  <option>Green Valley Branch</option>
-                  <option>Downtown Sanctuary</option>
+                  <option value="">Select a branch</option>
+                  {availableBranches.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="sa-settings__form-group">
                 <label className="sa-settings__label">Assigned Healer</label>
                 <select 
                   className="sa-settings__input"
-                  value={newPatient.healer}
-                  onChange={(e) => setNewPatient({ ...newPatient, healer: e.target.value })}
+                  value={newPatient.healerId}
+                  onChange={(e) => setNewPatient({ ...newPatient, healerId: e.target.value })}
                 >
-                  <option>Dr. Aris Varma</option>
-                  <option>Maya Rose</option>
-                  <option>Samuel Chen</option>
-                  <option>Lila Thorne</option>
+                  <option value="">Select a healer</option>
+                  {availableHealers.map((h: any) => (
+                    <option key={h.id} value={h.id}>{h.name}</option>
+                  ))}
                 </select>
               </div>
             </div>

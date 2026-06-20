@@ -46,7 +46,7 @@ interface Transaction {
 interface Visitor {
   id: string;
   name: string;
-  type: 'Walk-in' | 'Meditation' | 'Session' | 'Camp' | 'Healer';
+  type: 'Walk-in' | 'Meditation' | 'Session' | 'Camp' | 'Healer' | 'Conversion';
   checkIn: string;
   checkOut?: string;
   status: 'Inside' | 'Completed';
@@ -178,7 +178,16 @@ const DashboardPage: React.FC = () => {
       ]);
       
       // Ensure today's visitors are calculated properly or just pass them raw
-      const mappedVis = (visRes.data || []).map((v: any) => ({ ...v, status: v.checkOut ? 'Completed' : 'Inside' }));
+      const mappedVis = (visRes.data || []).map((v: any) => {
+        let mappedType = v.visitorType || 'Walk-in';
+        if (mappedType === 'Healing Session' || mappedType === 'Consultation') mappedType = 'Session';
+        if (mappedType === 'Other' || mappedType === 'Inquiry') mappedType = 'Walk-in';
+        return {
+          ...v,
+          type: mappedType,
+          status: v.checkOut ? 'Completed' : 'Inside'
+        };
+      });
 
       setVisitors(mappedVis);
       setPatients(patRes.data || []);

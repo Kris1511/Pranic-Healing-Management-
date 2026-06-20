@@ -89,7 +89,7 @@
 
 .vl-stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -121,6 +121,7 @@
 .vl-stat-card--sessions { border-top-color: #2563eb; }
 .vl-stat-card--camp { border-top-color: #c084fc; }
 .vl-stat-card--healers { border-top-color: #0891b2; }
+.vl-stat-card--conversion { border-top-color: #10b981; }
 
 .vl-stat-info {
   display: flex;

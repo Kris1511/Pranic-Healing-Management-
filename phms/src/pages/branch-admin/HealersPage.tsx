@@ -45,6 +45,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { getHealers, deleteHealer } from '../../api/healer.api';
+import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './branch-admin.css';
 import '../super-admin/super-admin.css';
 
@@ -151,6 +152,24 @@ const SPECIALIZATIONS = [
 const HealersPage: React.FC = () => {
   const { user } = useAuthStore();
   const history = useHistory();
+  const [specializations, setSpecializations] = useState<string[]>(SPECIALIZATIONS);
+
+  useEffect(() => {
+    const fetchSpecialties = async () => {
+      try {
+        const response = await getTreatmentTypes({ status: 'Active' });
+        if (response.success && Array.isArray(response.data)) {
+          const names = response.data.map((t: any) => t.name);
+          if (names.length > 0) {
+            setSpecializations(names);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching specialties:', err);
+      }
+    };
+    fetchSpecialties();
+  }, []);
 
   // ── Access Control Layer ──────────────────────────────────────────────────
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -972,8 +991,8 @@ const HealersPage: React.FC = () => {
                     onChange={e => setSpecFilter(e.target.value)}
                     style={{ height: '36px', padding: '0 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '12px', color: '#475569', outline: 'none', fontWeight: 600, boxSizing: 'border-box' }}
                   >
-                    <option value="All">All Specializations</option>
-                    {SPECIALIZATIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                     <option value="All">All Specializations</option>
+                    {specializations.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
@@ -1409,7 +1428,7 @@ const HealersPage: React.FC = () => {
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Specializations</label>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {SPECIALIZATIONS.map(s => (
+                    {specializations.map(s => (
                       <label key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#475569', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
