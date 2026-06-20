@@ -93,6 +93,18 @@ export default function BARegisterPatientPage() {
     fetchHealers();
   }, []);
 
+  const calculateAge = (dobString: string) => {
+    if (!dobString) return "";
+    const today = new Date();
+    const birthDate = new Date(dobString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? String(age) : "0";
+  };
+
   // Handle Input Changes
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -100,7 +112,16 @@ export default function BARegisterPatientPage() {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "dateOfBirth") {
+      const calculatedAge = calculateAge(value);
+      setFormData((prev) => ({
+        ...prev,
+        dateOfBirth: value,
+        age: calculatedAge,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   // Simulate File Upload
@@ -627,6 +648,7 @@ export default function BARegisterPatientPage() {
                               placeholder="Enter age in years"
                               min="0"
                               max="120"
+                              readOnly
                               required
                             />
                           </div>

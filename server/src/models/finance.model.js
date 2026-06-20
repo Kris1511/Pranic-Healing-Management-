@@ -31,6 +31,21 @@ module.exports = (sequelize, DataTypes) => {
     branchId: {
       type: DataTypes.UUID,
       allowNull: false,
+      field: 'branch_id',
+    },
+    remarks: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    paymentMode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'payment_mode',
+    },
+    createdBy: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'created_by',
     },
   }, {
     tableName: 'finance',

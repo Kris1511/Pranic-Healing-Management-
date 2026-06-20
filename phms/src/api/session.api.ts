@@ -10,6 +10,11 @@ export const getSessions = async (params?: any) => {
   return response.data;
 };
 
+export const getSessionsSummary = async () => {
+  const response = await axiosInstance.get('/sessions/dashboard-summary');
+  return response.data;
+};
+
 export const getSessionById = async (id: string) => {
   const response = await axiosInstance.get(`/sessions/${id}`);
   return response.data;

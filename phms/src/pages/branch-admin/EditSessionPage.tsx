@@ -18,7 +18,7 @@ import {
   star,
   starOutline,
 } from 'ionicons/icons';
-import { useHistory, useParams } from 'react-router-dom';
+import { useHistory, useParams, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getHealers } from '../../api/healer.api';
@@ -185,7 +185,18 @@ const CustomTimeSelect = ({
 export default function EditSessionsPages() {
   const history = useHistory();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation<{ fromPatientId?: string }>();
   const { user } = useAuthStore();
+
+  const fromPatientId = location.state?.fromPatientId;
+  const isFromFinance = history.location.pathname.includes('/finance');
+  const redirectBack = () => {
+    if (fromPatientId) {
+      history.push(`${ROUTES.BRANCH_ADMIN.PATIENT_DETAILS.replace(':id', encodeURIComponent(fromPatientId))}?tab=financials`);
+    } else {
+      history.push(isFromFinance ? ROUTES.BRANCH_ADMIN.FINANCE : ROUTES.BRANCH_ADMIN.SESSIONS);
+    }
+  };
   const [present] = useIonToast();
 
   const isBranchAdmin = user?.role === 'BRANCH_ADMIN';
@@ -194,11 +205,8 @@ export default function EditSessionsPages() {
     : (user?.branch || 'Mumbai');
   const branchName = rawBranch.toLowerCase().includes('branch') ? rawBranch : `${rawBranch} Branch`;
 
-  // Load healers, patients, and sessions from localStorage
-  const [registeredHealers] = useState<Healer[]>(() => {
-    const saved = localStorage.getItem('phms_healers');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Load healers
+  const [registeredHealers, setRegisteredHealers] = useState<Healer[]>([]);
 
   const [sessions, setSessions] = useState<HealingSession[]>(() => {
     const saved = localStorage.getItem('phms_sessions');
@@ -238,8 +246,7 @@ export default function EditSessionsPages() {
       try {
         const healersRes = await getHealers();
         if (healersRes.success) {
-          // setRegisteredHealers(healersRes.data);
-          localStorage.setItem('phms_healers', JSON.stringify(healersRes.data));
+          setRegisteredHealers(healersRes.data);
         }
 
         const sessionRes = await getSessionById(id);
@@ -310,21 +317,14 @@ export default function EditSessionsPages() {
         });
       } else if (sessions.length > 0) {
         triggerToast(`Session ID ${id} not found in registry.`, 'danger');
-        history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
+        redirectBack();
       }
     };
     fetchData();
   }, [id, sessions]);
 
-  // Dynamic healers list falling back to default active healers if empty
-  const activeHealers = registeredHealers.length > 0
-    ? registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE')
-    : [
-        { id: 'H-2091', name: 'Aris Varma', specialization: ['Advanced Pranic Healing'] },
-        { id: 'H-2104', name: 'Julian Mars', specialization: ['Pranic Psychotherapy'] },
-        { id: 'H-1822', name: 'Maya Rose', specialization: ['Crystal Healing'] },
-        { id: 'H-1994', name: 'Lila Thorne', specialization: ['Basic Pranic Healing'] }
-      ];
+  // Dynamic healers list
+  const activeHealers = registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE');
 
   // Current Date display
   const formattedDate = new Date().toLocaleDateString('en-US', {
@@ -525,7 +525,7 @@ export default function EditSessionsPages() {
     localStorage.setItem('phms_audits', JSON.stringify([newAudit, ...audits]));
 
     triggerToast(`Session ${formData.sessionNo} details successfully saved!`);
-    history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
+    redirectBack();
   };
 
   if (!isBranchAdmin) {
@@ -638,7 +638,7 @@ export default function EditSessionsPages() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button 
                   className="db-corp-nav-icon-btn" 
-                  onClick={() => history.push(ROUTES.BRANCH_ADMIN.SESSIONS)} 
+                  onClick={() => redirectBack()} 
                   title="Back to Sessions Registry"
                   style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
@@ -692,13 +692,36 @@ export default function EditSessionsPages() {
                               style={customStyles.grayInput}
                               value={formData.healer}
                               onChange={(e) => setFormData({ ...formData, healer: e.target.value })}
+                              disabled={activeHealers.length === 0}
                             >
-                              {activeHealers.map((h, i) => (
-                                <option key={i} value={h.name}>
-                                  {/* Dr. {h.name} {h.specialization ? `(${h.specialization.join(', ')})` : ''} */}
-                                  Dr. {h.name} {Array.isArray(h.specialization) ? `(${h.specialization.join(', ')})` : ''}
-                                </option>
-                              ))}
+                              {activeHealers.length === 0 ? (
+                                <option value="">No Healers Available</option>
+                              ) : (
+                                activeHealers.map((h, i) => {
+                                  let specText = '';
+                                  if (h.specialization) {
+                                    if (Array.isArray(h.specialization)) {
+                                      specText = ` (${h.specialization.join(', ')})`;
+                                    } else {
+                                      try {
+                                        const parsed = JSON.parse(h.specialization);
+                                        if (Array.isArray(parsed)) {
+                                          specText = ` (${parsed.join(', ')})`;
+                                        } else {
+                                          specText = ` (${h.specialization})`;
+                                        }
+                                      } catch (e) {
+                                        specText = ` (${h.specialization})`;
+                                      }
+                                    }
+                                  }
+                                  return (
+                                    <option key={i} value={h.name}>
+                                      Dr. {h.name}{specText}
+                                    </option>
+                                  );
+                                })
+                              )}
                             </select>
                           </div>
 
@@ -977,7 +1000,7 @@ export default function EditSessionsPages() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '12px', marginBottom: '40px', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
                   <button 
                     type="button"
-                    onClick={() => history.push(ROUTES.BRANCH_ADMIN.SESSIONS)} 
+                    onClick={() => redirectBack()} 
                     style={{
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',

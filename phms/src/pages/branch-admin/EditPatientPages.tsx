@@ -44,10 +44,10 @@ export default function EditPatientPages() {
     name: '',
     mobile: '',
     email: '',
-    gender: 'Female' as 'Male' | 'Female' | 'Other',
+    gender: '' as 'Male' | 'Female' | 'Other' | '',
     dateOfBirth: '',
     age: '',
-    bloodGroup: 'O+',
+    bloodGroup: '',
     occupation: '',
     emergencyContact: '',
     address: '',
@@ -58,15 +58,15 @@ export default function EditPatientPages() {
     pincode: '',
     status: 'Active' as 'Active' | 'On Hold' | 'Completed' | 'Inactive',
     medicalHistory: '',
-    treatmentType: 'Pranic Psychotherapy',
-    assignedHealer: 'Dr. Aris Varma',
+    treatmentType: '',
+    assignedHealer: '',
     password: '',
     accountStatus: 'Active' as 'Active' | 'Inactive',
   });
 
   // Uploaded files mock state
   const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: { name: string; size: string } | null }>({
-    reports: { name: 'Blood_Work_Oct.pdf', size: '1.20 MB' },
+    reports: null,
     labResults: null,
     prescriptions: null,
     scanImages: null,
@@ -79,92 +79,111 @@ export default function EditPatientPages() {
   const [savedPatientId, setSavedPatientId] = useState('');
 
   const [healersList, setHealersList] = useState<any[]>([]);
+  const [patientHealer, setPatientHealer] = useState<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchHealers = async () => {
       try {
-        const response = await getHealers();
-        const apiHealers = Array.isArray(response) ? response : (response.data || response);
-        if (Array.isArray(apiHealers)) {
+        const response = await getHealers({ status: 'active' });
+        // getHealers() returns { success: boolean, data: Healer[] }
+        const apiHealers = response?.data ?? (Array.isArray(response) ? response : []);
+        if (isMounted) {
           setHealersList(apiHealers);
         }
       } catch (error) {
-        console.error('Error fetching healers:', error);
+        console.error('[EditPatient] Error fetching healers:', error);
       }
     };
     fetchHealers();
+
+    const intervalId = setInterval(fetchHealers, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
   }, []);
 
-  // Load patient data and parse the address
+  // Load patient data from the database and populate all form fields
   useEffect(() => {
     const fetchPatient = async () => {
       try {
+        console.log('[EditPatient] Fetching patient ID:', decodeURIComponent(id));
         const response = await getPatientById(decodeURIComponent(id));
-        const p = response.data || response;
+        // API returns { success: true, data: { ...patient } }
+        const p = response.data ?? response;
+        console.log('[EditPatient] Patient data received from DB:', p);
+
         if (p) {
-          let line1 = p.address || '';
-          let line2 = '';
-          let city = '';
-          let state = '';
-          let pin = '';
-          
-          const parts = line1.split(',').map((part: string) => part.trim());
-          if (parts.length >= 3) {
-            const lastPart = parts.pop() || '';
-            const statePinParts = lastPart.split('-').map((part: string) => part.trim());
-            if (statePinParts.length === 2) {
-              pin = statePinParts[1];
-              state = statePinParts[0];
-            } else {
-              state = lastPart;
-            }
-            
-            if (parts.length >= 1) {
-              city = parts.pop() || '';
-            }
-            
-            if (parts.length >= 1) {
-              line2 = parts.pop() || '';
-            }
-            
-            line1 = parts.join(', ');
-          }
-          
+          const dob = p.dob || '';
+          const computedAge = p.age ? String(p.age) : calculateAge(dob);
+
           setFormData({
             name: p.name || '',
-            mobile: p.phone || p.mobile || '',
+            mobile: p.phone || '',
             email: p.email || '',
-            gender: p.gender || 'Female',
-            dateOfBirth: p.dob || p.dateOfBirth || '',
-            age: p.age ? String(p.age) : '',
-            bloodGroup: p.bloodGroup || 'O+',
+            gender: (p.gender as any) || '',
+            dateOfBirth: dob,
+            age: computedAge,
+            bloodGroup: p.bloodGroup || '',
             occupation: p.occupation || '',
             emergencyContact: p.emergencyContact || '',
             address: p.address || '',
-            addressLine1: line1 || p.address || '',
-            addressLine2: line2 || '',
-            city: city || 'Hyderabad',
-            state: state || 'Telangana',
-            pincode: pin || '500034',
-            status: p.status || 'Active',
+            addressLine1: p.address || '',
+            addressLine2: '',
+            city: '',
+            state: '',
+            pincode: '',
+            status: (p.status as any) || 'Active',
             medicalHistory: p.medicalHistory || '',
-            treatmentType: p.treatmentType || 'Pranic Psychotherapy',
+            treatmentType: p.treatmentType || '',
+            // healerId UUID from DB maps directly to the healer <select> value
             assignedHealer: p.healerId || '',
             password: '',
-            accountStatus: p.status === 'Inactive' ? 'Inactive' : 'Active',
+            accountStatus: p.status?.toLowerCase() === 'inactive' ? 'Inactive' : 'Active',
           });
+
+          if (p.healer) {
+            setPatientHealer(p.healer);
+          }
+
+          console.log('[EditPatient] Form populated — DOB:', dob, '| Age:', computedAge,
+            '| Blood Group:', p.bloodGroup, '| Treatment:', p.treatmentType,
+            '| Healer ID:', p.healerId, '| Emergency Contact:', p.emergencyContact);
         }
       } catch (error) {
-        console.error('Error fetching patient details:', error);
+        console.error('[EditPatient] Error fetching patient details:', error);
       }
     };
     fetchPatient();
   }, [id]);
 
+  const calculateAge = (dobString: string) => {
+    if (!dobString) return "";
+    const today = new Date();
+    const birthDate = new Date(dobString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? String(age) : "0";
+  };
+
   // Handle Input Changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "dateOfBirth") {
+      const calculatedAge = calculateAge(value);
+      setFormData((prev) => ({
+        ...prev,
+        dateOfBirth: value,
+        age: calculatedAge,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   // Simulate File Upload
@@ -193,10 +212,10 @@ export default function EditPatientPages() {
       name: '',
       mobile: '',
       email: '',
-      gender: 'Female',
+      gender: '',
       dateOfBirth: '',
       age: '',
-      bloodGroup: 'O+',
+      bloodGroup: '',
       occupation: '',
       emergencyContact: '',
       address: '',
@@ -207,8 +226,8 @@ export default function EditPatientPages() {
       pincode: '',
       status: 'Active',
       medicalHistory: '',
-      treatmentType: 'Pranic Psychotherapy',
-      assignedHealer: 'Dr. Aris Varma',
+      treatmentType: '',
+      assignedHealer: '',
       password: '',
       accountStatus: 'Active',
     });
@@ -285,7 +304,7 @@ export default function EditPatientPages() {
 
   const closeAndRedirect = () => {
     setShowSuccessToast(false);
-    history.push(ROUTES.BRANCH_ADMIN.PATIENTS);
+    history.push(ROUTES.BRANCH_ADMIN.PATIENT_DETAILS.replace(':id', encodeURIComponent(id)));
   };
 
   if (!isBranchAdmin) {
@@ -569,6 +588,7 @@ export default function EditPatientPages() {
                               placeholder="Enter age in years"
                               min="0"
                               max="120"
+                              readOnly
                               required
                             />
                           </div>
@@ -776,6 +796,9 @@ export default function EditPatientPages() {
                             {healersList.map((h: any) => (
                               <option key={h.id} value={h.id}>{h.name}</option>
                             ))}
+                            {formData.assignedHealer && patientHealer && !healersList.some((h: any) => h.id === formData.assignedHealer) && (
+                              <option value={patientHealer.id}>{patientHealer.name} (Assigned)</option>
+                            )}
                           </select>
                         </div>
                       </div>
@@ -1119,7 +1142,7 @@ export default function EditPatientPages() {
               </div>
 
               <button onClick={closeAndRedirect} className="sa-btn sa-btn--primary" style={{ width: '100%', justifyContent: 'center', margin: 0 }}>
-                Proceed to Patient Registry
+                Proceed to Patient Details
               </button>
             </div>
           </div>

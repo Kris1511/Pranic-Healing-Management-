@@ -53,6 +53,7 @@ const mapSessionToLedgerEntry = (session) => {
   return {
     id:             `INV-${session.id.substring(0, 8).toUpperCase()}`,
     sessionId:      session.id,
+    paymentId:      payment ? payment.id : null,
     sessionNo:      session.sessionNo || `SES-${session.id.substring(0, 6).toUpperCase()}`,
     sessionDate:    session.sessionDate,
     treatmentType:  session.treatmentType || session.type || 'Pranic Healing',
@@ -100,8 +101,11 @@ class PaymentController {
 
     // ─── Admin / healer roles: return session-based ledger for all patients in the branch ───
     const filter = {};
-    if (req.branchId) filter.branchId = req.branchId;
-    if (req.query.branchId) filter.branchId = req.query.branchId;
+    if (req.user && req.user.role === 'SUPER_ADMIN') {
+      if (req.query.branchId) filter.branchId = req.query.branchId;
+    } else {
+      if (req.branchId) filter.branchId = req.branchId;
+    }
     if (req.query.patientId) filter.patientId = req.query.patientId;
     if (req.query.healerId) filter.healerId = req.query.healerId;
 
@@ -113,6 +117,17 @@ class PaymentController {
   getById = async (req, res) => {
     const payment = await paymentService.getPaymentById(req.params.id, req.branchId);
     return sendResponse(res, 200, 'Payment retrieved successfully', payment);
+  };
+
+  update = async (req, res) => {
+    if (req.branchId) req.body.branchId = req.branchId;
+    const payment = await paymentService.updatePayment(req.params.id, req.body, req.branchId);
+    return sendResponse(res, 200, 'Payment updated successfully', payment);
+  };
+
+  delete = async (req, res) => {
+    await paymentService.deletePayment(req.params.id, req.branchId);
+    return sendResponse(res, 200, 'Payment deleted successfully');
   };
 }
 

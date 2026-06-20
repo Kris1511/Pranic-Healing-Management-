@@ -68,8 +68,8 @@ const superAdminNav: NavItem[] = [
   },
 
   /* Finance Section */
-  { title: 'Revenue', url: ROUTES.SUPER_ADMIN.REVENUE, icon: cashOutline, section: 'Finance' },
-  { title: 'Daily Income & Expense', url: ROUTES.SUPER_ADMIN.DAILY_FINANCE, icon: walletOutline },
+  { title: 'Daily Income & Expense', url: ROUTES.SUPER_ADMIN.DAILY_FINANCE, icon: cashOutline, section: 'Finance' },
+  { title: 'Revenue', url: ROUTES.SUPER_ADMIN.REVENUE, icon: walletOutline },
   { title: 'Reports', url: ROUTES.SUPER_ADMIN.REPORTS, icon: barChartOutline },
   
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   IonPage,
   IonContent,
@@ -44,20 +44,25 @@ import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getPayments, processPayment } from '../../api/payment.api';
 import { getPatients } from '../../api/patient.api';
+import { getSessions } from '../../api/session.api';
+import {
+  getFinanceTransactions,
+  addFinanceTransaction,
+  updateFinanceTransaction,
+  deleteFinanceTransaction,
+} from '../../api/finance.api';
 import './branch-admin.css';
 
 interface Transaction {
-  id: number;
-  transactionId: string;   // FIN-0001
-  receiptId: string;       // TXN-2026-0001
-  timestamp: string;
+  id: string | number;
   category: string;
   type: 'income' | 'expense';
   amount: number;
   mode: string;
-  recordedBy: string;
   description?: string;
+  remarks?: string;
   dateStr: string; // YYYY-MM-DD
+  timestamp: string; // formatted display
 }
 
 interface PatientPayment {
@@ -107,8 +112,7 @@ const FinancePage: React.FC = () => {
   const [isPageActive, setIsPageActive] = useState(true);
 
   // Branch is fixed to current branch admin's branch (not selectable)
-  const BRANCH_NAME = (user as any)?.branchName || user?.name?.includes('Mumbai') ? 'Mumbai Branch' : 'Mumbai Branch';
-  const BRANCH_BASELINE = { rev: 240000, exp: 33800, cash: 80000, online: 126000 };
+  const BRANCH_NAME = user?.branchName || 'Current Branch';
 
   // Tab control state
   const [activeTab, setActiveTab] = useState<'transactions' | 'payments' | 'reports'>('transactions');
@@ -118,6 +122,8 @@ const FinancePage: React.FC = () => {
   const [addModalType, setAddModalType] = useState<'income' | 'expense'>('income');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [txToDelete, setTxToDelete] = useState<string | number | null>(null);
 
   // Export Modal States
   const [showExportModal, setShowExportModal] = useState(false);
@@ -125,6 +131,10 @@ const FinancePage: React.FC = () => {
   const [exportProgress, setExportProgress] = useState(0);
   const [exportState, setExportState] = useState<'idle' | 'generating' | 'completed'>('idle');
 
+  /*
+  Raise Invoice
+  Generate Invoice
+  
   // Raise Invoice & Dues List Modal States
   const [showRaiseInvoiceModal, setShowRaiseInvoiceModal] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
@@ -133,6 +143,7 @@ const FinancePage: React.FC = () => {
     amount: '',
     remarks: ''
   });
+  */
   const [showDuesListModal, setShowDuesListModal] = useState(false);
 
   // Search & Filter States for Transactions
@@ -144,9 +155,54 @@ const FinancePage: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  /*
+  Receipt Preview
+  Transaction ID
+  Download Receipt
+  Print Receipt
+  
   // Receipt Modal State
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptTx, setReceiptTx] = useState<Transaction | null>(null);
+  */
+
+  const queryClient = useQueryClient();
+
+  // ─── LIVE QUERY: Finance Transactions from DB ───────────────────────────
+  const apiFilters = {
+    branchId: (user as any)?.branchId,
+    search: searchQuery || undefined,
+    type: filterType !== 'All' ? filterType.toLowerCase() : undefined,
+    paymentMode: filterMode !== 'All' ? filterMode : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  };
+
+  const { data: transactionsData, refetch: refetchTransactions } = useQuery({
+    queryKey: ['branch-finance-transactions', apiFilters],
+    queryFn: async () => {
+      const res = await getFinanceTransactions(apiFilters);
+      const raw: any[] = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      return raw.map((r: any): Transaction => ({
+        id: r.id,
+        category: r.category || 'General',
+        type: r.type?.toLowerCase() === 'income' ? 'income' : 'expense',
+        amount: parseFloat(r.amount) || 0,
+        mode: r.paymentMode || r.payment_mode || r.mode || r.paymentMethod || 'UPI',
+        description: r.description || '',
+        remarks: r.remarks || '',
+        dateStr: r.date ? new Date(r.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        timestamp: r.date
+          ? `${new Date(r.date).toISOString().split('T')[0]}, ${new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : '—',
+      }));
+    },
+    enabled: !!user,
+    refetchInterval: isPageActive ? 5000 : false,
+    staleTime: 0,
+  });
+
+  const transactions: Transaction[] = transactionsData || [];
 
   // Live query for branch payments
   const { data: paymentsData, refetch: refetchPayments } = useQuery({
@@ -164,13 +220,15 @@ const FinancePage: React.FC = () => {
   const patientPayments: PatientPayment[] = paymentsData || [];
 
   // Live query for patients
-  const { data: patientsData } = useQuery({
+  const { data: patientsData, refetch: refetchPatients } = useQuery({
     queryKey: ['branch-patients'],
     queryFn: async () => {
       const res = await getPatients();
       return Array.isArray(res?.data) ? res.data : [];
     },
     enabled: !!user,
+    refetchInterval: isPageActive ? 3000 : false,
+    staleTime: 0,
   });
 
   const activePatients = patientsData || [];
@@ -191,6 +249,7 @@ const FinancePage: React.FC = () => {
   // Patient Billing Summary Drawer States
   const [showDrawer, setShowDrawer] = useState(false);
   const [drawerPayment, setDrawerPayment] = useState<PatientPayment | null>(null);
+  const [patientSessions, setPatientSessions] = useState<any[]>([]);
 
   // Search & Filters for Patient Payments
   const [paySearchQuery, setPaySearchQuery] = useState('');
@@ -207,160 +266,99 @@ const FinancePage: React.FC = () => {
     const patientName = params.get('patientName');
     const sessionNo = params.get('sessionNo');
     
-    if (openRecordPay === 'true' && paymentsData) {
+    if (openRecordPay === 'true' && (paymentsData || activePatients.length > 0)) {
       setActiveTab('payments');
       setShowRecordPaymentModal(true);
       
-      let sessionType = 'Basic Pranic Healing';
-      const billed = 1200;
-      
       const liveSession = (paymentsData || []).find((s: any) => s.sessionNo === sessionNo || s.caseId === sessionNo);
-      setPaymentForm({
-        patientId: liveSession ? (liveSession.patientId || '') : (patientName || ''),
-        sessionId: liveSession ? liveSession.caseId : '',
-        sessionNo: liveSession ? liveSession.sessionNo : (sessionNo || ''),
-        amountBilled: liveSession ? liveSession.totalBilled : billed,
-        outstanding: liveSession ? liveSession.outstanding : billed,
-        amountPaid: liveSession ? String(liveSession.outstanding) : '',
-        paymentMode: 'UPI',
-        remarks: `Recorded via Session Manager (${sessionNo || ''})`
-      });
+      
+      let targetPatientId = '';
+      if (liveSession) {
+        targetPatientId = liveSession.patientId || '';
+      } else if (patientName) {
+        const matchedPatient = activePatients.find(
+          (p: any) => p.name.toLowerCase() === patientName.toLowerCase() || p.id === patientName
+        );
+        targetPatientId = matchedPatient ? matchedPatient.id : patientName;
+      }
+
+      if (targetPatientId) {
+        getSessions({ patient_id: targetPatientId }).then(res => {
+          const sessions = res?.data ?? (Array.isArray(res) ? res : []);
+          setPatientSessions(sessions);
+          
+          const matchedSession = sessions.find((s: any) => 
+            s.sessionNo === sessionNo || 
+            s.id === sessionNo || 
+            `SES-${s.id.substring(0, 6).toUpperCase()}` === sessionNo
+          ) || sessions[0];
+
+          if (matchedSession) {
+            const billed = matchedSession.sessionFee !== null && matchedSession.sessionFee !== undefined
+              ? parseFloat(matchedSession.sessionFee)
+              : (parseFloat(matchedSession.totalAmount) || 0);
+
+            const rawStatus = (matchedSession.paymentStatus || 'pending').toLowerCase();
+            let paidAmount = 0;
+            let outstanding = 0;
+
+            if (rawStatus === 'paid') {
+              outstanding = 0;
+            } else if (rawStatus === 'pending' || rawStatus === 'unpaid') {
+              outstanding = billed;
+            } else {
+              paidAmount = matchedSession.payment ? parseFloat(matchedSession.payment.amount) || 0 : 0;
+              outstanding = Math.max(0, billed - paidAmount);
+            }
+
+            setPaymentForm({
+              patientId: targetPatientId,
+              sessionId: matchedSession.id,
+              sessionNo: matchedSession.sessionNo || `SES-${matchedSession.id.substring(0, 6).toUpperCase()}`,
+              amountBilled: billed,
+              outstanding: outstanding,
+              amountPaid: String(outstanding),
+              paymentMode: 'UPI',
+              remarks: `Recorded via Session Manager (${sessionNo || ''})`
+            });
+          } else {
+            setPaymentForm({
+              patientId: targetPatientId,
+              sessionId: '',
+              sessionNo: sessionNo || '',
+              amountBilled: 1200,
+              outstanding: 1200,
+              amountPaid: '1200',
+              paymentMode: 'UPI',
+              remarks: `Recorded via Session Manager (${sessionNo || ''})`
+            });
+          }
+        }).catch(err => {
+          console.error(err);
+          setPaymentForm({
+            patientId: targetPatientId,
+            sessionId: liveSession ? liveSession.caseId : '',
+            sessionNo: liveSession ? liveSession.sessionNo : (sessionNo || ''),
+            amountBilled: liveSession ? liveSession.totalBilled : 1200,
+            outstanding: liveSession ? liveSession.outstanding : 1200,
+            amountPaid: liveSession ? String(liveSession.outstanding) : '1200',
+            paymentMode: 'UPI',
+            remarks: `Recorded via Session Manager (${sessionNo || ''})`
+          });
+        });
+      }
 
       // Clear search params to prevent reopening on reload
       window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
     }
-  }, [paymentsData]);
+  }, [paymentsData, activePatients]);
 
-  // Helper to generate sequential Finance IDs based on existing list
-  const genFinId = (existing: Transaction[]) => {
-    const maxNum = existing.reduce((max, t) => {
-      const match = t.transactionId?.match(/FIN-(\d+)/);
-      return match ? Math.max(max, parseInt(match[1], 10)) : max;
-    }, 0);
-    return `FIN-${String(maxNum + 1).padStart(4, '0')}`;
-  };
-  const genRcptId = (existing: Transaction[]) => {
-    const year = new Date().getFullYear();
-    const maxNum = existing.reduce((max, t) => {
-      const match = t.receiptId?.match(/TXN-\d+-(\d+)/);
-      return match ? Math.max(max, parseInt(match[1], 10)) : max;
-    }, 0);
-    return `TXN-${year}-${String(maxNum + 1).padStart(4, '0')}`;
-  };
-
-  // General transactions ledger — seeded from localStorage, then reconciled from sessions
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const feeMap: Record<string, number> = {
-      'Pranic Psychotherapy': 2500,
-      'Crystal Healing': 3000,
-      'Advanced Pranic Healing': 2000,
-    };
-    const getFee = (type: string) => feeMap[type] || 1200;
-
-    let base: Transaction[];
-    const saved = localStorage.getItem('phms_finance_transactions');
-    if (saved) {
-      base = JSON.parse(saved);
-      // Back-fill any missing IDs in existing records
-      base = base.map((t, i) => ({
-        ...t,
-        transactionId: t.transactionId || `FIN-${String(i + 1).padStart(4, '0')}`,
-        receiptId: t.receiptId || `TXN-${new Date().getFullYear()}-${String(i + 1).padStart(4, '0')}`,
-      }));
-    } else {
-      base = [
-        { id: 1, transactionId: 'FIN-0001', receiptId: 'TXN-2026-0001', timestamp: '2026-05-28, 09:15 AM', category: 'Session Fee', type: 'income', amount: 1200, mode: 'UPI (GPay)', recordedBy: 'Admin - Anjali Rao', description: 'Elena Gilbert Pranic Psychotherapy', dateStr: '2026-05-28' },
-        { id: 2, transactionId: 'FIN-0002', receiptId: 'TXN-2026-0002', timestamp: '2026-05-27, 10:30 AM', category: 'Utilities', type: 'expense', amount: 4500, mode: 'Bank Trans', recordedBy: 'Admin - Anjali Rao', description: 'Monthly electricity bill', dateStr: '2026-05-27' },
-        { id: 3, transactionId: 'FIN-0003', receiptId: 'TXN-2026-0003', timestamp: '2026-05-26, 11:00 AM', category: 'Camp Fee', type: 'income', amount: 8500, mode: 'Cash', recordedBy: 'Admin - Anjali Rao', description: 'Summer healing camp registration', dateStr: '2026-05-26' },
-        { id: 4, transactionId: 'FIN-0004', receiptId: 'TXN-2026-0004', timestamp: '2026-05-25, 01:45 PM', category: 'Session Fee', type: 'income', amount: 1200, mode: 'UPI (PhonePe)', recordedBy: 'Admin - Anjali Rao', description: 'Stefan Salvatore Advanced Healing', dateStr: '2026-05-25' },
-      ];
-    }
-
-    // Reconcile: inject income entries for any Paid session not already in ledger
-    const rawSessions: any[] = JSON.parse(localStorage.getItem('phms_sessions') || '[]');
-    let changed = false;
-    rawSessions.forEach((s: any) => {
-      if (s.paymentStatus !== 'Paid') return;
-      const alreadyIn = base.some(tx => tx.description?.includes(s.sessionNo));
-      if (!alreadyIn) {
-        const fee = getFee(s.type);
-        const newEntry: Transaction = {
-          id: Date.now() + Math.random(),
-          transactionId: genFinId(base),
-          receiptId: genRcptId(base),
-          timestamp: `${s.date || new Date().toISOString().split('T')[0]}, ${s.startTime || '09:00 AM'}`,
-          category: 'Session Fee',
-          type: 'income',
-          amount: fee,
-          mode: s.paymentMethod || 'UPI',
-          recordedBy: 'Auto-sync',
-          description: `${s.patient} - Session fee for ${s.sessionNo} (${s.type})`,
-          dateStr: s.date || new Date().toISOString().split('T')[0],
-        };
-        base = [newEntry, ...base];
-        changed = true;
-      }
-    });
-    if (changed) localStorage.setItem('phms_finance_transactions', JSON.stringify(base));
-    return base;
-  });
-
-  // NOTE: transactions is refreshed via useIonViewWillEnter on every navigation.
-  // It is written to localStorage explicitly in action handlers only.
-
-  // Full reconciliation on every page activation
   useIonViewWillEnter(() => {
     setIsPageActive(true);
     refetchPayments();
-
-    const feeMap: Record<string, number> = {
-      'Pranic Psychotherapy': 2500,
-      'Crystal Healing': 3000,
-      'Advanced Pranic Healing': 2000,
-    };
-    const getFee = (type: string) => feeMap[type] || 1200;
-
-    const rawSessions: any[] = JSON.parse(localStorage.getItem('phms_sessions') || '[]');
-    let txList: Transaction[] = JSON.parse(localStorage.getItem('phms_finance_transactions') || '[]');
-
-    // Back-fill IDs on existing records that don't have them
-    txList = txList.map((t, i) => ({
-      ...t,
-      transactionId: t.transactionId || `FIN-${String(i + 1).padStart(4, '0')}`,
-      receiptId: t.receiptId || `TXN-${new Date().getFullYear()}-${String(i + 1).padStart(4, '0')}`,
-    }));
-
-    let txChanged = false;
-
-    rawSessions.forEach((s: any) => {
-      if (s.paymentStatus !== 'Paid') return;
-      const fee = getFee(s.type);
-
-      const alreadyInTx = txList.some(tx => tx.description?.includes(s.sessionNo));
-      if (!alreadyInTx) {
-        const newEntry: Transaction = {
-          id: Date.now() + Math.random(),
-          transactionId: genFinId(txList),
-          receiptId: genRcptId(txList),
-          timestamp: `${s.date || new Date().toISOString().split('T')[0]}, ${s.startTime || '09:00 AM'}`,
-          category: 'Session Fee',
-          type: 'income',
-          amount: fee,
-          mode: s.paymentMethod || 'UPI',
-          recordedBy: 'Auto-sync',
-          description: `${s.patient} - Session fee for ${s.sessionNo} (${s.type})`,
-          dateStr: s.date || new Date().toISOString().split('T')[0],
-        };
-        txList = [newEntry, ...txList];
-        txChanged = true;
-      }
-    });
-
-    if (txChanged || true) localStorage.setItem('phms_finance_transactions', JSON.stringify(txList));
-
-    // Update React state
-    setTransactions(txList);
+    refetchTransactions();
   });
+
 
   // Form input states
   const [newTx, setNewTx] = useState({
@@ -387,9 +385,34 @@ const FinancePage: React.FC = () => {
     });
   };
 
-  const baselines = BRANCH_BASELINE;
+  // ─── LIVE MUTATIONS: Add / Update / Delete ────────────────────────────
+  const addTxMutation = useMutation({
+    mutationFn: (data: any) => addFinanceTransaction(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branch-finance-transactions'] });
+      refetchTransactions();
+    },
+  });
 
-  // Compute live real-time totals dynamically
+  const updateTxMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string | number; data: any }) => updateFinanceTransaction(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branch-finance-transactions'] });
+      refetchTransactions();
+    },
+  });
+
+  const deleteTxMutation = useMutation({
+    mutationFn: (id: string | number) => deleteFinanceTransaction(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branch-finance-transactions'] });
+      refetchTransactions();
+    },
+  });
+
+  // ─── TOTALS: Computed purely from live DB records ─────────────────────
+
+  // Compute live real-time totals dynamically from DB records only
   const incomeFromTransactions = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -398,8 +421,8 @@ const FinancePage: React.FC = () => {
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalRevenue = baselines.rev + incomeFromTransactions;
-  const totalExpenses = baselines.exp + expenseFromTransactions;
+  const totalRevenue = incomeFromTransactions;
+  const totalExpenses = expenseFromTransactions;
   const netBalance = totalRevenue - totalExpenses;
 
   // Today's finance summary
@@ -410,28 +433,23 @@ const FinancePage: React.FC = () => {
   const todayExpense = transactions
     .filter(t => t.type === 'expense' && t.dateStr === todayStr)
     .reduce((sum, t) => sum + t.amount, 0);
-  const todayNet = todayIncome - todayExpense;
 
   // Real-time audit balances
-  const cashInHand = baselines.cash + transactions
-    .filter((t) => t.type === 'income' && t.mode.toLowerCase() === 'cash')
+  const cashInHand = transactions
+    .filter((t) => t.type === 'income' && t.mode.toLowerCase().includes('cash'))
     .reduce((sum, t) => sum + t.amount, 0) - transactions
-    .filter((t) => t.type === 'expense' && t.mode.toLowerCase() === 'cash')
+    .filter((t) => t.type === 'expense' && t.mode.toLowerCase().includes('cash'))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const onlineBalance = baselines.online + transactions
-    .filter((t) => t.type === 'income' && t.mode.toLowerCase() !== 'cash')
+  const onlineBalance = transactions
+    .filter((t) => t.type === 'income' && !t.mode.toLowerCase().includes('cash'))
     .reduce((sum, t) => sum + t.amount, 0) - transactions
-    .filter((t) => t.type === 'expense' && t.mode.toLowerCase() !== 'cash')
+    .filter((t) => t.type === 'expense' && !t.mode.toLowerCase().includes('cash'))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalBalance = cashInHand + onlineBalance;
   const cashPct = totalBalance > 0 ? Math.round((cashInHand / totalBalance) * 100) : 0;
   const upiPct = 100 - cashPct;
-
-  // Profit Insights
-  const profitMarginPct = totalRevenue > 0 ? Math.round((netBalance / totalRevenue) * 100) : 0;
-  const expenseRatioPct = totalRevenue > 0 ? Math.round((totalExpenses / totalRevenue) * 100) : 0;
 
   // Add transaction popup
   const handleOpenAddModal = (type: 'income' | 'expense') => {
@@ -439,16 +457,15 @@ const FinancePage: React.FC = () => {
     setNewTx({
       category: type === 'income' ? 'Session Fee' : 'Utilities',
       amount: '',
-      mode: type === 'income' ? 'UPI (GPay)' : 'Bank Trans',
+      mode: type === 'income' ? 'UPI (GPay)' : 'Cash',
       description: '',
     });
     setShowAddModal(true);
   };
 
-  // Transaction Validation & Submit
-  const handleRecordTx = () => {
+  // Transaction Validation & Submit — calls live API
+  const handleRecordTx = async () => {
     const parsedAmount = parseFloat(newTx.amount);
-    
     if (!newTx.amount.trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
       alert('Validation Error: Transaction amount must be a positive number greater than zero.');
       return;
@@ -461,30 +478,24 @@ const FinancePage: React.FC = () => {
       alert('Validation Error: Please select a valid payment mode.');
       return;
     }
-
-    const now = new Date();
-    const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const formattedDate = now.toISOString().split('T')[0];
-
-    const addedTx: Transaction = {
-      id: Date.now(),
-      transactionId: genFinId(transactions),
-      receiptId: genRcptId(transactions),
-      timestamp: `${formattedDate}, ${formattedTime}`,
-      category: newTx.category,
-      type: addModalType,
-      amount: parsedAmount,
-      mode: newTx.mode,
-      recordedBy: user?.name || 'Admin - Anjali Rao',
-      description: newTx.description.trim() || 'No remarks provided.',
-      dateStr: formattedDate,
-    };
-
-    const updated = [addedTx, ...transactions];
-    setTransactions(updated);
-    localStorage.setItem('phms_finance_transactions', JSON.stringify(updated));
-    setShowAddModal(false);
-    triggerToast(`${addModalType.toUpperCase()} transaction recorded under category "${newTx.category}". All analytics updated!`);
+    try {
+      await addTxMutation.mutateAsync({
+        branch_id: (user as any)?.branchId,
+        type: addModalType === 'income' ? 'INCOME' : 'EXPENSE',
+        category: newTx.category,
+        amount: parsedAmount,
+        payment_mode: newTx.mode,
+        description: newTx.description.trim() || 'No description provided.',
+        remarks: newTx.description.trim() || 'No remarks provided.',
+        created_by: user?.name || user?.email || 'System',
+        date: new Date().toISOString(),
+      });
+      setShowAddModal(false);
+      triggerToast(`${addModalType.toUpperCase()} transaction recorded under category "${newTx.category}". All analytics updated!`);
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Failed to record transaction: ' + (err?.response?.data?.message || err.message), 'danger');
+    }
   };
 
   // Soft Edit Dialog Trigger
@@ -494,16 +505,15 @@ const FinancePage: React.FC = () => {
       category: tx.category,
       amount: String(tx.amount),
       mode: tx.mode,
-      description: tx.description || '',
+      description: tx.remarks || tx.description || '',
     });
     setShowEditModal(true);
   };
 
-  // Save changes with validation
-  const handleEditTxSubmit = () => {
+  // Save changes — calls live API
+  const handleEditTxSubmit = async () => {
     if (!selectedTx) return;
     const parsedAmount = parseFloat(editTxState.amount);
-
     if (!editTxState.amount.trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
       alert('Validation Error: Transaction amount must be a positive number greater than zero.');
       return;
@@ -516,42 +526,51 @@ const FinancePage: React.FC = () => {
       alert('Validation Error: Please select a valid payment mode.');
       return;
     }
-
-    const updatedTxList = transactions.map((t) => {
-      if (t.id === selectedTx.id) {
-        return {
-          ...t,
+    try {
+      await updateTxMutation.mutateAsync({
+        id: selectedTx.id,
+        data: {
           category: editTxState.category,
           amount: parsedAmount,
-          mode: editTxState.mode,
-          description: editTxState.description.trim(),
-        };
-      }
-      return t;
-    });
-    setTransactions(updatedTxList);
-    localStorage.setItem('phms_finance_transactions', JSON.stringify(updatedTxList));
-
-    setShowEditModal(false);
-    setSelectedTx(null);
-    triggerToast('Transaction record updated successfully.');
-  };
-
-  // Delete/Archive Action
-  const handleDeleteTx = (id: number) => {
-    if (window.confirm('Are you sure you want to permanently delete this financial ledger record? This will alter active cash balances.')) {
-      const filtered = transactions.filter((t) => t.id !== id);
-      setTransactions(filtered);
-      localStorage.setItem('phms_finance_transactions', JSON.stringify(filtered));
-      triggerToast('Transaction record removed from registry.');
+          payment_mode: editTxState.mode,
+          description: editTxState.description.trim() || 'No description provided.',
+          remarks: editTxState.description.trim() || 'No remarks provided.',
+        },
+      });
+      setShowEditModal(false);
+      setSelectedTx(null);
+      triggerToast('Transaction record updated successfully.');
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Failed to update transaction: ' + (err?.response?.data?.message || err.message), 'danger');
     }
   };
 
+  // Delete — calls live API
+  const handleDeleteTx = async (id: string | number) => {
+    try {
+      await deleteTxMutation.mutateAsync(id);
+      triggerToast('Payment record deleted successfully.');
+      setShowDeleteModal(false);
+      setTxToDelete(null);
+    } catch (err: any) {
+      console.error('Error deleting transaction:', err);
+      triggerToast('Failed to delete transaction: ' + (err?.response?.data?.message || err.message), 'danger');
+    }
+  };
+
+  /*
+  Receipt Preview
+  Transaction ID
+  Download Receipt
+  Print Receipt
+  
   // Print Receipt simulator
   const handlePrintReceipt = (tx: Transaction) => {
     setReceiptTx(tx);
     setShowReceiptModal(true);
   };
+  */
 
   // Premium Report Export Triggers
   const handleExportReport = (format: 'PDF' | 'Excel') => {
@@ -577,12 +596,41 @@ const FinancePage: React.FC = () => {
     }, 120);
   };
 
+  const handleDownloadFile = () => {
+    // Generate CSV data from database records (filteredTransactions)
+    const headers = ["Timestamp", "Category", "Remarks", "Type", "Amount", "Mode"];
+    const rows = filteredTransactions.map(tx => [
+      `"${tx.timestamp}"`,
+      `"${tx.category}"`,
+      `"${(tx.remarks || tx.description || '').replace(/"/g, '""')}"`,
+      `"${tx.type.toUpperCase()}"`,
+      tx.amount,
+      `"${tx.mode}"`
+    ]);
+    
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    
+    const extension = exportFormat === 'Excel' ? 'csv' : 'txt';
+    const filename = `PHMS-Finance-Report-${BRANCH_NAME.replace(/\s+/g, '-')}-${new Date().getFullYear()}.${extension}`;
+    
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setShowExportModal(false);
+    triggerToast(`Downloaded ${filename} successfully!`);
+  };
+
   // Comprehensive Search & Advanced Filtering calculations
   const filteredTransactions = transactions.filter((tx) => {
     const matchesSearch =
       tx.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (tx.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.recordedBy.toLowerCase().includes(searchQuery.toLowerCase());
+      (tx.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesType = filterType === 'All' || tx.type === filterType.toLowerCase();
     const matchesMode = filterMode === 'All' || tx.mode.toLowerCase().includes(filterMode.toLowerCase());
@@ -642,34 +690,108 @@ const FinancePage: React.FC = () => {
   });
 
   // Handle patient autocomplete / billing defaults inside modal
-  const handlePaymentFormPatientChange = (patientId: string) => {
-    // Find all sessions for this patient from live payments/sessions list
-    const patientSessions = (paymentsData || []).filter((s: any) => s.patientId === patientId || (s.patient && s.patient.id === patientId) || s.patient_id === patientId);
-    
-    // Choose the first session by default
-    const firstSession = patientSessions[0];
-    
-    setPaymentForm(prev => ({
-      ...prev,
-      patientId,
-      sessionId: firstSession ? firstSession.caseId : '',
-      sessionNo: firstSession ? firstSession.sessionNo : '',
-      amountBilled: firstSession ? firstSession.totalBilled : 0,
-      outstanding: firstSession ? firstSession.outstanding : 0,
-      amountPaid: firstSession ? String(firstSession.outstanding) : '',
-    }));
+  const handlePaymentFormPatientChange = async (patientId: string) => {
+    if (!patientId) {
+      setPatientSessions([]);
+      setPaymentForm(prev => ({
+        ...prev,
+        patientId: '',
+        sessionId: '',
+        sessionNo: '',
+        amountBilled: 0,
+        outstanding: 0,
+        amountPaid: '',
+      }));
+      return;
+    }
+
+    try {
+      const res = await getSessions({ patient_id: patientId });
+      const sessions = res?.data ?? (Array.isArray(res) ? res : []);
+      setPatientSessions(sessions);
+
+      const firstSession = sessions[0];
+      if (firstSession) {
+        const billed = firstSession.sessionFee !== null && firstSession.sessionFee !== undefined
+          ? parseFloat(firstSession.sessionFee)
+          : (parseFloat(firstSession.totalAmount) || 0);
+
+        const rawStatus = (firstSession.paymentStatus || 'pending').toLowerCase();
+        let paidAmount = 0;
+        let outstanding = 0;
+
+        if (rawStatus === 'paid') {
+          outstanding = 0;
+        } else if (rawStatus === 'pending' || rawStatus === 'unpaid') {
+          outstanding = billed;
+        } else {
+          paidAmount = firstSession.payment ? parseFloat(firstSession.payment.amount) || 0 : 0;
+          outstanding = Math.max(0, billed - paidAmount);
+        }
+
+        setPaymentForm(prev => ({
+          ...prev,
+          patientId,
+          sessionId: firstSession.id,
+          sessionNo: firstSession.sessionNo || `SES-${firstSession.id.substring(0, 6).toUpperCase()}`,
+          amountBilled: billed,
+          outstanding: outstanding,
+          amountPaid: String(outstanding),
+        }));
+      } else {
+        setPaymentForm(prev => ({
+          ...prev,
+          patientId,
+          sessionId: '',
+          sessionNo: '',
+          amountBilled: 0,
+          outstanding: 0,
+          amountPaid: '',
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading patient sessions:', error);
+    }
   };
 
   const handlePaymentFormSessionChange = (sessionId: string) => {
-    const session = (paymentsData || []).find((s: any) => s.caseId === sessionId);
-    setPaymentForm(prev => ({
-      ...prev,
-      sessionId,
-      sessionNo: session ? session.sessionNo : '',
-      amountBilled: session ? session.totalBilled : 0,
-      outstanding: session ? session.outstanding : 0,
-      amountPaid: session ? String(session.outstanding) : '',
-    }));
+    const session = patientSessions.find((s: any) => s.id === sessionId);
+    if (session) {
+      const billed = session.sessionFee !== null && session.sessionFee !== undefined
+        ? parseFloat(session.sessionFee)
+        : (parseFloat(session.totalAmount) || 0);
+
+      const rawStatus = (session.paymentStatus || 'pending').toLowerCase();
+      let paidAmount = 0;
+      let outstanding = 0;
+
+      if (rawStatus === 'paid') {
+        outstanding = 0;
+      } else if (rawStatus === 'pending' || rawStatus === 'unpaid') {
+        outstanding = billed;
+      } else {
+        paidAmount = session.payment ? parseFloat(session.payment.amount) || 0 : 0;
+        outstanding = Math.max(0, billed - paidAmount);
+      }
+
+      setPaymentForm(prev => ({
+        ...prev,
+        sessionId,
+        sessionNo: session.sessionNo || `SES-${session.id.substring(0, 6).toUpperCase()}`,
+        amountBilled: billed,
+        outstanding: outstanding,
+        amountPaid: String(outstanding),
+      }));
+    } else {
+      setPaymentForm(prev => ({
+        ...prev,
+        sessionId: '',
+        sessionNo: '',
+        amountBilled: 0,
+        outstanding: 0,
+        amountPaid: '',
+      }));
+    }
   };
 
   // Submit recorded patient payment
@@ -700,27 +822,15 @@ const FinancePage: React.FC = () => {
       // Refetch live payments list from DB
       refetchPayments();
 
-      if (paidVal > 0) {
-        const patientObj = activePatients.find((p: any) => p.id === paymentForm.patientId);
-        const patientName = patientObj ? patientObj.name : 'Unknown Patient';
-
-        const newTx: Transaction = {
-          id: Date.now(),
-          transactionId: genFinId(transactions),
-          receiptId: genRcptId(transactions),
-          timestamp: `${new Date().toISOString().split('T')[0]}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-          category: 'Session Fee',
-          type: 'income',
-          amount: paidVal,
-          mode: paymentForm.paymentMode,
-          recordedBy: user?.name || 'Admin - Anjali Rao',
-          description: `${patientName} - Dynamic payment recorded for ${paymentForm.sessionNo} (${paymentForm.remarks || 'No remarks'})`,
-          dateStr: new Date().toISOString().split('T')[0]
-        };
-        const updatedTxAfterPayment = [newTx, ...transactions];
-        setTransactions(updatedTxAfterPayment);
-        localStorage.setItem('phms_finance_transactions', JSON.stringify(updatedTxAfterPayment));
+      if (paymentForm.patientId) {
+        getSessions({ patient_id: paymentForm.patientId }).then(res => {
+          const sessions = res?.data ?? (Array.isArray(res) ? res : []);
+          setPatientSessions(sessions);
+        }).catch(err => console.error(err));
       }
+
+      // Refetch live transactions from DB to reflect payment
+      refetchTransactions();
 
       setShowRecordPaymentModal(false);
       triggerToast(`Payment of ₹${paidVal} successfully recorded for session ${paymentForm.sessionNo}.`);
@@ -954,7 +1064,6 @@ const FinancePage: React.FC = () => {
                     <option value="All">All Payment Modes</option>
                     <option value="Cash">Cash</option>
                     <option value="UPI">UPI / Online</option>
-                    <option value="Bank">Bank Transfers</option>
                   </select>
 
                   {/* Monthly Filter */}
@@ -1057,7 +1166,14 @@ const FinancePage: React.FC = () => {
                   <table className="bf-table" style={{ width: '100%', minWidth: '700px' }}>
                     <thead>
                       <tr>
+                        {/*
+                        Receipt Preview
+                        Transaction ID
+                        Download Receipt
+                        Print Receipt
+                        
                         <th>TXN ID</th>
+                        */}
                         <th>TIMESTAMP</th>
                         <th>CATEGORY</th>
                         <th>REMARKS</th>
@@ -1072,10 +1188,17 @@ const FinancePage: React.FC = () => {
                       {filteredTransactions.length > 0 ? (
                         filteredTransactions.map((tx) => (
                           <tr key={tx.id}>
+                             {/*
+                             Receipt Preview
+                             Transaction ID
+                             Download Receipt
+                             Print Receipt
+                             
                              <td style={{ fontWeight: 700, color: '#0d5c46', fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'nowrap' }}>{tx.transactionId || '—'}</td>
+                             */}
                              <td style={{ fontWeight: 600 }}>{tx.timestamp}</td>
                             <td style={{ fontWeight: 700, color: '#0f766e' }}>{tx.category}</td>
-                            <td style={{ fontSize: '12px', color: '#64748b' }}>{tx.description || '—'}</td>
+                            <td style={{ fontSize: '12px', color: '#64748b' }}>{tx.remarks || tx.description || '—'}</td>
                             <td>
                               <span className={tx.type === 'income' ? 'bf-badge-income' : 'bf-badge-expense'} style={{ textTransform: 'uppercase', fontSize: '10px', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>
                                 {tx.type}
@@ -1090,6 +1213,12 @@ const FinancePage: React.FC = () => {
                             {/* <td style={{ fontSize: '11px', color: '#475569', fontWeight: 600 }}>{tx.recordedBy}</td> */}
                             <td style={{ textAlign: 'center' }}>
                               <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'center' }}>
+                                {/*
+                                Receipt Preview
+                                Transaction ID
+                                Download Receipt
+                                Print Receipt
+                                
                                 <button
                                   title="Print Receipt"
                                   onClick={() => handlePrintReceipt(tx)}
@@ -1097,6 +1226,7 @@ const FinancePage: React.FC = () => {
                                 >
                                   <IonIcon icon={printOutline} />
                                 </button>
+                                */}
                                 <button
                                   title="Edit Entry"
                                   onClick={() => handleOpenEditModal(tx)}
@@ -1106,7 +1236,7 @@ const FinancePage: React.FC = () => {
                                 </button>
                                 <button
                                   title="Delete Record"
-                                  onClick={() => handleDeleteTx(tx.id)}
+                                  onClick={() => { setTxToDelete(tx.id); setShowDeleteModal(true); }}
                                   style={{ width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fecaca', borderRadius: '8px', background: '#fef2f2', cursor: 'pointer', color: '#ef4444', fontSize: '16px', transition: 'all 0.15s ease' }}
                                 >
                                   <IonIcon icon={trashOutline} />
@@ -1383,7 +1513,7 @@ const FinancePage: React.FC = () => {
                                   className="sa-table__action-btn"
                                   title="View Session Details"
                                   onClick={() => {
-                                    history.push(ROUTES.BRANCH_ADMIN.SESSION_DETAILS.replace(':id', p.caseId));
+                                    history.push(ROUTES.BRANCH_ADMIN.SESSION_DETAILS.replace(':id', p.caseId), { fromFinance: true });
                                   }}
                                 >
                                   <IonIcon icon={eyeOutline} />
@@ -1392,7 +1522,7 @@ const FinancePage: React.FC = () => {
                                   className="sa-table__action-btn"
                                   title="Edit Session"
                                   onClick={() => {
-                                    history.push(ROUTES.BRANCH_ADMIN.EDIT_SESSION.replace(':id', p.caseId));
+                                    history.push(ROUTES.BRANCH_ADMIN.FINANCE_EDIT_SESSION.replace(':id', p.caseId));
                                   }}
                                 >
                                   <IonIcon icon={pencilOutline} style={{ color: '#6366f1' }} />
@@ -1544,11 +1674,9 @@ const FinancePage: React.FC = () => {
                       <option value="UPI (GPay)">UPI (GPay)</option>
                       <option value="UPI (PhonePe)">UPI (PhonePe)</option>
                       <option value="Cash">Cash Ledger</option>
-                      <option value="Bank Trans">Bank NetBanking</option>
                     </>
                   ) : (
                     <>
-                      <option value="Bank Trans">Bank NetBanking</option>
                       <option value="Cash">Cash Ledger</option>
                       <option value="Card Payment">Debit/Credit Card</option>
                     </>
@@ -1571,6 +1699,46 @@ const FinancePage: React.FC = () => {
           <div className="sa-modal__footer">
             <button className="sa-btn sa-btn--outline" onClick={() => setShowAddModal(false)}>Cancel</button>
             <button className="sa-btn sa-btn--primary" onClick={handleRecordTx}>Record Entry</button>
+          </div>
+        </div>
+      </IonModal>
+
+      {/* ── DIALOG: DELETE CONFIRMATION ─────────────────────────── */}
+      <IonModal isOpen={showDeleteModal} onDidDismiss={() => { setShowDeleteModal(false); setTxToDelete(null); }} className="sa-modal sa-modal--sm">
+        <div className="sa-modal__content">
+          <div className="sa-modal__header">
+            <h2>Confirm Delete</h2>
+            <button className="sa-modal__close-btn" onClick={() => { setShowDeleteModal(false); setTxToDelete(null); }}>×</button>
+          </div>
+          <div className="sa-modal__body" style={{ textAlign: 'center', padding: '24px 16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <div style={{
+                background: '#fef2f2',
+                borderRadius: '50%',
+                width: '64px',
+                height: '64px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #fecaca'
+              }}>
+                <IonIcon icon={alertCircleOutline} style={{ fontSize: '36px', color: '#ef4444' }} />
+              </div>
+            </div>
+            <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 8px 0', fontWeight: 600 }}>
+              Are you sure you want to delete this payment record?
+            </p>
+            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+              This action cannot be undone. The transaction will be permanently removed from the active database ledger.
+            </p>
+          </div>
+          <div className="sa-modal__footer" style={{ display: 'flex', justifyContent: 'center', gap: '12px', borderTop: 'none', paddingBottom: '24px' }}>
+            <button className="sa-btn sa-btn--outline" style={{ minWidth: '100px', justifyContent: 'center' }} onClick={() => { setShowDeleteModal(false); setTxToDelete(null); }}>
+              Cancel
+            </button>
+            <button className="sa-btn sa-btn--danger" style={{ minWidth: '130px', justifyContent: 'center', background: '#ef4444', borderColor: '#ef4444', color: 'white' }} onClick={() => txToDelete && handleDeleteTx(txToDelete)}>
+              Confirm Delete
+            </button>
           </div>
         </div>
       </IonModal>
@@ -1613,7 +1781,6 @@ const FinancePage: React.FC = () => {
                   <option value="UPI (GPay)">UPI (GPay)</option>
                   <option value="UPI (PhonePe)">UPI (PhonePe)</option>
                   <option value="Cash">Cash Ledger</option>
-                  <option value="Bank Trans">Bank NetBanking</option>
                   <option value="Card Payment">Debit/Credit Card</option>
                 </select>
               </div>
@@ -1636,7 +1803,12 @@ const FinancePage: React.FC = () => {
         </div>
       </IonModal>
 
-      {/* ── DIALOG: PRINT RECEIPT ────────────────────────────────── */}
+      {/*
+      Receipt Preview
+      Transaction ID
+      Download Receipt
+      Print Receipt
+      
       <IonModal isOpen={showReceiptModal} onDidDismiss={() => setShowReceiptModal(false)} className="sa-modal sa-modal--sm">
         <div className="sa-modal__content" style={{ background: '#f8fafc' }}>
           <div className="sa-modal__header" style={{ borderBottom: '1px solid #cbd5e1' }}>
@@ -1709,6 +1881,7 @@ const FinancePage: React.FC = () => {
           </div>
         </div>
       </IonModal>
+      */}
 
       {/* ── DIALOG: RECORD PATIENT PAYMENT ────────────────────────────── */}
       <IonModal isOpen={showRecordPaymentModal} onDidDismiss={() => setShowRecordPaymentModal(false)} className="sa-modal sa-modal--sm">
@@ -1746,16 +1919,34 @@ const FinancePage: React.FC = () => {
                 onChange={(e) => handlePaymentFormSessionChange(e.target.value)}
               >
                 <option value="">-- Select Session --</option>
-                {(paymentsData || [])
-                  .filter((s: any) => s.patientId === paymentForm.patientId || (s.patient && s.patient.id === paymentForm.patientId) || s.patient_id === paymentForm.patientId)
-                  .map((s: any) => (
-                    <option key={s.caseId} value={s.caseId}>
-                      {s.sessionNo} ({s.treatmentType || 'Pranic Healing'} - Outstanding: ₹{s.outstanding})
+                {(patientSessions || []).map((s: any) => {
+                  const billed = s.sessionFee !== null && s.sessionFee !== undefined
+                    ? parseFloat(s.sessionFee)
+                    : (parseFloat(s.totalAmount) || 0);
+
+                  const rawStatus = (s.paymentStatus || 'pending').toLowerCase();
+                  let paidAmount = 0;
+                  let outstanding = 0;
+
+                  if (rawStatus === 'paid') {
+                    outstanding = 0;
+                  } else if (rawStatus === 'pending' || rawStatus === 'unpaid') {
+                    outstanding = billed;
+                  } else {
+                    paidAmount = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
+                    outstanding = Math.max(0, billed - paidAmount);
+                  }
+
+                  const sessionNo = s.sessionNo || `SES-${s.id.substring(0, 6).toUpperCase()}`;
+
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {sessionNo} ({s.treatmentType || 'Pranic Healing'} - Outstanding: ₹{outstanding})
                     </option>
-                  ))
-                }
+                  );
+                })}
               </select>
-              {paymentForm.patientId && (paymentsData || []).filter((s: any) => s.patientId === paymentForm.patientId || (s.patient && s.patient.id === paymentForm.patientId) || s.patient_id === paymentForm.patientId).length === 0 && (
+              {paymentForm.patientId && (patientSessions || []).length === 0 && (
                 <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 600 }}>
                   This patient has no recorded sessions.
                 </div>
@@ -1799,7 +1990,6 @@ const FinancePage: React.FC = () => {
               >
                 <option value="UPI">UPI</option>
                 <option value="Cash">Cash</option>
-                <option value="Bank Transfer">Bank NetBanking</option>
               </select>
             </div>
  
@@ -1900,12 +2090,12 @@ const FinancePage: React.FC = () => {
                 Consolidated Report Ready!
               </h3>
               <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
-                Your {exportFormat} statement for <strong>Mumbai Branch</strong> has been compiled successfully. All audit balances, graphs, and transaction histories have been formatted.
+                Your {exportFormat} statement for <strong>{BRANCH_NAME}</strong> has been compiled successfully. All audit balances, graphs, and transaction histories have been formatted.
               </p>
 
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '20px', fontSize: '11px', textAlign: 'left', fontFamily: 'monospace', color: '#475569', lineHeight: 1.6 }}>
-                <div><strong>File Name:</strong> PHMS-Finance-Report-{new Date().getFullYear()}.{exportFormat?.toLowerCase() === 'excel' ? 'xlsx' : 'pdf'}</div>
-                <div><strong>Format:</strong> {exportFormat === 'Excel' ? 'Microsoft Excel Spreadsheet' : 'Adobe PDF Document'}</div>
+                <div><strong>File Name:</strong> PHMS-Finance-Report-{BRANCH_NAME.replace(/\s+/g, '-')}-{new Date().getFullYear()}.{exportFormat?.toLowerCase() === 'excel' ? 'csv' : 'txt'}</div>
+                <div><strong>Format:</strong> {exportFormat === 'Excel' ? 'Microsoft Excel Spreadsheet (CSV)' : 'Adobe PDF Document (TXT)'}</div>
                 <div><strong>Size:</strong> {exportFormat === 'Excel' ? '42.8 KB' : '158.4 KB'}</div>
                 <div><strong>Checksum:</strong> SHA256-f8d29b0a...</div>
               </div>
@@ -1915,10 +2105,7 @@ const FinancePage: React.FC = () => {
                   type="button"
                   className="sa-btn sa-btn--primary"
                   style={{ flex: 1, background: '#10b981', border: 'none', justifyContent: 'center', fontSize: '13px', padding: '10px' }}
-                  onClick={() => {
-                    setShowExportModal(false);
-                    triggerToast(`Downloaded PHMS-Finance-Report.${exportFormat?.toLowerCase() === 'excel' ? 'xlsx' : 'pdf'} successfully!`);
-                  }}
+                  onClick={handleDownloadFile}
                 >
                   Download File
                 </button>
@@ -2004,7 +2191,10 @@ const FinancePage: React.FC = () => {
         </div>
       </IonModal>
 
-      {/* ── MODAL: RAISE NEW INVOICE ────────────────────────────── */}
+      {/*
+      Raise Invoice
+      Generate Invoice
+      
       <IonModal isOpen={showRaiseInvoiceModal} onDidDismiss={() => setShowRaiseInvoiceModal(false)} className="sa-modal sa-modal--sm">
         <div className="sa-modal__header" style={{ background: '#0d5c46', color: '#fff', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 className="sa-modal__title" style={{ color: '#fff', fontSize: '16px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2096,6 +2286,7 @@ const FinancePage: React.FC = () => {
           </div>
         </form>
       </IonModal>
+      */}
 
       {/* ── DRAWER: PATIENT BILLING SUMMARY ────────────────────────────── */}
       {showDrawer && drawerPayment && (

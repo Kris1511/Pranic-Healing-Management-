@@ -9,6 +9,10 @@ router.use(branchScope);
 
 router.post('/process', paymentController.process);
 router.get('/', paymentController.getAll);
-router.get('/:id', paymentController.getById);
+
+router.route('/:id')
+  .get(paymentController.getById)
+  .put(paymentController.update)
+  .delete(paymentController.delete);
 
 module.exports = router;

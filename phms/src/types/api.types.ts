@@ -12,6 +12,7 @@ export interface User {
   name?: string;
   role: UserRole;
   branch?: string;
+  branchName?: string;
   avatar?: string;
   createdAt: string;
   updatedAt: string;

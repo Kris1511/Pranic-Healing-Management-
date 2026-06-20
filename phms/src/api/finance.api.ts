@@ -9,3 +9,33 @@ export const getFinanceSummary = async (params?: any) => {
   const response = await axiosInstance.get('/finance/summary', { params });
   return response.data;
 };
+
+export const getSuperAdminDailyFinance = async (params?: any) => {
+  const response = await axiosInstance.get('/finance/super-admin/daily', { params });
+  return response.data;
+};
+
+export const addFinanceTransaction = async (data: any) => {
+  const response = await axiosInstance.post('/finance', data);
+  return response.data;
+};
+
+export const updateFinanceTransaction = async (id: number | string, data: any) => {
+  const response = await axiosInstance.put(`/finance/${id}`, data);
+  return response.data;
+};
+
+export const deleteFinanceTransaction = async (id: number | string) => {
+  const response = await axiosInstance.delete(`/finance/${id}`);
+  return response.data;
+};
+
+export const getSuperAdminRevenueFinance = async () => {
+  const response = await axiosInstance.get('/finance/super-admin/revenue');
+  return response.data;
+};
+
+export const getBranchDashboardStats = async () => {
+  const response = await axiosInstance.get('/finance/dashboard-stats');
+  return response.data;
+};

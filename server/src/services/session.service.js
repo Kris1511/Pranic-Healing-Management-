@@ -11,6 +11,10 @@ class SessionService {
     return await sessionRepository.findAll(filter);
   }
 
+  async getDashboardSummary(filter = {}) {
+    return await sessionRepository.getDashboardSummary(filter);
+  }
+
   async getSessionById(id, branchId) {
     const session = await sessionRepository.findById(id);
     if (!session) {

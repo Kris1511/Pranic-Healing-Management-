@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   IonPage,
   IonContent,
   IonIcon,
   useIonToast,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   arrowBackOutline,
@@ -192,40 +193,53 @@ export default function CreateBookSession() {
 
   // Load healers and patients from database to provide responsive selectors
   const [registeredPatients, setRegisteredPatients] = useState<any[]>([]);
+  const [registeredHealers, setRegisteredHealers] = useState<Healer[]>([]);
 
-  const [registeredHealers, setRegisteredHealers] = useState<Healer[]>(() => {
-    const saved = localStorage.getItem('phms_healers');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    const fetchPatientsAndHealers = async () => {
-      try {
-        const response = await getPatients();
-        if (response.success) {
-          setRegisteredPatients(response.data);
-        }
-        const healersRes = await getHealers();
-        if (healersRes.success) {
-          setRegisteredHealers(healersRes.data);
-          localStorage.setItem('phms_healers', JSON.stringify(healersRes.data));
-        }
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
+  const fetchPatientsAndHealers = useCallback(async () => {
+    try {
+      const response = await getPatients();
+      if (response.success) {
+        setRegisteredPatients(response.data);
       }
-    };
-    fetchPatientsAndHealers();
+      const healersRes = await getHealers();
+      console.log('[BookSession] getHealers response:', healersRes);
+      if (healersRes.success) {
+        setRegisteredHealers(healersRes.data);
+        console.log('[BookSession] Loaded healers from DB:', healersRes.data.length);
+      }
+    } catch (error) {
+      console.error('[BookSession] Failed to fetch data:', error);
+    }
   }, []);
 
-  // Dynamic healers list falling back to default mock list if empty
-  const activeHealers = registeredHealers.length > 0
-    ? registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE')
-    : [
-        { id: 'H-2091', name: 'Aris Varma', specialization: ['Advanced Pranic Healing'] },
-        { id: 'H-2104', name: 'Julian Mars', specialization: ['Pranic Psychotherapy'] },
-        { id: 'H-1822', name: 'Maya Rose', specialization: ['Crystal Healing'] },
-        { id: 'H-1994', name: 'Lila Thorne', specialization: ['Basic Pranic Healing'] }
-      ];
+  // Fetch on initial mount
+  useEffect(() => {
+    fetchPatientsAndHealers();
+  }, [fetchPatientsAndHealers]);
+
+  // Re-fetch every time the page is navigated back to (e.g., after creating/editing/deleting a healer)
+  useIonViewWillEnter(() => {
+    fetchPatientsAndHealers();
+  });
+
+  // Auto-select patient from router state
+  useEffect(() => {
+    const state = history.location.state as { patientId?: string } | undefined;
+    if (state?.patientId && registeredPatients.length > 0) {
+      const selected = registeredPatients.find(p => p.id === state.patientId);
+      if (selected) {
+        setFormData(prev => ({
+          ...prev,
+          selectedPatientId: state.patientId!,
+          patientName: selected.name,
+          type: selected.caseType || prev.type
+        }));
+      }
+    }
+  }, [registeredPatients, history.location.state]);
+
+  // Dynamic active healers list
+  const activeHealers = registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE');
 
   // Sessions state loaded from localStorage
   const [sessions, setSessions] = useState<HealingSession[]>(() => {
@@ -237,7 +251,7 @@ export default function CreateBookSession() {
   const [formData, setFormData] = useState({
     patientName: '',
     selectedPatientId: '',
-    healer: activeHealers[0]?.name || 'Dr. Aris Varma',
+    healer: activeHealers[0]?.name || '',
     date: todayStr,
     startTime: '09:00 AM',
     endTime: '10:00 AM',
@@ -273,6 +287,8 @@ export default function CreateBookSession() {
       if (!isValid) {
         setFormData(prev => ({ ...prev, healer: activeHealers[0].name }));
       }
+    } else {
+      setFormData(prev => ({ ...prev, healer: '' }));
     }
   }, [activeHealers, formData.healer]);
 
@@ -636,12 +652,36 @@ export default function CreateBookSession() {
                               style={customStyles.grayInput}
                               value={formData.healer}
                               onChange={(e) => setFormData({ ...formData, healer: e.target.value })}
+                              disabled={activeHealers.length === 0}
                             >
-                              {activeHealers.map((h, i) => (
-                                <option key={i} value={h.name}>
-                                  Dr. {h.name} {Array.isArray(h.specialization) ? `(${h.specialization.join(', ')})` : ''}
-                                </option>
-                              ))}
+                              {activeHealers.length === 0 ? (
+                                <option value="">No Healers Available</option>
+                              ) : (
+                                activeHealers.map((h, i) => {
+                                  let specText = '';
+                                  if (h.specialization) {
+                                    if (Array.isArray(h.specialization)) {
+                                      specText = ` (${h.specialization.join(', ')})`;
+                                    } else {
+                                      try {
+                                        const parsed = JSON.parse(h.specialization);
+                                        if (Array.isArray(parsed)) {
+                                          specText = ` (${parsed.join(', ')})`;
+                                        } else {
+                                          specText = ` (${h.specialization})`;
+                                        }
+                                      } catch (e) {
+                                        specText = ` (${h.specialization})`;
+                                      }
+                                    }
+                                  }
+                                  return (
+                                    <option key={i} value={h.name}>
+                                      Dr. {h.name}{specText}
+                                    </option>
+                                  );
+                                })
+                              )}
                             </select>
                           </div>
 
