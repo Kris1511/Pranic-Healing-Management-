@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -8,6 +8,11 @@ import {
   IonButtons,
   IonMenuButton,
   IonIcon,
+  IonModal,
+  useIonToast,
+  useIonViewWillEnter,
+  useIonViewWillLeave,
+  IonSpinner
 } from '@ionic/react';
 import {
   folderOpenOutline,
@@ -16,356 +21,163 @@ import {
   documentTextOutline,
   personOutline,
   calendarOutline,
+  documentOutline,
+  closeOutline,
+  downloadOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import { getAllDocuments, getDocumentBlob } from '../../api/document.api';
 import '../branch-admin/branch-admin.css';
 import './Healers.css';
 
-export interface PatientMock {
-  name: string;
-  age: number;
-  gender: string;
-  phone: string;
-  patientId: string;
-  condition: string;
-  assignedHealer: string;
-}
-
-export const mockPatients: PatientMock[] = [
-  { name: 'Rajesh Kumar', age: 45, gender: 'Male', phone: '+91 98765 43210', patientId: 'PAT-10023', condition: 'Chronic Back Pain', assignedHealer: 'Dr. Nilesh Joshi' },
-  { name: 'Priya Sharma', age: 34, gender: 'Female', phone: '+91 91234 56789', patientId: 'PAT-10045', condition: 'Severe Anxiety & Migraine', assignedHealer: 'Dr. Nilesh Joshi' },
-  { name: 'Amit Patel', age: 52, gender: 'Male', phone: '+91 98111 22233', patientId: 'PAT-10088', condition: 'Acute Ischemic Stroke Rehab', assignedHealer: 'Dr. David' },
-  { name: 'Sunita Rao', age: 29, gender: 'Female', phone: '+91 99888 77665', patientId: 'PAT-10112', condition: 'Insomnia', assignedHealer: 'Dr. David' },
-  { name: 'Vikram Singh', age: 60, gender: 'Male', phone: '+91 97777 88888', patientId: 'PAT-10156', condition: 'Bilateral Knee Pain', assignedHealer: 'Dr. Rajeshwari Iyer' }
-];
-
-interface PatientDoc {
+interface UploadedDocument {
   id: string;
+  documentName: string;
   patientName: string;
   patientId: string;
-  docName: string;
-  type: 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other Document';
+  type: string;
   date: string;
+  format: string;
+  mimeType: string;
+  filePath: string;
 }
-
-const mockDocuments: PatientDoc[] = [
-  { id: '1', patientName: 'Rajesh Kumar', patientId: 'PAT-10023', docName: 'MRI_Spine_Lumbar.pdf', type: 'Lab Report', date: '2025-11-20' },
-  { id: '2', patientName: 'Rajesh Kumar', patientId: 'PAT-10023', docName: 'Consultation_Notes_Dr_Joshi.pdf', type: 'Consultation Note', date: '2025-11-22' },
-  { id: '3', patientName: 'Priya Sharma', patientId: 'PAT-10045', docName: 'Neurologist_Consultation_Priya.pdf', type: 'Consultation Note', date: '2025-07-02' },
-  { id: '4', patientName: 'Priya Sharma', patientId: 'PAT-10045', docName: 'EEG_Report.pdf', type: 'Lab Report', date: '2025-06-30' },
-  { id: '5', patientName: 'Amit Patel', patientId: 'PAT-10088', docName: 'Discharge_Summary_Fortis.pdf', type: 'Doctor Report', date: '2025-08-15' },
-  { id: '6', patientName: 'Amit Patel', patientId: 'PAT-10088', docName: 'Physiotherapy_Assessment_Amit.pdf', type: 'Other Document', date: '2025-09-01' },
-  { id: '7', patientName: 'Sunita Rao', patientId: 'PAT-10112', docName: 'Sleep_Study_Analysis.pdf', type: 'Lab Report', date: '2026-02-05' },
-  { id: '8', patientName: 'Vikram Singh', patientId: 'PAT-10156', docName: 'XRay_Knee_Bilateral.pdf', type: 'Lab Report', date: '2025-10-10' },
-  { id: '9', patientName: 'Vikram Singh', patientId: 'PAT-10156', docName: 'Orthopedic_Referral_Vikram.pdf', type: 'Doctor Report', date: '2025-10-15' }
-];
 
 const DocumentsPages: React.FC = () => {
   const history = useHistory();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'All' | 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other Document'>('All');
-  const [selectedDoc, setSelectedDoc] = useState<PatientDoc | null>(null);
+  const [present] = useIonToast();
 
-  const filteredDocs = mockDocuments.filter(doc => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'All' | 'Medical Report' | 'Lab Report' | 'Prescription' | 'ID Proof' | 'Other Document'>('All');
+  
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPageActive, setIsPageActive] = useState(true);
+
+  const [viewingDoc, setViewingDoc] = useState<UploadedDocument | null>(null);
+  const [viewBlobUrl, setViewBlobUrl] = useState<string | null>(null);
+  const [isFetchingBlob, setIsFetchingBlob] = useState(false);
+
+  const triggerToast = (msg: string, color: 'success' | 'danger' = 'success') => {
+    present({
+      message: msg,
+      duration: 3000,
+      position: 'top',
+      color: color,
+    });
+  };
+
+  const fetchDocuments = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      const documentsRes = await getAllDocuments();
+      if (documentsRes.success && Array.isArray(documentsRes.data)) {
+        const mapped: UploadedDocument[] = documentsRes.data.map((doc: any) => {
+          const docName = doc.original_name || doc.originalName || doc.fileName;
+          const extension = (docName.split('.').pop() || 'PDF').toUpperCase();
+          
+          let displayType = 'Other Document';
+          if (doc.fileType === 'MEDICAL_REPORT') displayType = 'Medical Report';
+          else if (doc.fileType === 'LAB_REPORT') displayType = 'Lab Report';
+          else if (doc.fileType === 'PRESCRIPTION') displayType = 'Prescription';
+          else if (doc.fileType === 'ID_PROOF') displayType = 'ID Proof';
+
+          const dateObj = new Date(doc.createdAt);
+          const formattedDate = dateObj.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          });
+
+          return {
+            id: doc.id,
+            documentName: docName,
+            patientName: doc.patient ? doc.patient.name : 'Unknown Patient',
+            patientId: doc.patient ? doc.patient.patientId : 'N/A',
+            type: displayType,
+            date: formattedDate,
+            format: extension,
+            mimeType: doc.mimeType || 'application/pdf',
+            filePath: doc.filePath,
+          };
+        });
+        setDocuments(mapped);
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (showLoading) {
+        triggerToast('Failed to retrieve documents.', 'danger');
+      }
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  };
+
+  useIonViewWillEnter(() => {
+    setIsPageActive(true);
+  });
+
+  useIonViewWillLeave(() => {
+    setIsPageActive(false);
+  });
+
+  useEffect(() => {
+    if (!isPageActive) return;
+    fetchDocuments(documents.length === 0);
+    const interval = setInterval(() => {
+      fetchDocuments(false);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPageActive, documents.length]);
+
+  const filteredDocs = documents.filter(doc => {
     const matchesSearch = doc.patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          doc.docName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          doc.documentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           doc.patientId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'All' ? true : doc.type === typeFilter;
     return matchesSearch && matchesType;
   });
 
-  const renderMockDocumentContent = (doc: { name: string; type: string; date: string }, p: PatientMock) => {
-    const docName = doc.name.toLowerCase();
-
-    if (docName.includes('mri')) {
-      return (
-        <div className="healer-doc-paper">
-          <div className="healer-doc-header">
-            <div className="healer-doc-logo">NPHMS IMAGING CENTER</div>
-            <div className="healer-doc-meta-right">
-              <div><strong>Report ID:</strong> RAD-2026-9931</div>
-              <div><strong>Date:</strong> {doc.date}</div>
-            </div>
-          </div>
-          
-          <hr className="healer-doc-divider" />
-          
-          <div className="healer-doc-patient-info">
-            <h3>MRI CLINICAL STUDY REPORT</h3>
-            <div className="healer-doc-info-grid">
-              <div><strong>Patient Name:</strong> {p.name}</div>
-              <div><strong>Age / Gender:</strong> {p.age} / {p.gender}</div>
-              <div><strong>Referred By:</strong> Dr. Nilesh Joshi</div>
-              <div><strong>Modality:</strong> MRI Lumbar Spine (3.0T)</div>
-            </div>
-          </div>
-          
-          <div className="healer-doc-body">
-            <h4>CLINICAL INDICATION</h4>
-            <p>Chronic lower back pain with radiation to the left lower extremity. Suspected radiculopathy.</p>
-            
-            <h4>FINDINGS</h4>
-            <p><strong>Sagittal and Axial T1 & T2 weighted sequences of the lumbar spine:</strong></p>
-            <ul>
-              <li><strong>L1-L2, L2-L3, L3-L4:</strong> Normal disc heights. No evidence of bulge, herniation, or canal stenosis.</li>
-              <li><strong>L4-L5:</strong> Prominent left paracentral herniation (extrusion) of the nucleus pulposus measuring approximately 6.5mm, causing moderate compression on the descending left L5 nerve root. Mild narrowing of the left neural foramina is observed.</li>
-              <li><strong>L5-S1:</strong> Mild diffuse disc bulge without significant root impingement or canal stenosis.</li>
-              <li><strong>Conus Medullaris:</strong> Normal signal intensity, terminates at L1.</li>
-            </ul>
-            
-            <h4>IMPRESSION</h4>
-            <ol>
-              <li>Left paracentral herniated nucleus pulposus at L4-L5 causing moderate mass effect and compression of the left L5 nerve root.</li>
-              <li>Mild degenerative changes of the L5-S1 disc.</li>
-            </ol>
-          </div>
-          
-          <div className="healer-doc-footer">
-            <div className="healer-doc-signature">
-              <div className="signature-line"></div>
-              <strong>Dr. Rajeshwari Iyer, MD</strong>
-              <span>Consultant Radiologist</span>
-            </div>
-          </div>
-        </div>
-      );
+  const handleViewDoc = async (doc: UploadedDocument) => {
+    try {
+      setIsFetchingBlob(true);
+      setViewingDoc(doc);
+      const blob = await getDocumentBlob(doc.id);
+      const fileBlob = new Blob([blob], { type: doc.mimeType });
+      const url = window.URL.createObjectURL(fileBlob);
+      setViewBlobUrl(url);
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Failed to fetch document content for preview.', 'danger');
+      setViewingDoc(null);
+    } finally {
+      setIsFetchingBlob(false);
     }
-
-    if (docName.includes('consultation')) {
-      const isPriya = p.name.includes('Priya');
-      return (
-        <div className="healer-doc-paper">
-          <div className="healer-doc-header healer-doc-header--clinic">
-            <div className="healer-doc-logo">
-              <h2>DR. NILESH JOSHI, MD</h2>
-              <span>Consultant Neurologist & Spine Specialist</span>
-            </div>
-            <div className="healer-doc-meta-right">
-              <div>Reg No: 58821-A</div>
-              <div>Date: {doc.date}</div>
-            </div>
-          </div>
-          
-          <hr className="healer-doc-divider healer-doc-divider--prescription" />
-          
-          <div className="healer-doc-patient-info">
-            <div className="healer-doc-info-grid">
-              <div><strong>Patient:</strong> {p.name}</div>
-              <div><strong>Age/Gender:</strong> {p.age} / {p.gender}</div>
-              <div><strong>Phone:</strong> {p.phone}</div>
-              <div><strong>Status:</strong> OP Referral</div>
-            </div>
-          </div>
-          
-          <div className="healer-doc-body">
-            <h4>CLINICAL OBSERVATIONS</h4>
-            {isPriya ? (
-              <p>Patient presents with severe anxiety episodes, somatic muscle tension, and weekly chronic migraines. Migraines are preceded by visual auras and triggered by intense sensory environments or high stress. Conventional medications have yielded partial relief. Advised complementary energy healing sessions for nervous system relaxation.</p>
-            ) : (
-              <p>Patient presents with recurrent lower back pain radiating down the left thigh (sciatic path). Pain has increased over the past 3 months, worsening with prolonged sitting. MRI reports confirm L4-L5 herniated disc compressing the left L5 nerve root. Recommended conservative management including specialized energy healing therapies for pain modulation and inflammation reduction before surgery is considered.</p>
-            )}
-            
-            <h4>RECOMMENDED PLAN</h4>
-            <ul>
-              <li>Avoid heavy lifting, sudden twisting, or high-impact activities.</li>
-              <li>Initiate target energy healing therapy sessions (2-3 times a week) to relieve muscle spasms.</li>
-              <li>Incorporate gentle stretching exercises (hamstring, cat-cow) only if pain permits.</li>
-              <li>Re-evaluate neurological symptoms (reflexes, muscle strength) in 4 weeks.</li>
-            </ul>
-          </div>
-          
-          <div className="healer-doc-footer">
-            <div className="healer-doc-signature">
-              <div className="signature-line"></div>
-              <strong>Dr. Nilesh Joshi, MD</strong>
-              <span>Neurologist</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (docName.includes('eeg')) {
-      return (
-        <div className="healer-doc-paper">
-          <div className="healer-doc-header">
-            <div className="healer-doc-logo">METROPOLIS NEURO-LAB</div>
-            <div className="healer-doc-meta-right">
-              <div><strong>Lab Report ID:</strong> EEG-99212</div>
-              <div><strong>Date:</strong> {doc.date}</div>
-            </div>
-          </div>
-          
-          <hr className="healer-doc-divider" />
-          
-          <div className="healer-doc-patient-info">
-            <h3>ELECTROENCEPHALOGRAPHY (EEG) REPORT</h3>
-            <div className="healer-doc-info-grid">
-              <div><strong>Patient Name:</strong> {p.name}</div>
-              <div><strong>Age / Gender:</strong> {p.age} / {p.gender}</div>
-              <div><strong>Referred By:</strong> Dr. Nilesh Joshi</div>
-              <div><strong>Technique:</strong> 10-20 System Electrode Placement</div>
-            </div>
-          </div>
-          
-          <div className="healer-doc-body">
-            <h4>RECORDING CONDITIONS</h4>
-            <p>Awake state with eyes open and closed, hyperventilation for 3 minutes, and photic stimulation.</p>
-            
-            <h4>FINDINGS</h4>
-            <ul>
-              <li><strong>Background Activity:</strong> Alpha rhythm of 9.5 Hz, symmetrical and responsive to eye opening, mostly over posterior head regions.</li>
-              <li><strong>Photic Stimulation:</strong> Occipital driving response observed at various flash rates without epileptiform discharges.</li>
-              <li><strong>Hyperventilation:</strong> Caused mild, diffuse, symmetrical slowing of background activity. No paroxysmal activity triggered.</li>
-              <li><strong>Epileptiform Activity:</strong> No focal spikes, sharp waves, or spike-wave complexes noted during recording.</li>
-            </ul>
-            
-            <h4>IMPRESSION</h4>
-            <p>Normal awake electroencephalogram. No electrographic evidence of focal or generalized epileptiform activity during the study.</p>
-          </div>
-          
-          <div className="healer-doc-footer">
-            <div className="healer-doc-signature">
-              <div className="signature-line"></div>
-              <strong>Dr. Anita Deshmukh, MD</strong>
-              <span>Consultant Neurologist</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (docName.includes('discharge')) {
-      return (
-        <div className="healer-doc-paper">
-          <div className="healer-doc-header">
-            <div className="healer-doc-logo">FORTIS HOSPITALS</div>
-            <div className="healer-doc-meta-right">
-              <div><strong>Discharge Summary No:</strong> IP-550912</div>
-              <div><strong>Discharge Date:</strong> {doc.date}</div>
-            </div>
-          </div>
-          
-          <hr className="healer-doc-divider" />
-          
-          <div className="healer-doc-patient-info">
-            <h3>CLINICAL DISCHARGE SUMMARY</h3>
-            <div className="healer-doc-info-grid">
-              <div><strong>Patient Name:</strong> {p.name}</div>
-              <div><strong>Age / Gender:</strong> {p.age} / {p.gender}</div>
-              <div><strong>Admission Date:</strong> 2025-08-01</div>
-              <div><strong>Discharge Status:</strong> Stable / Ambulatory</div>
-            </div>
-          </div>
-          
-          <div className="healer-doc-body">
-            <h4>DIAGNOSIS</h4>
-            <p>Acute Ischemic Stroke involving the right middle cerebral artery (MCA) territory. Resulting in left-sided hemiparesis.</p>
-            
-            <h4>SUMMARY OF HOSPITAL COURSE</h4>
-            <p>Patient was admitted with sudden onset of left-sided weakness and slurred speech. Received thrombolytic therapy within window. Monitored in ICU. Symptoms stabilized. Left-sided limb mobility has improved significantly from 1/5 to 3/5. Remitted for outpatient physical and energy healing rehabilitation.</p>
-            
-            <h4>OUTPATIENT ADVICE</h4>
-            <ul>
-              <li>Continue antiplatelet and antihypertensive therapy as prescribed.</li>
-              <li>Undergo physical and occupational rehabilitation daily.</li>
-              <li>Energy healing sessions scheduled weekly to aid motor recovery and energy balancing.</li>
-            </ul>
-          </div>
-          
-          <div className="healer-doc-footer">
-            <div className="healer-doc-signature">
-              <div className="signature-line"></div>
-              <strong>Dr. Sameer Mehta, DM</strong>
-              <span>Chief Neurologist</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Fallback / default document view for others
-    return (
-      <div className="healer-doc-paper">
-        <div className="healer-doc-header">
-          <div className="healer-doc-logo">NPHMS MEDICAL ARCHIVE</div>
-          <div className="healer-doc-meta-right">
-            <div><strong>Document ID:</strong> DOC-{p.patientId}-{doc.date.replace(/-/g, '')}</div>
-            <div><strong>Date:</strong> {doc.date}</div>
-          </div>
-        </div>
-        
-        <hr className="healer-doc-divider" />
-        
-        <div className="healer-doc-patient-info">
-          <h3>{doc.type.toUpperCase()}: {doc.name.replace('.pdf', '')}</h3>
-          <div className="healer-doc-info-grid">
-            <div><strong>Patient Name:</strong> {p.name}</div>
-            <div><strong>Age / Gender:</strong> {p.age} / {p.gender}</div>
-            <div><strong>Patient ID:</strong> {p.patientId}</div>
-            <div><strong>Status:</strong> Logged Document</div>
-          </div>
-        </div>
-        
-        <div className="healer-doc-body">
-          <h4>DOCUMENT DESCRIPTION</h4>
-          <p>This is a scanned file upload of a patient medical record. The authenticity of this electronic copy has been verified by the clinic archives.</p>
-          
-          <h4>RECORD DETAIL</h4>
-          <p>This record corresponds to clinical observations for {p.name}. The diagnosis of <strong>{p.condition}</strong> is active. The recommended healing regimens should be modified according to the diagnostic contents of this clinical record.</p>
-          
-          <h4>CLINICAL NOTE</h4>
-          <p>Please contact the primary healthcare provider or the assigned healer, {p.assignedHealer}, for diagnostic interpretations regarding this patient chart.</p>
-        </div>
-        
-        <div className="healer-doc-footer">
-          <div className="healer-doc-signature">
-            <div className="signature-line"></div>
-            <strong>NPHMS Clinic Registrar</strong>
-            <span>Medical Records Department</span>
-          </div>
-        </div>
-      </div>
-    );
   };
 
-  if (selectedDoc) {
-    const activePatient = mockPatients.find(p => p.patientId === selectedDoc.patientId) || {
-      name: selectedDoc.patientName,
-      patientId: selectedDoc.patientId,
-      phone: '+91 98765 43210',
-      gender: 'Male',
-      age: 45,
-      condition: 'Chronic Back Pain',
-      assignedHealer: 'Dr. David'
-    };
+  const handleCloseViewer = () => {
+    if (viewBlobUrl) {
+      window.URL.revokeObjectURL(viewBlobUrl);
+    }
+    setViewBlobUrl(null);
+    setViewingDoc(null);
+  };
 
-    const docItem = {
-      name: selectedDoc.docName,
-      type: selectedDoc.type,
-      date: selectedDoc.date
-    };
-
-    return (
-      <IonPage className="sa-page">
-        <IonHeader className="ion-no-border">
-          <IonToolbar className="sa-page__toolbar">
-            <IonButtons slot="start">
-              <button className="healer-back-btn" onClick={() => setSelectedDoc(null)}>
-                <IonIcon icon={arrowBackOutline} />
-              </button>
-            </IonButtons>
-            <IonTitle className="sa-page__toolbar-title">{selectedDoc.docName}</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent className="healer-doc-viewer-content">
-          <div className="healer-doc-viewer-container">
-            {renderMockDocumentContent(docItem, activePatient)}
-          </div>
-        </IonContent>
-      </IonPage>
-    );
-  }
+  const handleDownloadDoc = async (id: string, fileName: string) => {
+    try {
+      const blob = await getDocumentBlob(id);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      triggerToast('Document download started.', 'success');
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Failed to download document.', 'danger');
+    }
+  };
 
   return (
     <IonPage className="sa-page">
@@ -391,7 +203,6 @@ const DocumentsPages: React.FC = () => {
             <p className="healer-page-subtitle">Review lab reports, doctor records, and consultation files uploaded for your assigned patients.</p>
           </div>
 
-          {/* Search Bar */}
           <div className="sa-search" style={{ margin: '1rem 0', maxWidth: '100%' }}>
             <IonIcon icon={searchOutline} />
             <input
@@ -402,9 +213,8 @@ const DocumentsPages: React.FC = () => {
             />
           </div>
 
-          {/* Category Filter Segments */}
           <div className="healer-filter-tabs">
-            {(['All', 'Doctor Report', 'Lab Report', 'Consultation Note', 'Other Document'] as const).map(tab => (
+            {(['All', 'Medical Report', 'Lab Report', 'Prescription', 'ID Proof', 'Other Document'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setTypeFilter(tab)}
@@ -415,20 +225,23 @@ const DocumentsPages: React.FC = () => {
             ))}
           </div>
 
-          {/* Document list */}
           <div className="healer-documents-list">
-            {filteredDocs.map(doc => (
+            {isLoading && filteredDocs.length === 0 ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+                <IonSpinner name="crescent" />
+              </div>
+            ) : filteredDocs.map(doc => (
               <div 
                 key={doc.id} 
                 className="healer-document-item-horizontal"
-                onClick={() => setSelectedDoc(doc)}
+                onClick={() => handleViewDoc(doc)}
               >
                 <div className="healer-document-item__left">
                   <div className="healer-document-item__icon-container">
                     <IonIcon icon={documentTextOutline} className="healer-document-item__icon" />
                   </div>
                   <div>
-                    <strong className="healer-document-item__name--large">{doc.docName}</strong>
+                    <strong className="healer-document-item__name--large">{doc.documentName}</strong>
                     <div className="healer-document-item__subtext">
                       <span className="healer-document-item__patient-info">
                         <IonIcon icon={personOutline} />
@@ -447,7 +260,7 @@ const DocumentsPages: React.FC = () => {
               </div>
             ))}
 
-            {filteredDocs.length === 0 && (
+            {!isLoading && filteredDocs.length === 0 && (
               <div className="healer-empty-state">
                 <IonIcon icon={folderOpenOutline} className="healer-empty-state__icon" />
                 <p>No documents found matching the filters.</p>
@@ -455,6 +268,91 @@ const DocumentsPages: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Full-Page Document Viewer Modal */}
+        <IonModal 
+          isOpen={viewingDoc !== null} 
+          onDidDismiss={handleCloseViewer} 
+          className="sa-modal sa-modal--full"
+        >
+          {viewingDoc && (
+            <div className="dm-viewer-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+              <div className="dm-viewer-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', height: '70px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+                <div className="dm-viewer-header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <IonIcon icon={documentOutline} style={{ fontSize: '24px', color: '#1f7a6a' }} />
+                  <div>
+                    <h3 className="dm-viewer-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{viewingDoc.documentName}</h3>
+                    <span className="dm-badge dm-badge--small" style={{ fontSize: '11px', marginTop: '2px', display: 'inline-block', color : "black" }}>
+                      {viewingDoc.type} • {viewingDoc.format}
+                    </span>
+                  </div>
+                </div>
+                <div className="dm-viewer-header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button 
+                    className="dm-viewer-download-btn" 
+                    onClick={() => handleDownloadDoc(viewingDoc.id, viewingDoc.documentName)} 
+                    style={{ background: '#1f7a6a', border: '1px solid #1f7a6a', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                  >
+                    <IonIcon icon={downloadOutline} />
+                    Download
+                  </button>
+                  <button 
+                    className="dm-viewer-close-btn" 
+                    onClick={handleCloseViewer} 
+                    style={{ background: '#ef4444', borderColor: '#ef4444', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                  >
+                    <IonIcon icon={closeOutline} />
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="dm-viewer-body" style={{ flex: 1, padding: 0, background: '#0f172a', overflowY: 'auto' }}>
+                {isFetchingBlob ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
+                    <h3>Loading Document Preview...</h3>
+                  </div>
+                ) : viewBlobUrl ? (
+                  <div className="dm-viewer-paper" style={{ width: '100%', height: '100%', background: 'transparent', overflow: 'hidden' }}>
+                    {viewingDoc.mimeType === 'application/pdf' || viewingDoc.format === 'PDF' ? (
+                      <iframe 
+                        src={viewBlobUrl} 
+                        style={{ width: '100%', height: 'calc(100vh - 70px)', border: 'none' }} 
+                        title={viewingDoc.documentName} 
+                      />
+                    ) : viewingDoc.mimeType.startsWith('image/') || ['PNG', 'JPG', 'JPEG'].includes(viewingDoc.format) ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: 'calc(100vh - 70px)', background: '#0f172a', padding: 0 }}>
+                        <img 
+                          src={viewBlobUrl} 
+                          alt={viewingDoc.documentName} 
+                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ padding: '60px 40px', textAlign: 'center', background: '#ffffff', height: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <IonIcon icon={documentOutline} style={{ fontSize: '72px', color: '#94a3b8', marginBottom: '20px' }} />
+                        <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Preview Not Supported</h3>
+                        <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '400px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+                          Direct browser previews are not supported for {viewingDoc.format} documents. Please download the file to view its content locally.
+                        </p>
+                        <button 
+                          className="sa-btn sa-btn--primary" 
+                          onClick={() => handleDownloadDoc(viewingDoc.id, viewingDoc.documentName)}
+                        >
+                          Download {viewingDoc.format}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
+                    <h3>Document content is unavailable.</h3>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </IonModal>
       </IonContent>
     </IonPage>
   );

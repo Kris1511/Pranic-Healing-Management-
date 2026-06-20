@@ -1,10 +1,14 @@
 import axiosInstance from './axois.instance';
 
-export const uploadDocument = async (patientId: string, file: File, fileType: string) => {
+export const uploadDocument = async (patientId: string, file: File, fileType: string, customFilename?: string) => {
   const formData = new FormData();
   formData.append('patientId', patientId);
   formData.append('fileType', fileType);
-  formData.append('file', file);
+  if (customFilename) {
+    formData.append('file', file, customFilename);
+  } else {
+    formData.append('file', file);
+  }
 
   const response = await axiosInstance.post('/documents/upload', formData, {
     headers: {

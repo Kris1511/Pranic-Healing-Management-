@@ -45,7 +45,12 @@ class DocumentController {
   getAllDocuments = async (req, res) => {
     try {
       const branchId = req.branchId || null;
-      const documents = await documentService.getAllDocuments(branchId);
+      const options = {
+        branchId,
+        userRole: req.user?.role,
+        userId: req.user?.id || req.user?._id
+      };
+      const documents = await documentService.getAllDocuments(options);
       return sendResponse(res, 200, 'Documents retrieved successfully', documents);
     } catch (error) {
       console.error('Get All Documents Error:', error);
@@ -64,7 +69,7 @@ class DocumentController {
         return sendResponse(res, 404, 'File not found on server');
       }
 
-      res.download(absolutePath, document.fileName);
+      res.download(absolutePath, document.originalName || document.fileName);
     } catch (error) {
       console.error('Download Error:', error);
       return res.status(500).json({ success: false, message: error.message || 'Internal Server Error' });

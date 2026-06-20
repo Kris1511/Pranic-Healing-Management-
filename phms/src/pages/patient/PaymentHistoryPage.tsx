@@ -248,7 +248,7 @@ const PaymentHistoryPage: React.FC = () => {
                 <table className="dm-table">
                   <thead>
                     <tr>
-                      <th>INVOICE ID</th>
+                      {/* <th>INVOICE ID</th> */}
                       <th>SESSION NO</th>
                       <th>SESSION DATE</th>
                       <th>TREATMENT</th>
@@ -263,7 +263,7 @@ const PaymentHistoryPage: React.FC = () => {
                   <tbody>
                     {entries.map((entry) => (
                       <tr className="dm-table-row" key={entry.id}>
-                        <td style={{ fontWeight: 700, color: '#1e293b' }}>{entry.id}</td>
+                        {/* <td style={{ fontWeight: 700, color: '#1e293b' }}>{entry.id}</td> */}
                         <td style={{ color: '#0f766e', fontWeight: 600 }}>{entry.sessionNo}</td>
                         <td style={{ color: '#475569', whiteSpace: 'nowrap' }}>
                           {toDisplayDate(entry.sessionDate)}

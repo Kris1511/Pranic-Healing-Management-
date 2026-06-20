@@ -222,6 +222,7 @@ const SessionsPage: React.FC = () => {
           localStorage.setItem('phms_audits', JSON.stringify([newAudit, ...audits]));
 
           triggerToast(`Session record ${session.sessionNo} removed successfully.`);
+          console.log("Status", session.status);
         } catch (error) {
           console.error(error);
           triggerToast('Failed to delete session from database', 'danger');

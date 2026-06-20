@@ -1639,3 +1639,20 @@
     display: inline !important;
   }
 }
+
+/* Full-screen Document Viewer Modal */
+.sa-modal--full {
+  --width: 100vw;
+  --height: 100vh;
+  --max-width: 100vw;
+  --max-height: 100vh;
+}
+
+.sa-modal--full::part(content) {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  box-shadow: none;
+}

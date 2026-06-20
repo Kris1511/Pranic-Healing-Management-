@@ -16,10 +16,14 @@ import {
   documentTextOutline,
   chevronForwardOutline,
   personOutline,
-  chatboxOutline
+  chatboxOutline,
+  businessOutline,
+  personCircleOutline
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useHistory } from 'react-router-dom';
+import { getPatients } from '../../api/patient.api';
+import { getSessions } from '../../api/session.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 
@@ -29,50 +33,47 @@ const PatientDashboardPage: React.FC = () => {
 
   const userName = user?.name || 'Valued Patient';
 
+  const [patientData, setPatientData] = React.useState<any>(null);
   const [upcomingCount, setUpcomingCount] = React.useState(0);
   const [completedCount, setCompletedCount] = React.useState(0);
   const [recordsCount, setRecordsCount] = React.useState(0);
 
   React.useEffect(() => {
-    let patientName = userName;
-    const savedPatients = localStorage.getItem('phms_patients');
-    if (savedPatients) {
-      try {
-        const parsed = JSON.parse(savedPatients);
-        const found = parsed.find((p: any) => p.email?.toLowerCase() === user?.email?.toLowerCase());
-        if (found) {
-          patientName = found.name;
+    const fetchPatientData = async () => {
+      if (user?.email) {
+        try {
+          const res = await getPatients({ email: user.email });
+          if (res.data && res.data.length > 0) {
+            setPatientData(res.data[0]);
+          }
+        } catch (e) {
+          console.error('Failed to fetch patient data', e);
         }
-      } catch (e) {
-        console.error(e);
       }
-    }
+    };
+    fetchPatientData();
+  }, [user?.email]);
 
-    const savedSessions = localStorage.getItem('phms_sessions');
-    let upcoming = 0;
-    let completed = 0;
-
-    if (savedSessions) {
-      try {
-        const parsed = JSON.parse(savedSessions);
-        const filtered = parsed.filter(
-          (s: any) => s.patient?.toLowerCase().trim() === patientName.toLowerCase().trim()
-        );
-        upcoming = filtered.filter((s: any) => s.status === 'Scheduled').length;
-        completed = filtered.filter((s: any) => s.status === 'Completed').length;
-      } catch (e) {
-        console.error(e);
-      }
+  React.useEffect(() => {
+    if (patientData?.id) {
+      getSessions({ patientId: patientData.id })
+        .then((res: any) => {
+          if (res.data) {
+            const upcoming = res.data.filter((s: any) => s.status === 'Scheduled').length;
+            const completed = res.data.filter((s: any) => s.status === 'Completed').length;
+            setUpcomingCount(upcoming);
+            setCompletedCount(completed);
+            setRecordsCount(patientData.documents?.length || 0);
+          }
+        })
+        .catch(console.error);
     } else {
-      upcoming = 1;
-      completed = 12;
+      // Fallback for UI if patient not loaded yet
+      setUpcomingCount(0);
+      setCompletedCount(0);
+      setRecordsCount(0);
     }
-
-    setUpcomingCount(upcoming);
-    setCompletedCount(completed);
-    setRecordsCount(completed > 0 ? completed : 4);
-  }, [user?.email, userName]);
-
+  }, [patientData]);
 
   return (
     <IonPage className="sa-page">
@@ -96,6 +97,69 @@ const PatientDashboardPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {patientData && (
+            <>
+              <h3 className="healer-section-title">Assigned Details</h3>
+              <div className="healer-stats-grid">
+                {patientData.branch && (
+                  <div className="healer-stat-card">
+                    <div className="healer-stat-card__icon-wrap" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>
+                      <IonIcon icon={businessOutline} />
+                    </div>
+                    <div className="healer-stat-card__info">
+                      <span className="healer-stat-card__label">Branch</span>
+                      <span className="healer-stat-card__value" style={{ fontSize: '1.1rem' }}>{patientData.branch.name}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {patientData.healer ? (
+                  <div className="healer-stat-card">
+                    <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--teal">
+                      <IonIcon icon={personCircleOutline} />
+                    </div>
+                    <div className="healer-stat-card__info">
+                      <span className="healer-stat-card__label">Assigned Healer</span>
+                      <span className="healer-stat-card__value" style={{ fontSize: '1.1rem' }}>{patientData.healer.name}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="healer-stat-card">
+                    <div className="healer-stat-card__icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                      <IonIcon icon={personCircleOutline} />
+                    </div>
+                    <div className="healer-stat-card__info">
+                      <span className="healer-stat-card__label">Assigned Healer</span>
+                      <span className="healer-stat-card__value" style={{ fontSize: '1rem', color: '#6b7280' }}>Unassigned</span>
+                    </div>
+                  </div>
+                )}
+
+                {patientData.treatmentType ? (
+                  <div className="healer-stat-card">
+                    <div className="healer-stat-card__icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+                      <IonIcon icon={medkitOutline} />
+                    </div>
+                    <div className="healer-stat-card__info">
+                      <span className="healer-stat-card__label">Treatment</span>
+                      <span className="healer-stat-card__value" style={{ fontSize: '1.1rem', textTransform: 'capitalize' }}>{patientData.treatmentType}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="healer-stat-card">
+                    <div className="healer-stat-card__icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+                      <IonIcon icon={medkitOutline} />
+                    </div>
+                    <div className="healer-stat-card__info">
+                      <span className="healer-stat-card__label">Treatment</span>
+                      <span className="healer-stat-card__value" style={{ fontSize: '1rem', color: '#6b7280' }}>Unassigned</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           <h3 className="healer-section-title">
             Your Overview

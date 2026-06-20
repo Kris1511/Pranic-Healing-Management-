@@ -135,7 +135,7 @@ const PatientsDetialsPages: React.FC = () => {
     
     return patient.documents.map((d: any) => ({
       id: d.id,
-      fileName: d.fileName,
+      fileName: d.original_name || d.originalName || d.fileName,
       fileType: d.fileType || 'Report',
       date: d.createdAt 
         ? (() => {

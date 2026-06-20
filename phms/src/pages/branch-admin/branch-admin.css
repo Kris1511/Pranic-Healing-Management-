@@ -740,6 +740,7 @@
   align-items: center;
   margin-bottom: 24px;
   gap: 16px;
+  color: #0f172a;
 }
 
 .dm-body-search {
@@ -972,10 +973,11 @@
   font-weight: 500;
 }
 
-.dm-badge--doctor-report { background-color: #dbeafe; color: #1d4ed8; }
-.dm-badge--lab-report { background-color: #fee2e2; color: #b91c1c; }
-.dm-badge--consultation-note { background-color: #f3e8ff; color: #7e22ce; }
-.dm-badge--other { background-color: #f1f5f9; color: #475569; }
+.dm-badge--medical-report { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.dm-badge--lab-report { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.dm-badge--prescription { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+.dm-badge--id-proof { background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+.dm-badge--other { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 
 .dm-format {
   font-size: 12px;

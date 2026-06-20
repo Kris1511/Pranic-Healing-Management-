@@ -10,6 +10,8 @@ import {
   IonMenuButton,
   IonModal,
   useIonToast,
+  useIonViewWillEnter,
+  useIonViewWillLeave,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -62,11 +64,13 @@ const DocumentManagementPage: React.FC = () => {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageActive, setIsPageActive] = useState(true);
 
   // Full-Page Document Viewer State
   const [viewingDoc, setViewingDoc] = useState<UploadedDocument | null>(null);
   const [viewBlobUrl, setViewBlobUrl] = useState<string | null>(null);
   const [isFetchingBlob, setIsFetchingBlob] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<UploadedDocument | null>(null);
 
   // Add Document Modal State
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -92,8 +96,8 @@ const DocumentManagementPage: React.FC = () => {
     });
   };
 
-  const fetchAllData = async () => {
-    setIsLoading(true);
+  const fetchAllData = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       // 1. Fetch Patients
       const patientsRes = await getPatients();
@@ -105,7 +109,9 @@ const DocumentManagementPage: React.FC = () => {
       const documentsRes = await getAllDocuments();
       if (documentsRes.success && Array.isArray(documentsRes.data)) {
         const mapped: UploadedDocument[] = documentsRes.data.map((doc: any) => {
-          const extension = (doc.fileName.split('.').pop() || 'PDF').toUpperCase();
+          // Use originalName/original_name if available, fallback to fileName (generated unique filename)
+          const docName = doc.original_name || doc.originalName || doc.fileName;
+          const extension = (docName.split('.').pop() || 'PDF').toUpperCase();
           
           // Map backend fileType to UI display type
           let displayType = 'Other';
@@ -124,7 +130,7 @@ const DocumentManagementPage: React.FC = () => {
 
           return {
             id: doc.id,
-            documentName: doc.fileName,
+            documentName: docName,
             patientName: doc.patient ? doc.patient.name : 'Unknown Patient',
             patientId: doc.patient ? doc.patient.patientId : 'N/A',
             type: displayType,
@@ -138,15 +144,35 @@ const DocumentManagementPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      triggerToast('Failed to retrieve documents ledger.', 'danger');
+      if (showLoading) {
+        triggerToast('Failed to retrieve documents ledger.', 'danger');
+      }
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
+  useIonViewWillEnter(() => {
+    setIsPageActive(true);
+  });
+
+  useIonViewWillLeave(() => {
+    setIsPageActive(false);
+  });
+
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (!isPageActive) return;
+
+    // Load initially with spinner if list is empty
+    fetchAllData(documents.length === 0);
+
+    // Setup live update polling interval
+    const interval = setInterval(() => {
+      fetchAllData(false);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isPageActive, documents.length]);
 
   // Filter & Search Logic
   const filteredDocs = documents.filter((doc) => {
@@ -226,13 +252,19 @@ const DocumentManagementPage: React.FC = () => {
     }
   };
 
-  // Action: Delete Document
-  const handleDeleteDoc = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this document?')) return;
+  // Action: Delete Document Confirmation Trigger
+  const handleDeleteDoc = (doc: UploadedDocument) => {
+    setDocToDelete(doc);
+  };
+
+  // Action: Confirm Delete
+  const handleConfirmDelete = async () => {
+    if (!docToDelete) return;
     try {
-      await deleteDocument(id);
+      await deleteDocument(docToDelete.id);
       triggerToast('Document deleted successfully!', 'success');
-      fetchAllData();
+      setDocToDelete(null);
+      fetchAllData(false);
     } catch (err: any) {
       console.error(err);
       triggerToast(err.response?.data?.message || 'Failed to delete document', 'danger');
@@ -253,7 +285,7 @@ const DocumentManagementPage: React.FC = () => {
 
     try {
       setIsUploading(true);
-      await uploadDocument(uploadForm.patientId, uploadForm.selectedFile, backendType);
+      await uploadDocument(uploadForm.patientId, uploadForm.selectedFile, backendType, uploadForm.selectedFileName || undefined);
       triggerToast('Document uploaded successfully!', 'success');
       setShowUploadModal(false);
       
@@ -423,7 +455,7 @@ const DocumentManagementPage: React.FC = () => {
                   <tr>
                     <th>DOCUMENT NAME</th>
                     <th>PATIENT NAME</th>
-                    <th>PATIENT ID</th>
+                    {/* <th>PATIENT ID</th> */}
                     <th>TYPE</th>
                     <th>UPLOAD DATE</th>
                     <th style={{ textAlign: 'center' }}>ACTIONS</th>
@@ -450,7 +482,7 @@ const DocumentManagementPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="dm-cell-patient">{doc.patientName}</td>
-                        <td style={{ color: '#64748b', fontWeight: 500 }}>{doc.patientId}</td>
+                        {/* <td style={{ color: '#64748b', fontWeight: 500 }}>{doc.patientId}</td> */}
                         <td>
                           <span className={`dm-badge dm-badge--${doc.type.toLowerCase().replace(' ', '-')}`}>
                             {doc.type}
@@ -474,12 +506,12 @@ const DocumentManagementPage: React.FC = () => {
                               <IonIcon icon={downloadOutline} /> Download
                             </button>
                             <button
-                              onClick={() => handleDeleteDoc(doc.id)}
-                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                              title="Delete Document"
-                            >
-                              <IonIcon icon={closeOutline} /> Delete
-                            </button>
+                               onClick={() => handleDeleteDoc(doc)}
+                               style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                               title="Delete Document"
+                             >
+                               <IonIcon icon={closeOutline} /> Delete
+                             </button>
                           </div>
                         </td>
                       </tr>
@@ -576,7 +608,7 @@ const DocumentManagementPage: React.FC = () => {
                 className="sa-input"
                 placeholder="Selected file name will appear here"
                 value={uploadForm.selectedFileName}
-                disabled
+                onChange={(e) => setUploadForm({ ...uploadForm, selectedFileName: e.target.value })}
               />
             </div>
 
@@ -631,18 +663,26 @@ const DocumentManagementPage: React.FC = () => {
         className="sa-modal sa-modal--full"
       >
         {viewingDoc && (
-          <div className="dm-viewer-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div className="dm-viewer-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <div className="dm-viewer-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+            <div className="dm-viewer-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', height: '70px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
               <div className="dm-viewer-header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <IonIcon icon={documentOutline} style={{ fontSize: '24px', color: '#1f7a6a' }} />
                 <div>
                   <h3 className="dm-viewer-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{viewingDoc.documentName}</h3>
-                  <span className="dm-badge dm-badge--small" style={{ fontSize: '11px', marginTop: '2px', display: 'inline-block' }}>
+                  <span className="dm-badge dm-badge--small" style={{ fontSize: '11px', marginTop: '2px', display: 'inline-block', color : "black" }}>
                     {viewingDoc.type} • {viewingDoc.format}
                   </span>
                 </div>
               </div>
-              <div className="dm-viewer-header-right">
+              <div className="dm-viewer-header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button 
+                  className="dm-viewer-download-btn" 
+                  onClick={() => handleDownloadDoc(viewingDoc.id, viewingDoc.documentName)} 
+                  style={{ background: '#1f7a6a', border: '1px solid #1f7a6a', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                >
+                  <IonIcon icon={downloadOutline} />
+                  Download
+                </button>
                 <button 
                   className="dm-viewer-close-btn" 
                   onClick={handleCloseViewer} 
@@ -654,29 +694,29 @@ const DocumentManagementPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="dm-viewer-body" style={{ flex: 1, padding: '24px', background: '#e2e8f0', overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div className="dm-viewer-body" style={{ flex: 1, padding: 0, background: '#0f172a', overflowY: 'auto' }}>
               {isFetchingBlob ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
                   <h3>Loading Document Preview...</h3>
                 </div>
               ) : viewBlobUrl ? (
-                <div className="dm-viewer-paper" style={{ width: '100%', maxWidth: '900px', background: '#ffffff', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                <div className="dm-viewer-paper" style={{ width: '100%', height: '100%', background: 'transparent', overflow: 'hidden' }}>
                   {viewingDoc.mimeType === 'application/pdf' || viewingDoc.format === 'PDF' ? (
                     <iframe 
                       src={viewBlobUrl} 
-                      style={{ width: '100%', height: '700px', border: 'none' }} 
+                      style={{ width: '100%', height: 'calc(100vh - 70px)', border: 'none' }} 
                       title={viewingDoc.documentName} 
                     />
                   ) : viewingDoc.mimeType.startsWith('image/') || ['PNG', 'JPG', 'JPEG'].includes(viewingDoc.format) ? (
-                    <div style={{ textAlign: 'center', padding: '24px', background: '#ffffff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: 'calc(100vh - 70px)', background: '#0f172a', padding: 0 }}>
                       <img 
                         src={viewBlobUrl} 
                         alt={viewingDoc.documentName} 
-                        style={{ maxWidth: '100%', maxHeight: '650px', borderRadius: '4px', objectFit: 'contain' }} 
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
                       />
                     </div>
                   ) : (
-                    <div style={{ padding: '60px 40px', textAlign: 'center', background: '#ffffff' }}>
+                    <div style={{ padding: '60px 40px', textAlign: 'center', background: '#ffffff', height: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                       <IonIcon icon={documentOutline} style={{ fontSize: '72px', color: '#94a3b8', marginBottom: '20px' }} />
                       <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Preview Not Supported</h3>
                       <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '400px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
@@ -692,13 +732,44 @@ const DocumentManagementPage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
                   <h3>Document content is unavailable.</h3>
                 </div>
               )}
             </div>
           </div>
         )}
+      </IonModal>
+
+      {/* Delete Confirmation Modal */}
+      <IonModal 
+        isOpen={docToDelete !== null} 
+        onDidDismiss={() => setDocToDelete(null)} 
+        className="sa-modal sa-modal--sm"
+      >
+        <div className="sa-modal__content">
+          <div className="sa-modal__header">
+            <h2 style={{ color: '#ef4444' }}>Confirm Deletion</h2>
+            <button className="sa-modal__close-btn" onClick={() => setDocToDelete(null)}>×</button>
+          </div>
+          <div className="sa-modal__body" style={{ padding: '24px', textAlign: 'center' }}>
+            {/* <IonIcon icon={closeOutline} style={{ fontSize: '48px', color: '#ef4444', marginBottom: '16px' }} /> */}
+            <p style={{ margin: 0, fontSize: '15px', color: '#475569', lineHeight: 1.6 }}>
+              Are you sure you want to permanently delete the document <strong>{docToDelete?.documentName}</strong>?
+            </p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
+              This action cannot be undone and the file will be removed from the server.
+            </p>
+          </div>
+          <div className="sa-modal__footer" style={{ background: '#fafbfc', padding: '16px 24px', borderTop: '1px solid #f1f5f9', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+            <button className="sa-btn sa-btn--outline" onClick={() => setDocToDelete(null)}>
+              Cancel
+            </button>
+            <button className="sa-btn" onClick={handleConfirmDelete} style={{ background: '#ef4444', color: '#fff' }}>
+              Delete Document
+            </button>
+          </div>
+        </div>
       </IonModal>
     </IonPage>
   );

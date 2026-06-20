@@ -149,6 +149,24 @@ class SessionController {
     if (req.query.patient_id) filter.patientId = req.query.patient_id;
     if (req.query.healer_id) filter.healerId = req.query.healer_id;
     if (req.branchId) filter.branchId = req.branchId;
+    if (req.query.treatment_type) filter.treatmentType = req.query.treatment_type;
+
+    if (req.query.startDate && req.query.endDate) {
+      const { Op } = require('sequelize');
+      filter.sessionDate = {
+        [Op.between]: [req.query.startDate, req.query.endDate]
+      };
+    } else if (req.query.startDate) {
+      const { Op } = require('sequelize');
+      filter.sessionDate = {
+        [Op.gte]: req.query.startDate
+      };
+    } else if (req.query.endDate) {
+      const { Op } = require('sequelize');
+      filter.sessionDate = {
+        [Op.lte]: req.query.endDate
+      };
+    }
 
     // Restrict sessions to only those assigned to the logged-in healer
     if (req.user && String(req.user.role).toUpperCase() === 'HEALER') {

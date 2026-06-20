@@ -41,6 +41,8 @@ const mapPatientToResponse = (patient) => {
     healerId: patient.healerId,
     email: patient.email,
     lastVisit,
+    status: patient.status,
+    createdAt: patient.createdAt,
 
     // Associations
     branch: patient.branch ? {

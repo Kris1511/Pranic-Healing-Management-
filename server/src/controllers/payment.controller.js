@@ -60,6 +60,7 @@ const mapSessionToLedgerEntry = (session) => {
     startTime:      session.startTime || null,
     endTime:        session.endTime || null,
     healer:         healerName,
+    healerId:       session.healerId || null,
     totalBilled:    sessionFee,
     paid:           paidAmount,
     outstanding,
@@ -108,6 +109,24 @@ class PaymentController {
     }
     if (req.query.patientId) filter.patientId = req.query.patientId;
     if (req.query.healerId) filter.healerId = req.query.healerId;
+    if (req.query.treatmentType) filter.treatmentType = req.query.treatmentType;
+
+    if (req.query.startDate && req.query.endDate) {
+      const { Op } = require('sequelize');
+      filter.sessionDate = {
+        [Op.between]: [req.query.startDate, req.query.endDate]
+      };
+    } else if (req.query.startDate) {
+      const { Op } = require('sequelize');
+      filter.sessionDate = {
+        [Op.gte]: req.query.startDate
+      };
+    } else if (req.query.endDate) {
+      const { Op } = require('sequelize');
+      filter.sessionDate = {
+        [Op.lte]: req.query.endDate
+      };
+    }
 
     const sessions = await paymentService.getSessionsWithPayments(filter);
     const ledger = sessions.map(mapSessionToLedgerEntry);

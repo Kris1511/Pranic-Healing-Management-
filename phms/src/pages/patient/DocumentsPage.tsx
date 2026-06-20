@@ -9,6 +9,7 @@ import {
   IonIcon,
   IonMenuButton,
   IonModal,
+  IonSpinner,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -22,204 +23,206 @@ import {
   chevronForwardOutline,
   closeOutline,
   arrowBackOutline,
+  downloadOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
+import { useQuery } from '@tanstack/react-query';
+import { getPatients } from '../../api/patient.api';
+import { getPatientDocuments, uploadDocument, getDocumentBlob } from '../../api/document.api';
 import '../branch-admin/branch-admin.css';
 import './Patient.css';
 
 interface UploadedDocument {
-  id: number;
+  id: string;
   documentName: string;
   patientName: string;
-  type: 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other';
+  type: string;
   date: string;
-  format: 'PDF' | 'JPG' | 'PNG' | 'DOCX' | 'XLSX';
+  format: string;
   size: string;
   uploadedBy: string;
-  assignedHealer?: string;
 }
+
+const mapFileTypeToLabel = (type: string) => {
+  if (type === 'MEDICAL_REPORT') return 'Medical Report';
+  if (type === 'LAB_REPORT') return 'Lab Report';
+  if (type === 'PRESCRIPTION') return 'Prescription';
+  if (type === 'ID_PROOF') return 'ID Proof';
+  return 'Other Document';
+};
+
+const inferDocumentType = (fileName: string) => {
+  const lower = fileName.toLowerCase();
+  if (lower.includes('lab') || lower.includes('blood') || lower.includes('mri') || lower.includes('xray') || lower.includes('scan') || lower.includes('test')) return 'LAB_REPORT';
+  if (lower.includes('consultation') || lower.includes('prescription') || lower.includes('note')) return 'PRESCRIPTION';
+  if (lower.includes('id') || lower.includes('proof') || lower.includes('aadhaar') || lower.includes('pan') || lower.includes('passport')) return 'ID_PROOF';
+  if (lower.includes('medical') || lower.includes('report') || lower.includes('discharge')) return 'MEDICAL_REPORT';
+  return 'MEDICAL_REPORT';
+};
 
 const DocumentsPage: React.FC = () => {
   const history = useHistory();
   const { user } = useAuthStore();
 
   const userName = user?.name || 'Valued Patient';
-  const userEmail = user?.email || 'patient@phms.com';
-
-  // Dynamic Patient Info lookup
-  const [resolvedPatientName, setResolvedPatientName] = useState(userName);
+  const userEmail = user?.email || '';
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showAll, setShowAll] = useState(false);
   const itemsPerPage = 5;
 
   // View Document State
   const [selectedViewDoc, setSelectedViewDoc] = useState<UploadedDocument | null>(null);
+  const [viewBlobUrl, setViewBlobUrl] = useState<string | null>(null);
+  const [isFetchingBlob, setIsFetchingBlob] = useState(false);
 
   // Add Document Modal State
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    documentType: 'Doctor Report' as 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other',
+  const [uploadForm, setUploadForm] = useState<{
+    documentType: string;
+    selectedFileName: string;
+    selectedFile: File | null;
+  }>({
+    documentType: 'MEDICAL_REPORT',
     selectedFileName: '',
+    selectedFile: null,
   });
 
-  // Mock Upload Progress State
   const [isUploading, setIsUploading] = useState(false);
 
-  // Primary Documents State (restricted to logged in Patient)
-  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  // 1. Fetch Patient
+  const { data: patientData } = useQuery({
+    queryKey: ['patient', userEmail],
+    queryFn: async () => {
+      const res = await getPatients({ email: userEmail });
+      return res.data && res.data.length > 0 ? res.data[0] : null;
+    },
+    enabled: !!userEmail,
+  });
 
-  // Initial load
-  useEffect(() => {
-    // 1. Resolve Patient name
-    let patientName = userName;
-    const savedPatients = localStorage.getItem('phms_patients');
-    if (savedPatients) {
-      try {
-        const parsed = JSON.parse(savedPatients);
-        const found = parsed.find((p: any) => p.email?.toLowerCase() === userEmail.toLowerCase());
-        if (found) {
-          patientName = found.name;
-          setResolvedPatientName(found.name);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
+  const resolvedPatientName = patientData?.name || userName;
 
-    // 2. Load all documents from localStorage
-    const cached = localStorage.getItem('phms_uploaded_documents');
-    let docsList: UploadedDocument[] = [];
-    if (cached) {
-      try {
-        docsList = JSON.parse(cached);
-      } catch (e) {
-        console.error(e);
-      }
-    }
+  // 2. Fetch Documents
+  const { data: documents = [], refetch: refetchDocs, isLoading: isLoadingDocs } = useQuery<UploadedDocument[]>({
+    queryKey: ['patient-documents', patientData?.id],
+    queryFn: async () => {
+      if (!patientData?.id) return [];
+      const res = await getPatientDocuments(patientData.id);
+      return (res.data || []).map((d: any) => {
+        const ext = (d.originalName || d.fileName || '').split('.').pop() || 'PDF';
+        return {
+          id: d.id,
+          documentName: d.originalName || d.fileName,
+          patientName: resolvedPatientName,
+          type: mapFileTypeToLabel(d.fileType),
+          date: new Date(d.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          format: ext.toUpperCase(),
+          size: 'Unknown',
+          uploadedBy: 'Patient',
+        };
+      }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    },
+    enabled: !!patientData?.id,
+  });
 
-    // Filter documents for this patient to check if any exist
-    const patientDocs = docsList.filter(
-      (d) => d.patientName?.toLowerCase().trim() === patientName.toLowerCase().trim()
-    );
-    if (patientDocs.length === 0) {
-      const sampleDocs: UploadedDocument[] = [
-        {
-          id: Date.now() - 3600000 * 24 * 3, // 3 days ago
-          documentName: 'Doctor_Diagnosis_May2026.pdf',
-          patientName: patientName,
-          type: 'Doctor Report',
-          date: new Date(Date.now() - 3600000 * 24 * 3).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          format: 'PDF',
-          size: '1.8 MB',
-          uploadedBy: 'Dr. David'
-        },
-        {
-          id: Date.now() - 3600000 * 24 * 10, // 10 days ago
-          documentName: 'Thyroid_Profile_Lab_Report.png',
-          patientName: patientName,
-          type: 'Lab Report',
-          date: new Date(Date.now() - 3600000 * 24 * 10).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          format: 'PNG',
-          size: '2.4 MB',
-          uploadedBy: patientName
-        },
-        {
-          id: Date.now() - 3600000 * 24 * 15, // 15 days ago
-          documentName: 'Chakra_Aura_Assessment.docx',
-          patientName: patientName,
-          type: 'Consultation Note',
-          date: new Date(Date.now() - 3600000 * 24 * 15).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          format: 'DOCX',
-          size: '1.2 MB',
-          uploadedBy: 'Dr. Shailesh'
-        }
-      ];
-      docsList = [...sampleDocs, ...docsList];
-      localStorage.setItem('phms_uploaded_documents', JSON.stringify(docsList));
-    }
-    setDocuments(docsList);
-  }, [userEmail, userName]);
-
-  // Sync documents list back to localStorage when patient uploads a new document
-  const saveAllDocuments = (newDocsList: UploadedDocument[]) => {
-    setDocuments(newDocsList);
-    localStorage.setItem('phms_uploaded_documents', JSON.stringify(newDocsList));
-  };
-
-  const triggerMockUpload = (fileName: string, type: 'Doctor Report' | 'Lab Report' | 'Consultation Note' | 'Other') => {
-    if (isUploading) return;
-    setIsUploading(true);
-
-    setTimeout(() => {
-      const extension = (fileName.split('.').pop() || 'PDF').toUpperCase() as any;
-      const newDoc: UploadedDocument = {
-        id: Date.now(),
-        documentName: fileName,
-        patientName: resolvedPatientName,
-        type: type,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        format: extension,
-        size: `${(Math.random() * 3 + 1).toFixed(1)} MB`,
-        uploadedBy: resolvedPatientName,
-        assignedHealer: 'Dr. Shailesh',
-      };
-
-      // Prepend new document
-      const updatedDocsList = [newDoc, ...documents];
-      saveAllDocuments(updatedDocsList);
-
-      setIsUploading(false);
-    }, 1000);
-  };
-
-  const handleModalUploadSubmit = () => {
-    if (!uploadForm.selectedFileName) {
+  const handleModalUploadSubmit = async () => {
+    if (!uploadForm.selectedFile) {
       alert('Please select a file to upload.');
       return;
     }
-    setShowUploadModal(false);
-    triggerMockUpload(uploadForm.selectedFileName, uploadForm.documentType);
-    setUploadForm({
-      documentType: 'Doctor Report',
-      selectedFileName: '',
-    });
+    if (!patientData?.id) {
+      alert('Patient context not loaded properly.');
+      return;
+    }
+    
+    setIsUploading(true);
+    try {
+      await uploadDocument(patientData.id, uploadForm.selectedFile, uploadForm.documentType, uploadForm.selectedFileName);
+      setShowUploadModal(false);
+      setUploadForm({
+        documentType: 'MEDICAL_REPORT',
+        selectedFileName: '',
+        selectedFile: null,
+      });
+      refetchDocs();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to upload document.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  // Filter logic (Strictly limited to current patient name)
+  // Filter logic
   const filteredDocs = documents.filter((doc) => {
-    const matchesPatient = doc.patientName?.toLowerCase().trim() === resolvedPatientName.toLowerCase().trim();
-    if (!matchesPatient) return false;
-
     const matchesSearch =
-      doc.documentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.uploadedBy.toLowerCase().includes(searchQuery.toLowerCase());
-
+      doc.documentName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'All' || doc.type === filterType;
-
     return matchesSearch && matchesType;
   });
 
   // Aggregate stats FOR THIS PATIENT ONLY
-  const patientTotalDocs = filteredDocs.length;
-  const patientDocReports = filteredDocs.filter((d) => d.type === 'Doctor Report').length;
-  const patientLabReports = filteredDocs.filter((d) => d.type === 'Lab Report').length;
-  const patientConsultNotes = filteredDocs.filter((d) => d.type === 'Consultation Note').length;
+  const patientTotalDocs = documents.length;
+  const patientDocReports = documents.filter((d) => d.type === 'Medical Report').length;
+  const patientLabReports = documents.filter((d) => d.type === 'Lab Report').length;
+  const patientConsultNotes = documents.filter((d) => d.type === 'Prescription').length;
 
   // Pagination
   const totalPages = Math.ceil(filteredDocs.length / itemsPerPage) || 1;
-  const paginatedDocs = showAll
-    ? filteredDocs
-    : filteredDocs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginatedDocs = filteredDocs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   useEffect(() => {
     setCurrentPage(1);
-    setShowAll(false);
   }, [searchQuery, filterType]);
+
+  const handleViewDoc = async (doc: UploadedDocument) => {
+    try {
+      setIsFetchingBlob(true);
+      setSelectedViewDoc(doc);
+      const blob = await getDocumentBlob(doc.id);
+      
+      let mimeType = 'application/pdf';
+      if (doc.format === 'PNG') mimeType = 'image/png';
+      else if (doc.format === 'JPG' || doc.format === 'JPEG') mimeType = 'image/jpeg';
+      
+      const fileBlob = new Blob([blob], { type: mimeType });
+      const url = window.URL.createObjectURL(fileBlob);
+      setViewBlobUrl(url);
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to fetch document content for preview.');
+      setSelectedViewDoc(null);
+    } finally {
+      setIsFetchingBlob(false);
+    }
+  };
+
+  const handleCloseViewer = () => {
+    if (viewBlobUrl) {
+      window.URL.revokeObjectURL(viewBlobUrl);
+    }
+    setViewBlobUrl(null);
+    setSelectedViewDoc(null);
+  };
+
+  const handleDownloadDoc = async (id: string, fileName: string) => {
+    try {
+      const blob = await getDocumentBlob(id);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to download document.');
+    }
+  };
 
   return (
     <IonPage className="sa-page">
@@ -248,7 +251,7 @@ const DocumentsPage: React.FC = () => {
                 Upload and view your doctor reports, laboratory analyses, consultation assessments, and wellness plans.
               </p>
             </div>
-            <div className="dm-action-row__right">
+            {/* <div className="dm-action-row__right">
               <button
                 className="dm-action-btn dm-action-btn--primary"
                 onClick={() => setShowUploadModal(true)}
@@ -256,7 +259,7 @@ const DocumentsPage: React.FC = () => {
                 <IonIcon icon={addOutline} className="dm-btn-icon dm-btn-icon--plus" />
                 Upload New File
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* Stats Horizontal Row (restricted to this patient only) */}
@@ -282,7 +285,7 @@ const DocumentsPage: React.FC = () => {
                     <IonIcon icon={folderOpenOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
-                    <span className="dm-stat-card__label">Doctor Reports</span>
+                    <span className="dm-stat-card__label">Medical Reports</span>
                     <span className="dm-stat-card__value">{patientDocReports}</span>
                   </div>
                 </div>
@@ -310,7 +313,7 @@ const DocumentsPage: React.FC = () => {
                     <IonIcon icon={documentOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
-                    <span className="dm-stat-card__label">Consultation Notes</span>
+                    <span className="dm-stat-card__label">Prescriptions</span>
                     <span className="dm-stat-card__value">{patientConsultNotes}</span>
                   </div>
                 </div>
@@ -332,7 +335,7 @@ const DocumentsPage: React.FC = () => {
             </div>
 
             <div className="dm-panel-filter-tabs">
-              {['All', 'Doctor Report', 'Lab Report', 'Consultation Note', 'Other'].map((type) => (
+              {['All', 'Medical Report', 'Lab Report', 'Prescription', 'ID Proof', 'Other Document'].map((type) => (
                 <button
                   key={type}
                   className={`dm-filter-tab ${filterType === type ? 'dm-filter-tab--active' : ''}`}
@@ -356,7 +359,6 @@ const DocumentsPage: React.FC = () => {
                   <tr>
                     <th>DOCUMENT NAME</th>
                     <th>TYPE</th>
-                    <th>UPLOADED BY</th>
                     <th>DATE</th>
                     <th>FORMAT</th>
                   </tr>
@@ -367,7 +369,7 @@ const DocumentsPage: React.FC = () => {
                       <tr key={doc.id} className="dm-table-row">
                         <td 
                           className="dm-cell-docname pat-cursor-pointer"
-                          onClick={() => setSelectedViewDoc(doc)}
+                          onClick={() => handleViewDoc(doc)}
                         >
                           <IonIcon icon={documentOutline} className="dm-cell-icon" />
                           <span className="dm-doc-title pat-doc-title-link">{doc.documentName}</span>
@@ -376,9 +378,6 @@ const DocumentsPage: React.FC = () => {
                           <span className={`dm-badge dm-badge--${doc.type.toLowerCase().replace(' ', '-')}`}>
                             {doc.type}
                           </span>
-                        </td>
-                        <td className="dm-cell-uploadedby pat-td-uploadedby">
-                          {doc.uploadedBy === resolvedPatientName ? 'Me' : doc.uploadedBy}
                         </td>
                         <td className="dm-cell-date">{doc.date}</td>
                         <td>
@@ -400,7 +399,7 @@ const DocumentsPage: React.FC = () => {
             </div>
 
             {/* Pagination footer */}
-            {totalPages > 1 && !showAll && (
+            {totalPages > 1 && (
               <div className="dm-pagination">
                 <button
                   className="dm-page-btn"
@@ -450,17 +449,17 @@ const DocumentsPage: React.FC = () => {
               <select
                 className="sa-input"
                 value={uploadForm.documentType}
-                onChange={(e) => setUploadForm({ ...uploadForm, documentType: e.target.value as any })}
+                onChange={(e) => setUploadForm({ ...uploadForm, documentType: e.target.value })}
               >
-                <option value="Doctor Report">Doctor Report</option>
-                <option value="Lab Report">Lab Report</option>
-                <option value="Consultation Note">Consultation Note</option>
-                <option value="Other">Other</option>
+                <option value="MEDICAL_REPORT">Medical Report</option>
+                <option value="LAB_REPORT">Lab Report</option>
+                <option value="PRESCRIPTION">Consultation Note / Prescription</option>
+                <option value="ID_PROOF">ID Proof</option>
               </select>
             </div>
 
             <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Scanned File Name</label>
+              <label className="sa-settings__label">Scanned File Name (Optional)</label>
               <input
                 type="text"
                 className="sa-input"
@@ -483,17 +482,23 @@ const DocumentsPage: React.FC = () => {
                   onChange={(e) => {
                     const files = e.target.files;
                     if (files && files.length > 0) {
-                      setUploadForm({ ...uploadForm, selectedFileName: files[0].name });
+                      const file = files[0];
+                      setUploadForm({
+                        ...uploadForm,
+                        selectedFile: file,
+                        selectedFileName: file.name,
+                        documentType: inferDocumentType(file.name)
+                      });
                     }
                   }}
                   accept=".pdf,.jpg,.jpeg,.png,.docx"
                 />
                 <IonIcon icon={cloudUploadOutline} />
                 <span className="dm-modal-drag-drop-text">
-                  {uploadForm.selectedFileName ? 'Change File' : 'Click to select scan'}
+                  {uploadForm.selectedFile ? 'Change File' : 'Click to select scan'}
                 </span>
                 <span className="dm-modal-drag-drop-subtext">
-                  {uploadForm.selectedFileName ? `Selected: ${uploadForm.selectedFileName}` : 'Supports: PDF, JPG, PNG, DOCX'}
+                  {uploadForm.selectedFile ? `Selected: ${uploadForm.selectedFile.name}` : 'Supports: PDF, JPG, PNG, DOCX'}
                 </span>
               </div>
             </div>
@@ -502,77 +507,93 @@ const DocumentsPage: React.FC = () => {
             <button className="sa-btn sa-btn--outline" onClick={() => setShowUploadModal(false)}>
               Cancel
             </button>
-            <button className="sa-btn sa-btn--primary" onClick={handleModalUploadSubmit}>
-              Encrypt & Store
+            <button className="sa-btn sa-btn--primary" onClick={handleModalUploadSubmit} disabled={isUploading}>
+              {isUploading ? 'Uploading...' : 'Encrypt & Store'}
             </button>
           </div>
         </div>
       </IonModal>
 
-      {/* View Modal */}
+      {/* Full-Page Document Viewer Modal */}
       <IonModal 
         isOpen={selectedViewDoc !== null} 
-        onDidDismiss={() => setSelectedViewDoc(null)} 
-        className="dm-document-viewer-popup"
+        onDidDismiss={handleCloseViewer} 
+        className="sa-modal sa-modal--full"
       >
         {selectedViewDoc && (
-          <div className="dm-viewer-container">
-            <div className="dm-viewer-header">
-              <div className="dm-viewer-header-left">
-                <IonIcon icon={documentOutline} className="pat-viewer-doc-icon" />
+          <div className="dm-viewer-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+            <div className="dm-viewer-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', height: '70px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+              <div className="dm-viewer-header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <IonIcon icon={documentOutline} style={{ fontSize: '24px', color: '#1f7a6a' }} />
                 <div>
-                  <h3 className="dm-viewer-title">{selectedViewDoc.documentName}</h3>
-                  <span className="dm-badge dm-badge--small pat-viewer-doc-badge">
-                    {selectedViewDoc.type} • {selectedViewDoc.format} • {selectedViewDoc.size}
+                  <h3 className="dm-viewer-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{selectedViewDoc.documentName}</h3>
+                  <span className="dm-badge dm-badge--small" style={{ fontSize: '11px', marginTop: '2px', display: 'inline-block', color : "black" }}>
+                    {selectedViewDoc.type} • {selectedViewDoc.format}
                   </span>
                 </div>
               </div>
-              <div className="dm-viewer-header-right">
-                <button className="dm-viewer-close-btn pat-viewer-close-btn" onClick={() => setSelectedViewDoc(null)}>
+              <div className="dm-viewer-header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* <button 
+                  className="dm-viewer-download-btn" 
+                  onClick={() => handleDownloadDoc(selectedViewDoc.id, selectedViewDoc.documentName)} 
+                  style={{ background: '#1f7a6a', border: '1px solid #1f7a6a', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                >
+                  <IonIcon icon={downloadOutline} />
+                  Download
+                </button> */}
+                <button 
+                  className="dm-viewer-close-btn" 
+                  onClick={handleCloseViewer} 
+                  style={{ background: '#ef4444', borderColor: '#ef4444', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                >
                   <IonIcon icon={closeOutline} />
                   Close
                 </button>
               </div>
             </div>
 
-            <div className="dm-viewer-body">
-              <div className="dm-viewer-paper">
-                <div className="dm-viewer-paper-header">
-                  <div className="dm-viewer-paper-logo">
-                    <div className="dm-viewer-logo-icon pat-viewer-logo-icon">✦</div>
-                    <div>
-                      <div className="dm-viewer-logo-text pat-viewer-logo-text">NPHMS HEALTHCARE</div>
-                      <div className="dm-viewer-logo-sub pat-viewer-logo-sub">Mumbai Main Branch • Private Records Division</div>
-                    </div>
-                  </div>
-                  <div className="dm-viewer-paper-meta pat-viewer-paper-meta">
-                    <h2 className="dm-viewer-meta-title pat-viewer-meta-title">{selectedViewDoc.type}</h2>
-                    <p className="dm-viewer-meta-text pat-viewer-meta-text"><strong>RECORD ID:</strong> NPHMS-DOC-{selectedViewDoc.id}</p>
-                    <p className="dm-viewer-meta-text pat-viewer-meta-text"><strong>DATE GENERATED:</strong> {selectedViewDoc.date}</p>
-                  </div>
+            <div className="dm-viewer-body" style={{ flex: 1, padding: 0, background: '#0f172a', overflowY: 'auto' }}>
+              {isFetchingBlob ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
+                  <h3>Loading Document Preview...</h3>
                 </div>
-
-                <div className="pat-viewer-content-divider">
-                  <div className="pat-viewer-grid-2col">
-                    <div>
-                      <h4 className="pat-viewer-sub-section-title">Patient Details</h4>
-                      <p className="pat-viewer-p-margin">Name: <strong>{selectedViewDoc.patientName}</strong></p>
-                      <p className="pat-viewer-p-margin">Record Type: <strong>{selectedViewDoc.type}</strong></p>
+              ) : viewBlobUrl ? (
+                <div className="dm-viewer-paper" style={{ width: '100%', height: '100%', background: 'transparent', overflow: 'hidden' }}>
+                  {selectedViewDoc.format === 'PDF' ? (
+                    <iframe 
+                      src={viewBlobUrl} 
+                      style={{ width: '100%', height: 'calc(100vh - 70px)', border: 'none' }} 
+                      title={selectedViewDoc.documentName} 
+                    />
+                  ) : ['PNG', 'JPG', 'JPEG'].includes(selectedViewDoc.format) ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: 'calc(100vh - 70px)', background: '#0f172a', padding: 0 }}>
+                      <img 
+                        src={viewBlobUrl} 
+                        alt={selectedViewDoc.documentName} 
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                      />
                     </div>
-                    <div className="pat-text-right">
-                      <h4 className="pat-viewer-sub-section-title">Security Details</h4>
-                      <p className="pat-viewer-p-margin">Uploaded By: <strong>{selectedViewDoc.uploadedBy}</strong></p>
-                      <p className="pat-viewer-p-margin">File Size: <strong>{selectedViewDoc.size} ({selectedViewDoc.format})</strong></p>
+                  ) : (
+                    <div style={{ padding: '60px 40px', textAlign: 'center', background: '#ffffff', height: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                      <IonIcon icon={documentOutline} style={{ fontSize: '72px', color: '#94a3b8', marginBottom: '20px' }} />
+                      <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Preview Not Supported</h3>
+                      <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '400px', margin: '0 auto 24px auto', lineHeight: 1.6 }}>
+                        Direct browser previews are not supported for {selectedViewDoc.format} documents. Please download the file to view its content locally.
+                      </p>
+                      <button 
+                        className="sa-btn sa-btn--primary" 
+                        onClick={() => handleDownloadDoc(selectedViewDoc.id, selectedViewDoc.documentName)}
+                      >
+                        Download {selectedViewDoc.format}
+                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
-
-                <div className="pat-viewer-enc-box">
-                  <IonIcon icon={documentOutline} className="pat-viewer-enc-icon" />
-                  <h3 className="pat-viewer-enc-title">Clinical Document Secured & Encrypted</h3>
-                  <p className="pat-viewer-enc-desc">The content of this file is protected with end-to-end patient-healer cryptographic keys.</p>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
+                  <h3>Document content is unavailable.</h3>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}

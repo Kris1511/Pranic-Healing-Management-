@@ -43,6 +43,12 @@ interface SessionRecord {
   status: 'Completed' | 'Scheduled' | 'Cancelled';
   paymentStatus: 'Paid' | 'Pending';
   notes?: string;
+  branchName?: string;
+  totalAmount?: number | string;
+  paymentMethod?: string;
+  followupRequired?: boolean;
+  followupDate?: string;
+  followupPriority?: string;
 }
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
@@ -82,6 +88,12 @@ const mapApiSession = (s: any): SessionRecord => ({
   status: normaliseStatus(s.status),
   paymentStatus: normalisePayment(s.paymentStatus || s.payment_status),
   notes: s.notes || undefined,
+  branchName: s.branch?.name || s.branch_name || 'Unknown Branch',
+  totalAmount: s.totalAmount || s.total_amount || s.sessionFee || s.session_fee,
+  paymentMethod: s.paymentMethod || s.payment_method || '—',
+  followupRequired: s.followupRequired || s.followup_required,
+  followupDate: toLocalDate(s.followupDate || s.followup_date),
+  followupPriority: s.followupPriority || s.followup_priority,
 });
 
 /* ─── Component ───────────────────────────────────────────────────── */
@@ -148,7 +160,7 @@ const SessionHistoryPage: React.FC = () => {
           <div className="healer-header-box">
             <h1 className="healer-page-title">Session History</h1>
             <p className="healer-page-subtitle">
-              Track your complete healing timeline. View notes and recommendations logged by your assigned healer.
+              Track your complete healing timeline. View notes and details logged by your assigned healer.
             </p>
           </div>
 
@@ -226,14 +238,12 @@ const SessionHistoryPage: React.FC = () => {
                           {session.status}
                         </span>
 
-                        {session.status === 'Completed' && (
-                          <button
-                            className="pat-btn-notes-outline"
-                            onClick={() => setSelectedSession(session)}
-                          >
-                            View Notes
-                          </button>
-                        )}
+                        <button
+                          className="pat-btn-notes-outline"
+                          onClick={() => setSelectedSession(session)}
+                        >
+                          View Details
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -243,7 +253,7 @@ const SessionHistoryPage: React.FC = () => {
           </AppCard>
         </div>
 
-        {/* Session Notes Modal */}
+        {/* Session Details Modal */}
         <IonModal
           isOpen={selectedSession !== null}
           onDidDismiss={() => setSelectedSession(null)}
@@ -252,7 +262,7 @@ const SessionHistoryPage: React.FC = () => {
           <div className="healer-modal-container">
             <IonHeader className="ion-no-border">
               <IonToolbar className="healer-modal-toolbar">
-                <IonTitle>Session Notes: {selectedSession?.sessionNo}</IonTitle>
+                <IonTitle>Session Details: {selectedSession?.sessionNo}</IonTitle>
                 <IonButtons slot="end">
                   <button className="healer-modal-close-btn" onClick={() => setSelectedSession(null)}>
                     <IonIcon icon={closeOutline} style={{ fontSize: '24px' }} />
@@ -271,13 +281,22 @@ const SessionHistoryPage: React.FC = () => {
                       {[
                         ['Session Modality', selectedSession.type],
                         ['Healing Practitioner', selectedSession.healer],
+                        ['Branch', selectedSession.branchName],
                         ['Conduct Date', selectedSession.date],
                         ['Timing Slot', `${selectedSession.startTime} – ${selectedSession.endTime}`],
+                        ['Session Status', selectedSession.status],
                         ['Payment Status', selectedSession.paymentStatus],
+                        ['Amount / Fee', `₹${selectedSession.totalAmount || 0}`],
+                        ['Payment Method', selectedSession.paymentMethod],
+                        ['Follow-up Required', selectedSession.followupRequired ? 'Yes' : 'No'],
+                        ...(selectedSession.followupRequired ? [
+                          ['Follow-up Date', selectedSession.followupDate !== 'N/A' ? selectedSession.followupDate : 'Pending'],
+                          ['Follow-up Priority', selectedSession.followupPriority]
+                        ] : []),
                       ].map(([label, value]) => (
-                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                           <span style={{ color: '#64748b' }}>{label}</span>
-                          <strong style={{ color: '#0f766e' }}>{value}</strong>
+                          <strong style={{ color: '#0f766e', textAlign: 'right' }}>{value as React.ReactNode}</strong>
                         </div>
                       ))}
                     </div>
@@ -292,16 +311,6 @@ const SessionHistoryPage: React.FC = () => {
                       {selectedSession.notes && selectedSession.notes !== '—'
                         ? selectedSession.notes
                         : 'No notes logged for this session.'}
-                    </div>
-                  </div>
-
-                  {/* Recommendations */}
-                  <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <IonIcon icon={leafOutline} /> Recommendations
-                    </h4>
-                    <div style={{ background: '#faf8fc', border: '1px solid #faf5ff', borderRadius: '8px', padding: '16px', fontSize: '14px', color: '#5b21b6', lineHeight: 1.5, fontWeight: 500 }}>
-                      Ensure regular practice of physical exercises and meditation as advised by your healer.
                     </div>
                   </div>
 

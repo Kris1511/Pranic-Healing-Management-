@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    originalName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     filePath: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -32,6 +36,12 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     underscored: true,
   });
+
+  Document.prototype.toJSON = function () {
+    const values = Object.assign({}, this.get());
+    values.original_name = values.originalName;
+    return values;
+  };
 
   Document.associate = (models) => {
     Document.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'patient' });

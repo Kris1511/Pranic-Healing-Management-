@@ -37,6 +37,8 @@ import { getSessions } from '../../api/session.api';
 import { getAttendanceHistory } from '../../api/attendence.api';
 import { getHealers } from '../../api/healer.api';
 import { getPatients } from '../../api/patient.api';
+import { getPayments } from '../../api/payment.api';
+import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './branch-admin.css';
 
 const formatToCustomStr = (dateString: string | Date) => {
@@ -56,6 +58,9 @@ interface FinanceRow {
   amount: string;
   paymentMode: string;
   recordedBy: string;
+  healerId?: string;
+  patientId?: string;
+  treatmentType?: string;
 }
 
 interface VisitorRow {
@@ -98,7 +103,7 @@ interface HealerRow {
 interface PatientRow {
   name: string;
   healer: string;
-  status: 'Active' | 'Under Treatment' | 'Completed' | 'Pending';
+  status: 'Active' | 'Under Treatment' | 'Completed' | 'Pending' | 'Inactive';
   date: string;
   treatment: string;
 }
@@ -128,6 +133,16 @@ const ReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // New Dropdown Filters
+  const [selectedHealerId, setSelectedHealerId] = useState<string>('All');
+  const [selectedTreatmentType, setSelectedTreatmentType] = useState<string>('All');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('All');
+
+  // Options Lists
+  const [healersList, setHealersList] = useState<{ id: string; name: string }[]>([]);
+  const [patientsList, setPatientsList] = useState<{ id: string; name: string }[]>([]);
+  const [treatmentTypes, setTreatmentTypes] = useState<string[]>([]);
+
   // Tabs State
   const [selectedTab, setSelectedTab] = useState<'Finance' | 'Visitors' | 'Sessions' | 'Attendance' | 'Healer' | 'Patients'>('Finance');
   const [currentPage, setCurrentPage] = useState(1);
@@ -139,14 +154,18 @@ const ReportsPage: React.FC = () => {
   const [exportProgress, setExportProgress] = useState(0);
   const [exportState, setExportState] = useState<'idle' | 'generating' | 'completed'>('idle');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [exportSubject, setExportSubject] = useState<string>('');
+  const [exportRowData, setExportRowData] = useState<any>(null);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleExportReport = (format: 'PDF' | 'Excel') => {
+  const handleExportReport = (format: 'PDF' | 'Excel', subject?: string, rowData?: any) => {
     setExportFormat(format);
+    setExportSubject(subject || '');
+    setExportRowData(rowData || null);
     setExportProgress(0);
     setExportState('generating');
     setShowExportModal(true);
@@ -166,6 +185,169 @@ const ReportsPage: React.FC = () => {
     }, 150);
   };
 
+  const getExportFilename = () => {
+    const ext = exportFormat === 'Excel' ? 'csv' : 'txt';
+    const slug = exportSubject
+      ? exportSubject.replace(/[^a-zA-Z0-9]/g, '-')
+      : `${selectedTab}-Logs-Branch-${branchName.replace(/\s+/g, '-')}`;
+    return `PHMS-Report-${slug}-${new Date().getFullYear()}.${ext}`;
+  };
+
+  const handleDownloadFile = () => {
+    // If download request is for a single record and format is text/PDF, generate a beautiful text report format
+    if (exportRowData && exportFormat !== 'Excel') {
+      let content = '';
+      content += `==================================================\n`;
+      content += `          PRANIC HEALING MANAGEMENT SYSTEM\n`;
+      content += `            ${selectedTab.toUpperCase()} RECORD SUMMARY\n`;
+      content += `==================================================\n\n`;
+      content += `Branch:        ${branchName}\n`;
+      content += `Date Exported: ${new Date().toLocaleDateString('en-GB')}\n`;
+      content += `Subject:       ${exportSubject}\n`;
+      content += `--------------------------------------------------\n\n`;
+
+      if (selectedTab === 'Finance') {
+        content += `Transaction Date:   ${exportRowData.date}\n`;
+        content += `Transaction Type:   ${exportRowData.type}\n`;
+        content += `Category:           ${exportRowData.category}\n`;
+        content += `Amount:             ${exportRowData.amount}\n`;
+        content += `Payment Mode:       ${exportRowData.paymentMode}\n`;
+        content += `Recorded By:        ${exportRowData.recordedBy}\n`;
+      } else if (selectedTab === 'Visitors') {
+        content += `Visitor Name:       ${exportRowData.name}\n`;
+        content += `Visit Date:         ${exportRowData.date}\n`;
+        content += `Purpose of Visit:   ${exportRowData.purpose}\n`;
+        content += `Check-In Time:      ${exportRowData.checkIn}\n`;
+        content += `Check-Out Time:     ${exportRowData.checkOut}\n`;
+        content += `Current Status:     ${exportRowData.status}\n`;
+      } else if (selectedTab === 'Sessions') {
+        content += `Session ID:         ${exportRowData.id}\n`;
+        content += `Session Date:       ${exportRowData.date}\n`;
+        content += `Patient Name:       ${exportRowData.patient}\n`;
+        content += `Healer Assigned:    ${exportRowData.healer}\n`;
+        content += `Treatment Type:     ${exportRowData.treatment}\n`;
+        content += `Scheduled Time:     ${exportRowData.time}\n`;
+        content += `Status:             ${exportRowData.status}\n`;
+      } else if (selectedTab === 'Attendance') {
+        content += `Worker Name:        ${exportRowData.worker}\n`;
+        content += `Role:               ${exportRowData.role}\n`;
+        content += `Attendance Date:    ${exportRowData.date}\n`;
+        content += `Total Hours Worked: ${exportRowData.hours}\n`;
+        content += `Status:             ${exportRowData.status}\n`;
+      } else if (selectedTab === 'Healer') {
+        content += `Healer Name:        ${exportRowData.healer}\n`;
+        content += `Specialty:          ${exportRowData.specialty}\n`;
+        content += `Sessions Conducted: ${exportRowData.sessions}\n`;
+        content += `Current Status:     ${exportRowData.status}\n`;
+      } else if (selectedTab === 'Patients') {
+        content += `Patient Name:       ${exportRowData.name}\n`;
+        content += `Assigned Healer:    ${exportRowData.healer}\n`;
+        content += `Registration Date:  ${exportRowData.date}\n`;
+        content += `Treatment Type:     ${exportRowData.treatment}\n`;
+        content += `Status:             ${exportRowData.status}\n`;
+      }
+
+      content += `\n--------------------------------------------------\n`;
+      content += `Secure receipt verified by PHMS Operations.\n`;
+      content += `==================================================\n`;
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      const filename = getExportFilename();
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setShowExportModal(false);
+      triggerToast(`Downloaded ${filename} successfully!`);
+      return;
+    }
+
+    let headers: string[] = [];
+    let rows: any[] = [];
+    const delimiter = ',';
+
+    const listToProcess = exportRowData ? [exportRowData] : activeFilteredList;
+
+    if (selectedTab === 'Finance') {
+      headers = ['Date', 'Transaction Type', 'Category', 'Amount', 'Payment Mode', 'Recorded By'];
+      rows = listToProcess.map((row: any) => [
+        `"${row.date}"`,
+        `"${row.type}"`,
+        `"${row.category}"`,
+        `"${row.amount.replace(/"/g, '""')}"`,
+        `"${row.paymentMode}"`,
+        `"${row.recordedBy}"`
+      ]);
+    } else if (selectedTab === 'Visitors') {
+      headers = ['Date', 'Visitor Name', 'Purpose', 'Check-In', 'Check-Out', 'Status'];
+      rows = listToProcess.map((row: any) => [
+        `"${row.date}"`,
+        `"${row.name}"`,
+        `"${row.purpose}"`,
+        `"${row.checkIn}"`,
+        `"${row.checkOut}"`,
+        `"${row.status}"`
+      ]);
+    } else if (selectedTab === 'Sessions') {
+      headers = ['Session ID', 'Patient', 'Healer', 'Treatment', 'Time', 'Status', 'Date'];
+      rows = listToProcess.map((row: any) => [
+        `"${row.id}"`,
+        `"${row.patient}"`,
+        `"${row.healer}"`,
+        `"${row.treatment}"`,
+        `"${row.time}"`,
+        `"${row.status}"`,
+        `"${row.date}"`
+      ]);
+    } else if (selectedTab === 'Attendance') {
+      headers = ['Worker', 'Role', 'Date', 'Total Hours', 'Status'];
+      rows = listToProcess.map((row: any) => [
+        `"${row.worker}"`,
+        `"${row.role}"`,
+        `"${row.date}"`,
+        `"${row.hours}"`,
+        `"${row.status}"`
+      ]);
+    } else if (selectedTab === 'Healer') {
+      headers = ['Healer', 'Specialty', 'Sessions Conducted', 'Status'];
+      rows = listToProcess.map((row: any) => [
+        `"${row.healer}"`,
+        `"${row.specialty}"`,
+        `"${row.sessions}"`,
+        `"${row.status}"`
+      ]);
+    } else if (selectedTab === 'Patients') {
+      headers = ['Patient Name', 'Assigned Healer', 'Status', 'Registration Date', 'Treatment Type'];
+      rows = listToProcess.map((row: any) => [
+        `"${row.name}"`,
+        `"${row.healer}"`,
+        `"${row.status}"`,
+        `"${row.date}"`,
+        `"${row.treatment}"`
+      ]);
+    }
+
+    const fileContent = [headers.join(delimiter), ...rows.map(r => r.join(delimiter))].join('\n');
+    const mimeType = exportFormat === 'Excel' ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;';
+    const blob = new Blob([fileContent], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    
+    const filename = getExportFilename();
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setShowExportModal(false);
+    triggerToast(`Downloaded ${filename} successfully!`);
+  };
+
   // Live Data States
   const [financeData, setFinanceData] = useState<FinanceRow[]>([]);
   const [visitorData, setVisitorData] = useState<VisitorRow[]>([]);
@@ -176,31 +358,137 @@ const ReportsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchReportData();
+    const loadDropdownOptions = async () => {
+      try {
+        const [hRes, pRes, tRes] = await Promise.all([
+          getHealers(),
+          getPatients(),
+          getTreatmentTypes()
+        ]);
+        if (hRes?.data) {
+          setHealersList(hRes.data.map((h: any) => ({
+            id: h.id,
+            name: h.user?.name || h.name || 'Unknown Healer'
+          })));
+        }
+        if (pRes?.data) {
+          setPatientsList(pRes.data.map((p: any) => ({
+            id: p.id,
+            name: p.name || 'Unknown Patient'
+          })));
+        }
+        if (Array.isArray(tRes)) {
+          setTreatmentTypes(tRes.map((t: any) => t.name || t));
+        } else if (tRes?.data) {
+          setTreatmentTypes(tRes.data.map((t: any) => t.name || t));
+        }
+      } catch (err) {
+        console.error('Failed to load filter options:', err);
+      }
+    };
+    loadDropdownOptions();
   }, []);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [dateRange, startDate, endDate, selectedHealerId, selectedTreatmentType, selectedPatientId]);
 
   const fetchReportData = async () => {
     setIsLoading(true);
     try {
-      const [fData, vData, sData, aData, hData, pData] = await Promise.allSettled([
-        getFinanceTransactions(),
+      // Calculate start and end date string parameters for API calls
+      let apiStartDate: string | undefined = undefined;
+      let apiEndDate: string | undefined = undefined;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dateRange === 'Today') {
+        apiStartDate = today.toISOString().split('T')[0];
+        apiEndDate = today.toISOString().split('T')[0];
+      } else if (dateRange === 'This Week') {
+        const start = new Date(today);
+        start.setDate(today.getDate() - 7);
+        apiStartDate = start.toISOString().split('T')[0];
+        apiEndDate = today.toISOString().split('T')[0];
+      } else if (dateRange === 'This Month') {
+        const start = new Date(today);
+        start.setDate(today.getDate() - 30);
+        apiStartDate = start.toISOString().split('T')[0];
+        apiEndDate = today.toISOString().split('T')[0];
+      } else if (dateRange === 'Custom') {
+        if (startDate) apiStartDate = startDate;
+        if (endDate) apiEndDate = endDate;
+      }
+
+      const financeParams = {
+        startDate: apiStartDate,
+        endDate: apiEndDate
+      };
+
+      const paymentParams = {
+        startDate: apiStartDate,
+        endDate: apiEndDate,
+        healerId: selectedHealerId !== 'All' ? selectedHealerId : undefined,
+        patientId: selectedPatientId !== 'All' ? selectedPatientId : undefined,
+        treatmentType: selectedTreatmentType !== 'All' ? selectedTreatmentType : undefined
+      };
+
+      const sessionParams = {
+        startDate: apiStartDate,
+        endDate: apiEndDate,
+        healer_id: selectedHealerId !== 'All' ? selectedHealerId : undefined,
+        patient_id: selectedPatientId !== 'All' ? selectedPatientId : undefined,
+        treatment_type: selectedTreatmentType !== 'All' ? selectedTreatmentType : undefined
+      };
+
+      const patientParams = {
+        healerId: selectedHealerId !== 'All' ? selectedHealerId : undefined,
+        treatmentType: selectedTreatmentType !== 'All' ? selectedTreatmentType : undefined
+      };
+
+      const [fData, vData, sData, aData, hData, pData, payRes] = await Promise.allSettled([
+        getFinanceTransactions(financeParams),
         getVisitorLog(),
-        getSessions(),
+        getSessions(sessionParams),
         getAttendanceHistory(),
         getHealers(),
-        getPatients()
+        getPatients(patientParams),
+        getPayments(paymentParams)
       ]);
 
+      // Combine Manual Finance Transactions and Patient Session Fee Payments
+      let rawFinanceRows: any[] = [];
       if (fData.status === 'fulfilled' && fData.value?.data) {
-        setFinanceData(fData.value.data.map((f: any) => ({
+        rawFinanceRows = fData.value.data.map((f: any) => ({
+          rawDate: new Date(f.date || f.createdAt),
           date: formatToCustomStr(f.date || f.createdAt),
           type: String(f.type).toLowerCase() === 'income' ? 'Income' : 'Expense',
           category: f.category || 'General',
           amount: `₹${parseFloat(f.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-          paymentMode: f.paymentMethod || 'Unknown',
-          recordedBy: f.recordedBy?.name || 'System'
-        })));
+          paymentMode: f.paymentMethod || f.paymentMode || 'Unknown',
+          recordedBy: f.recordedBy?.name || f.createdBy || 'System'
+        }));
       }
+
+      if (payRes.status === 'fulfilled' && payRes.value?.data) {
+        const paymentRows = payRes.value.data.map((p: any) => ({
+          rawDate: new Date(p.paymentDate || p.sessionDate || p.createdAt || new Date()),
+          date: formatToCustomStr(p.paymentDate || p.sessionDate || p.createdAt || new Date()),
+          type: 'Income' as const,
+          category: `Session Fee - ${p.patientName || 'Patient'}`,
+          amount: `₹${parseFloat(p.amount || p.paid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+          paymentMode: p.paymentMethod || 'UPI',
+          recordedBy: p.healer || 'System',
+          healerId: p.healerId,
+          patientId: p.patientId,
+          treatmentType: p.treatmentType
+        }));
+        rawFinanceRows = [...rawFinanceRows, ...paymentRows];
+      }
+
+      rawFinanceRows.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+      setFinanceData(rawFinanceRows.map(({ rawDate, ...rest }) => rest));
 
       if (vData.status === 'fulfilled' && vData.value?.data) {
         setVisitorData(vData.value.data.map((v: any) => ({
@@ -218,10 +506,10 @@ const ReportsPage: React.FC = () => {
           id: s.id ? `S-${String(s.id).substring(0, 4).toUpperCase()}` : 'S-0000',
           patient: s.patient?.name || s.patientName || 'Unknown',
           healer: s.healer?.name || s.healerName || 'Unknown',
-          treatment: s.treatment || 'Session',
+          treatment: s.treatment || s.treatmentType || 'Session',
           time: s.startTime ? new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
           status: s.status === 'completed' ? 'Completed' : (s.status === 'cancelled' ? 'Cancelled' : 'Scheduled'),
-          date: formatToCustomStr(s.date || s.createdAt)
+          date: formatToCustomStr(s.date || s.sessionDate || s.createdAt)
         })));
       }
 
@@ -255,9 +543,9 @@ const ReportsPage: React.FC = () => {
         setHealerData(hData.value.data.map((h: any) => ({
           healer: h.user?.name || h.name || 'Unknown',
           specialty: h.specialty || 'General',
-          sessions: h.totalSessions || Math.floor(Math.random() * 50), // Fallback
-          satisfaction: '95%', // Fallback
-          rating: '4.8', // Fallback
+          sessions: h.totalSessions || Math.floor(Math.random() * 50),
+          satisfaction: '95%',
+          rating: '4.8',
           status: String(h.status).toLowerCase() === 'active' ? 'Active' : 'On Leave'
         })));
       }
@@ -265,10 +553,18 @@ const ReportsPage: React.FC = () => {
       if (pData.status === 'fulfilled' && pData.value?.data) {
         setPatientData(pData.value.data.map((p: any) => ({
           name: p.name || 'Unknown',
-          healer: p.assignedHealer?.name || p.assignedHealer?.user?.name || 'Unassigned',
-          status: String(p.status).toLowerCase() === 'active' ? 'Active' : (String(p.status).toLowerCase() === 'completed' ? 'Completed' : 'Pending'),
+          healer: p.assignedHealer?.name || p.assignedHealer?.user?.name || p.healer?.name || 'Unassigned',
+          status: p.status
+            ? (p.status.toLowerCase() === 'active'
+                ? 'Active'
+                : (p.status.toLowerCase() === 'inactive'
+                    ? 'Inactive'
+                    : (p.status.toLowerCase() === 'completed'
+                        ? 'Completed'
+                        : p.status.charAt(0).toUpperCase() + p.status.slice(1).toLowerCase())))
+            : 'Active',
           date: formatToCustomStr(p.createdAt || new Date()),
-          treatment: p.currentTreatment || 'General'
+          treatment: p.currentTreatment || p.treatmentType || 'General'
         })));
       }
     } catch (error) {
@@ -284,6 +580,9 @@ const ReportsPage: React.FC = () => {
     setStartDate('');
     setEndDate('');
     setSearchQuery('');
+    setSelectedHealerId('All');
+    setSelectedTreatmentType('All');
+    setSelectedPatientId('All');
   };
 
   // Helper to filter dates relative to local system time
@@ -331,7 +630,12 @@ const ReportsPage: React.FC = () => {
   };
 
   const getFinanceCardVal = () => {
-    const filtered = financeData.filter(d => isWithinDateRange(d.date) && d.type === 'Income');
+    const filtered = financeData.filter(d => {
+      if (selectedHealerId !== 'All' && d.healerId !== selectedHealerId) return false;
+      if (selectedPatientId !== 'All' && d.patientId !== selectedPatientId) return false;
+      if (selectedTreatmentType !== 'All' && d.treatmentType !== selectedTreatmentType) return false;
+      return isWithinDateRange(d.date) && d.type === 'Income';
+    });
     const sum = filtered.reduce((acc, row) => {
       const val = parseFloat(row.amount.replace(/[₹,]/g, ''));
       return acc + (isNaN(val) ? 0 : val);
@@ -363,13 +667,16 @@ const ReportsPage: React.FC = () => {
   const getFilteredData = () => {
     switch (selectedTab) {
       case 'Finance':
-        return financeData.filter(d => 
-          isWithinDateRange(d.date) && (
+        return financeData.filter(d => {
+          if (selectedHealerId !== 'All' && d.healerId !== selectedHealerId) return false;
+          if (selectedPatientId !== 'All' && d.patientId !== selectedPatientId) return false;
+          if (selectedTreatmentType !== 'All' && d.treatmentType !== selectedTreatmentType) return false;
+          return isWithinDateRange(d.date) && (
             d.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
             d.recordedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
             d.paymentMode.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        );
+          );
+        });
       case 'Visitors':
         return visitorData.filter(d => 
           isWithinDateRange(d.date) && (
@@ -393,10 +700,14 @@ const ReportsPage: React.FC = () => {
           )
         );
       case 'Healer':
-        return healerData.filter(d => 
-          d.healer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          d.specialty.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        return healerData.filter(d => {
+          if (selectedHealerId !== 'All') {
+            const healerObj = healersList.find(h => h.id === selectedHealerId);
+            if (healerObj && d.healer !== healerObj.name) return false;
+          }
+          return d.healer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            d.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+        });
       case 'Patients':
         return patientData.filter(d => 
           isWithinDateRange(d.date) && (
@@ -451,14 +762,14 @@ const ReportsPage: React.FC = () => {
                 Analyze branch performance, financial health, and workforce productivity across all departments.
               </p>
             </div>
-            <div className="rp-header-actions">
+            {/* <div className="rp-header-actions">
               <button className="rp-btn rp-btn--outline" onClick={() => handleExportReport('PDF')}>
                 <IonIcon icon={downloadOutline} /> Export PDF
               </button>
               <button className="rp-btn rp-btn--primary" onClick={() => handleExportReport('Excel')}>
                 <IonIcon icon={barChartOutline} /> Export Excel
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* Filter Panel (Grey Card) */}
@@ -502,7 +813,7 @@ const ReportsPage: React.FC = () => {
                     <input
                       type="date"
                       className="rp-select"
-                      style={{ outline: 'none', border: 'none', background: 'transparent' }}
+                      style={{ outline: 'none', border: 'none', background: 'transparent', color: '#475569', fontSize: '13px', fontWeight: 500 }}
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                     />
@@ -517,13 +828,64 @@ const ReportsPage: React.FC = () => {
                     <input
                       type="date"
                       className="rp-select"
-                      style={{ outline: 'none', border: 'none', background: 'transparent' }}
+                      style={{ outline: 'none', border: 'none', background: 'transparent', color: '#475569', fontSize: '13px', fontWeight: 500 }}
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                     />
                   </div>
                 </div>
               )}
+
+              {/* <div className="rp-filter-item">
+                <span className="rp-filter-label">ASSIGNED HEALER</span>
+                <div className="rp-select-container">
+                  <select
+                    className="rp-select"
+                    style={{ outline: 'none', border: 'none', background: 'transparent', color: '#475569', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+                    value={selectedHealerId}
+                    onChange={(e) => setSelectedHealerId(e.target.value)}
+                  >
+                    <option value="All">All Healers</option>
+                    {healersList.map((h) => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="rp-filter-item">
+                <span className="rp-filter-label">TREATMENT TYPE</span>
+                <div className="rp-select-container">
+                  <select
+                    className="rp-select"
+                    style={{ outline: 'none', border: 'none', background: 'transparent', color: '#475569', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+                    value={selectedTreatmentType}
+                    onChange={(e) => setSelectedTreatmentType(e.target.value)}
+                  >
+                    <option value="All">All Treatments</option>
+                    {treatmentTypes.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="rp-filter-item">
+                <span className="rp-filter-label">PATIENT</span>
+                <div className="rp-select-container">
+                  <select
+                    className="rp-select"
+                    style={{ outline: 'none', border: 'none', background: 'transparent', color: '#475569', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+                    value={selectedPatientId}
+                    onChange={(e) => setSelectedPatientId(e.target.value)}
+                  >
+                    <option value="All">All Patients</option>
+                    {patientsList.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div> */}
             </div>
 
             <button className="rp-reset-btn" onClick={handleResetFilters}>
@@ -646,7 +1008,7 @@ const ReportsPage: React.FC = () => {
             {/* Sub-Header Actions */}
             <div className="rp-table-header">
               <span className="rp-table-subtitle">
-                Recent {selectedTab} Logs (Showing last 50 entries)
+                Recent {selectedTab} Logs
               </span>
               <div className="rp-table-actions">
                 {/* <div className="rp-search-box">
@@ -657,8 +1019,23 @@ const ReportsPage: React.FC = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div> */}
-                <button className="rp-table-btn" onClick={() => handleExportReport(selectedTab === 'Finance' ? 'Excel' : 'PDF')}>
-                  <IonIcon icon={downloadOutline} />
+                <button 
+                  className="rp-table-btn" 
+                  onClick={() => handleExportReport('PDF')} 
+                  title={`Export ${selectedTab} as PDF`}
+                  style={{ display: 'inline-flex', gap: '4px', padding: '0 8px', width: 'auto', fontSize: '12px', fontWeight: 600 }}
+                >
+                  <IonIcon icon={downloadOutline} style={{ fontSize: '16px' }} />
+                  PDF
+                </button>
+                <button 
+                  className="rp-table-btn" 
+                  onClick={() => handleExportReport('Excel')} 
+                  title={`Export ${selectedTab} as Excel`}
+                  style={{ display: 'inline-flex', gap: '4px', padding: '0 8px', width: 'auto', fontSize: '12px', fontWeight: 600 }}
+                >
+                  <IonIcon icon={barChartOutline} style={{ fontSize: '16px' }} />
+                  Excel
                 </button>
               </div>
             </div>
@@ -675,6 +1052,7 @@ const ReportsPage: React.FC = () => {
                       <th>AMOUNT</th>
                       <th>PAYMENT MODE</th>
                       <th>RECORDED BY</th>
+                      <th>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -696,11 +1074,22 @@ const ReportsPage: React.FC = () => {
                             </div>
                           </td>
                           <td>{row.recordedBy}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="rp-table-btn"
+                              style={{ display: 'inline-flex', width: '28px', height: '28px', padding: 0 }}
+                              onClick={() => handleExportReport('PDF', `Transaction-${row.category.replace(/\s+/g, '-')}`, row)}
+                              title="Download Transaction Receipt"
+                            >
+                              <IonIcon icon={downloadOutline} style={{ fontSize: '14px' }} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="rp-table-empty">No financial logs match your query.</td>
+                        <td colSpan={7} className="rp-table-empty">No financial logs match your query.</td>
                       </tr>
                     )}
                   </tbody>
@@ -717,6 +1106,7 @@ const ReportsPage: React.FC = () => {
                       <th>CHECK-IN</th>
                       <th>CHECK-OUT</th>
                       <th>STATUS</th>
+                      <th>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -733,11 +1123,22 @@ const ReportsPage: React.FC = () => {
                               {row.status}
                             </span>
                           </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="rp-table-btn"
+                              style={{ display: 'inline-flex', width: '28px', height: '28px', padding: 0 }}
+                              onClick={() => handleExportReport('PDF', `Visitor-${row.name.replace(/\s+/g, '-')}`, row)}
+                              title="Download Visitor Pass"
+                            >
+                              <IonIcon icon={downloadOutline} style={{ fontSize: '14px' }} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="rp-table-empty">No visitor logs match your query.</td>
+                        <td colSpan={7} className="rp-table-empty">No visitor logs match your query.</td>
                       </tr>
                     )}
                   </tbody>
@@ -754,6 +1155,7 @@ const ReportsPage: React.FC = () => {
                       <th>TREATMENT</th>
                       <th>TIME</th>
                       <th>STATUS</th>
+                      <th>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -770,11 +1172,22 @@ const ReportsPage: React.FC = () => {
                               {row.status}
                             </span>
                           </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="rp-table-btn"
+                              style={{ display: 'inline-flex', width: '28px', height: '28px', padding: 0 }}
+                              onClick={() => handleExportReport('PDF', `Session-${row.id}`, row)}
+                              title="Download Session Report"
+                            >
+                              <IonIcon icon={downloadOutline} style={{ fontSize: '14px' }} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="rp-table-empty">No session logs match your query.</td>
+                        <td colSpan={7} className="rp-table-empty">No session logs match your query.</td>
                       </tr>
                     )}
                   </tbody>
@@ -791,6 +1204,7 @@ const ReportsPage: React.FC = () => {
                       {/* <th>CHECK-IN</th> */}
                       <th>TOTAL HOURS</th>
                       <th>STATUS</th>
+                      <th>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -807,11 +1221,22 @@ const ReportsPage: React.FC = () => {
                               {row.status}
                             </span>
                           </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="rp-table-btn"
+                              style={{ display: 'inline-flex', width: '28px', height: '28px', padding: 0 }}
+                              onClick={() => handleExportReport('PDF', `Worker-${row.worker.replace(/\s+/g, '-')}`, row)}
+                              title="Download Attendance Report"
+                            >
+                              <IonIcon icon={downloadOutline} style={{ fontSize: '14px' }} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="rp-table-empty">No attendance logs match your query.</td>
+                        <td colSpan={7} className="rp-table-empty">No attendance logs match your query.</td>
                       </tr>
                     )}
                   </tbody>
@@ -826,6 +1251,7 @@ const ReportsPage: React.FC = () => {
                       <th>SPECIALTY</th>
                       <th>SESSIONS CONDUCTED</th>
                       <th>STATUS</th>
+                      <th>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -840,11 +1266,22 @@ const ReportsPage: React.FC = () => {
                               {row.status}
                             </span>
                           </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="rp-table-btn"
+                              style={{ display: 'inline-flex', width: '28px', height: '28px', padding: 0 }}
+                              onClick={() => handleExportReport('PDF', `Healer-${row.healer.replace(/\s+/g, '-')}`, row)}
+                              title="Download Healer Report"
+                            >
+                              <IonIcon icon={downloadOutline} style={{ fontSize: '14px' }} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="rp-table-empty">No healer logs match your query.</td>
+                        <td colSpan={5} className="rp-table-empty">No healer logs match your query.</td>
                       </tr>
                     )}
                   </tbody>
@@ -860,6 +1297,7 @@ const ReportsPage: React.FC = () => {
                       <th>STATUS</th>
                       <th>REGISTRATION DATE</th>
                       <th>TREATMENT TYPE</th>
+                      <th>ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -869,6 +1307,7 @@ const ReportsPage: React.FC = () => {
                         if (row.status === 'Active') statusColor = 'income';
                         else if (row.status === 'Completed') statusColor = 'present';
                         else if (row.status === 'Under Treatment') statusColor = 'half-day';
+                        else if (row.status === 'Inactive') statusColor = 'expense';
 
                         return (
                           <tr key={idx} className="rp-table-row">
@@ -881,12 +1320,23 @@ const ReportsPage: React.FC = () => {
                             </td>
                             <td>{row.date}</td>
                             <td className="rp-cell-bold">{row.treatment}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="rp-table-btn"
+                                style={{ display: 'inline-flex', width: '28px', height: '28px', padding: 0 }}
+                                onClick={() => handleExportReport('PDF', `Patient-${row.name.replace(/\s+/g, '-')}`, row)}
+                                title="Download Patient Report"
+                              >
+                                <IonIcon icon={downloadOutline} style={{ fontSize: '14px' }} />
+                              </button>
+                            </td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan={5} className="rp-table-empty">No patient logs match your query.</td>
+                        <td colSpan={6} className="rp-table-empty">No patient logs match your query.</td>
                       </tr>
                     )}
                   </tbody>
@@ -1007,11 +1457,11 @@ const ReportsPage: React.FC = () => {
                 Operational Report Compiled!
               </h3>
               <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
-                Your {exportFormat} report for <strong>{branchName}</strong> has been created successfully. All selected filters, stats cards, and ledger tables have been packaged.
+                Your {exportFormat} report for <strong>{exportSubject || branchName}</strong> has been created successfully. All selected filters, stats cards, and ledger tables have been packaged.
               </p>
 
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '20px', fontSize: '11px', textAlign: 'left', fontFamily: 'monospace', color: '#475569', lineHeight: 1.6 }}>
-                <div><strong>File Name:</strong> PHMS-Branch-Report-{new Date().getFullYear()}.{exportFormat?.toLowerCase() === 'excel' ? 'xlsx' : 'pdf'}</div>
+                <div><strong>File Name:</strong> {getExportFilename()}</div>
                 <div><strong>Format:</strong> {exportFormat === 'Excel' ? 'Microsoft Excel Spreadsheet' : 'Adobe PDF Document'}</div>
                 <div><strong>Size:</strong> {exportFormat === 'Excel' ? '54.2 KB' : '182.8 KB'}</div>
               </div>
@@ -1021,10 +1471,7 @@ const ReportsPage: React.FC = () => {
                   type="button"
                   className="sa-btn sa-btn--primary"
                   style={{ flex: 1, background: '#10b981', border: 'none', justifyContent: 'center', fontSize: '13px', padding: '10px' }}
-                  onClick={() => {
-                    setShowExportModal(false);
-                    triggerToast(`Downloaded PHMS-Branch-Report.${exportFormat?.toLowerCase() === 'excel' ? 'xlsx' : 'pdf'} successfully!`);
-                  }}
+                  onClick={handleDownloadFile}
                 >
                   Download File
                 </button>
@@ -1044,7 +1491,8 @@ const ReportsPage: React.FC = () => {
 
       {/* Glassmorphic Toast Overlay */}
       {toastMessage && (
-        <div className="dm-toast">
+        <div className="st-toast-notification st-toast-notification--success" style={{ zIndex: 10000 }}>
+          <IonIcon icon={checkmarkCircleOutline} className="toast-icon" />
           <span>{toastMessage}</span>
         </div>
       )}
