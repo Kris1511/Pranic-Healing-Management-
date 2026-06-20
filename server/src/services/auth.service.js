@@ -29,7 +29,7 @@ class AuthService {
         throw new ApiError(403, "Your account is deactivated.");
       }
 
-      return user;
+      return await this._attachBranchName(user);
     } catch (error) {
       console.error("FULL REGISTER ERROR:");
       console.error(error);
@@ -83,7 +83,8 @@ class AuthService {
         status: "active",
       });
 
-      return newUser;
+      const reloadedUser = await userRepository.findById(newUser.id);
+      return await this._attachBranchName(reloadedUser);
     } catch (error) {
       console.log("REGISTER ERROR:");
       console.log(error);
@@ -154,7 +155,31 @@ class AuthService {
     if (!user) {
       throw new ApiError(404, "User not found.");
     }
-    return user;
+    return await this._attachBranchName(user);
+  }
+
+  /**
+   * @desc    Attach branch name to user profile
+   */
+  async _attachBranchName(user) {
+    if (!user) return user;
+    const userJson = user.toJSON ? user.toJSON() : { ...user };
+    try {
+      if (userJson.role === 'BRANCH_ADMIN') {
+        const { BranchAdmin, Branch } = require('../models');
+        const branchAdmin = await BranchAdmin.findOne({
+          where: { userId: userJson.id },
+          include: [{ model: Branch, as: 'branch' }]
+        });
+        userJson.branchName = branchAdmin && branchAdmin.branch ? branchAdmin.branch.name : 'Current Branch';
+      } else {
+        userJson.branchName = userJson.branch ? userJson.branch.name : 'Current Branch';
+      }
+    } catch (err) {
+      console.error("Error attaching branch name to profile payload:", err);
+      userJson.branchName = 'Current Branch';
+    }
+    return userJson;
   }
 }
 

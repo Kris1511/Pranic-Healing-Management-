@@ -188,40 +188,10 @@ const DailyFinancePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sa-section-header" style={{ marginTop: '24px' }}>
-            <h2 className="sa-section__title" style={{ fontSize: '18px', fontWeight: 700 }}>System-wide Financial Overview</h2>
-            <p className="sa-section__subtitle">All-time consolidated statistics across all branches</p>
-          </div>
+          
 
-          <div className="sa-stats sa-stats--3" style={{ marginTop: '12px' }}>
-            <div className="sa-stat-card">
-              <div className="sa-stat-card__icon sa-stat-card__icon--success">
-                <IonIcon icon={cashOutline} />
-              </div>
-              <div>
-                <div className="sa-stat-card__label">Total Income (Manual)</div>
-                <div className="sa-stat-card__value">₹{(dailyFinanceData?.systemStats?.totalIncome || 0).toLocaleString()}</div>
-              </div>
-            </div>
-            <div className="sa-stat-card">
-              <div className="sa-stat-card__icon sa-stat-card__icon--danger">
-                <IonIcon icon={walletOutline} />
-              </div>
-              <div>
-                <div className="sa-stat-card__label">Total Expense (Manual)</div>
-                <div className="sa-stat-card__value">₹{(dailyFinanceData?.systemStats?.totalExpense || 0).toLocaleString()}</div>
-              </div>
-            </div>
-            <div className="sa-stat-card">
-              <div className="sa-stat-card__icon sa-stat-card__icon--warning">
-                <IonIcon icon={walletOutline} />
-              </div>
-              <div>
-                <div className="sa-stat-card__label">Outstanding Balance</div>
-                <div className="sa-stat-card__value">₹{(dailyFinanceData?.systemStats?.outstandingBalance || 0).toLocaleString()}</div>
-              </div>
-            </div>
-          </div>
+          
+          
 
           <div className="sa-stats sa-stats--3" style={{ marginTop: '12px', marginBottom: '24px' }}>
             <div className="sa-stat-card">

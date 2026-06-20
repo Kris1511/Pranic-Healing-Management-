@@ -109,6 +109,51 @@ class PaymentService {
     }
     return payment;
   }
+
+  async updatePayment(id, data, branchId) {
+    let payment = await this.getPaymentById(id, branchId);
+    
+    payment = await paymentRepository.update(id, data);
+    
+    // Update corresponding Session status
+    const { Session } = require('../models');
+    const session = await Session.findByPk(payment.sessionId);
+    if (session) {
+      const fee = parseFloat(session.sessionFee || session.totalAmount || 0);
+      const totalPaid = parseFloat(payment.amount || 0);
+      
+      let newStatus = 'pending';
+      if (totalPaid >= fee) {
+        newStatus = 'paid';
+      } else if (totalPaid > 0) {
+        newStatus = 'partial';
+      }
+      
+      await session.update({
+        paymentStatus: newStatus,
+        paymentMethod: payment.paymentMethod || session.paymentMethod
+      });
+    }
+    return payment;
+  }
+
+  async deletePayment(id, branchId) {
+    const payment = await this.getPaymentById(id, branchId);
+    const sessionId = payment.sessionId;
+    
+    await paymentRepository.delete(id);
+    
+    // Update corresponding Session status
+    const { Session } = require('../models');
+    const session = await Session.findByPk(sessionId);
+    if (session) {
+      await session.update({
+        paymentStatus: 'pending',
+        paymentMethod: null
+      });
+    }
+    return true;
+  }
 }
 
 module.exports = new PaymentService();

@@ -13,6 +13,8 @@ router.route('/')
   .post(validate(sessionValidator.create), sessionController.create)
   .get(sessionController.getAll);
 
+router.get('/dashboard-summary', sessionController.getDashboardSummary);
+
 router.route('/:id')
   .get(sessionController.getById)
   .put(validate(sessionValidator.update), sessionController.update)

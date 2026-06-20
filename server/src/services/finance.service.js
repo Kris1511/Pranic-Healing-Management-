@@ -136,11 +136,12 @@ class FinanceService {
     // 3. Map manual finance records (Income/Expense)
     const mappedFinance = financeRecords.map(r => {
       const isIncome = r.type && r.type.toLowerCase() === 'income';
+      const defaultTitle = isIncome ? 'Manual Income' : 'Manual Expense';
       return {
         id: `finance-${r.id}`,
-        title: r.remarks || r.description || 'Manual Entry',
+        title: (r.remarks || r.description || r.category || defaultTitle).trim().replace(/\s+/g, ' '),
         type: isIncome ? 'Income' : 'Expense',
-        category: r.category,
+        category: r.category || (isIncome ? 'Income' : 'Expense'),
         branch: r.branch ? r.branch.name : 'Unknown Branch',
         amount: parseFloat(r.amount),
         date: r.date ? new Date(r.date).toISOString().split('T')[0] : date
@@ -155,26 +156,35 @@ class FinanceService {
         ? parseFloat(s.sessionFee)
         : (parseFloat(s.totalAmount) || 0);
       const paidAmount = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
+      const rawStatus = (s.paymentStatus || 'pending').toLowerCase();
 
       let type = 'Pending';
-      if (paidAmount === 0) {
-        type = 'Pending';
-      } else if (paidAmount > 0 && paidAmount < totalBilled) {
-        type = 'Partial';
-      } else if (paidAmount >= totalBilled) {
+      let paid = 0;
+
+      if (rawStatus === 'paid') {
         type = 'Paid';
+        paid = totalBilled;
+      } else if (rawStatus === 'partial' || (paidAmount > 0 && paidAmount < totalBilled)) {
+        type = 'Partial';
+        paid = paidAmount;
+      } else if (paidAmount >= totalBilled && totalBilled > 0) {
+        type = 'Paid';
+        paid = paidAmount;
+      } else {
+        type = 'Pending';
+        paid = 0;
       }
 
       return {
         id: `session-${s.id}`,
         title: `Session Fee - ${patientName}`,
-        type: type,
+        type,
         category: 'Session Fee',
         branch: branchName,
-        amount: totalBilled,
+        amount: type === 'Partial' ? paid : totalBilled,
         date: s.sessionDate,
-        paid: paidAmount,
-        outstanding: Math.max(0, totalBilled - paidAmount)
+        paid,
+        outstanding: Math.max(0, totalBilled - paid)
       };
     });
 
@@ -189,21 +199,20 @@ class FinanceService {
       .filter(r => r.type === 'Expense')
       .reduce((sum, r) => sum + r.amount, 0);
 
-    // Fetch payments actually collected on this selected date
-    const paymentsOnDate = await Payment.findAll({
-      where: sequelize.where(
-        sequelize.fn('DATE', sequelize.col('payment_date')),
-        date
-      )
-    });
-    const dailyPaymentCollections = paymentsOnDate.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const dailySessionIncome = mappedSessions
+      .reduce((sum, s) => sum + s.paid, 0);
 
-    const totalDailyIncome = dailyManualIncome + dailyPaymentCollections;
+    const totalDailyIncome = dailyManualIncome + dailySessionIncome;
     const totalDailyExpense = dailyManualExpense;
     const closingBalance = totalDailyIncome - totalDailyExpense;
 
-    // 6. System-wide calculations (all branches, all time) for Dashboard Summary Cards
-    const allManualFinance = await Finance.findAll();
+    // 6. Daily calculations (all branches, filtered by selected date) for Dashboard Summary Cards
+    const allManualFinance = await Finance.findAll({
+      where: sequelize.where(
+        sequelize.fn('DATE', sequelize.col('date')),
+        date
+      )
+    });
     const totalManualIncome = allManualFinance
       .filter(f => f.type && f.type.toLowerCase() === 'income')
       .reduce((sum, f) => sum + parseFloat(f.amount), 0);
@@ -213,6 +222,9 @@ class FinanceService {
       .reduce((sum, f) => sum + parseFloat(f.amount), 0);
 
     const allSessions = await Session.findAll({
+      where: {
+        sessionDate: date
+      },
       include: [{ model: Payment, as: 'payment' }]
     });
 
@@ -232,18 +244,33 @@ class FinanceService {
       const paid = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
       const outstanding = Math.max(0, fee - paid);
 
-      if (paid === 0) {
+      const rawStatus = (s.paymentStatus || 'pending').toLowerCase();
+      let type = 'Pending';
+      if (rawStatus === 'paid') {
+        type = 'Paid';
+      } else if (rawStatus === 'partial' || (paid > 0 && paid < fee)) {
+        type = 'Partial';
+      } else if (paid >= fee && fee > 0) {
+        type = 'Paid';
+      }
+
+      if (type === 'Pending') {
         pendingCount++;
-      } else if (paid > 0 && paid < fee) {
+      } else if (type === 'Partial') {
         partialCount++;
-      } else if (paid >= fee) {
+      } else if (type === 'Paid') {
         paidCount++;
       }
 
       outstandingBalance += outstanding;
     });
 
-    const allPayments = await Payment.findAll();
+    const allPayments = await Payment.findAll({
+      where: sequelize.where(
+        sequelize.fn('DATE', sequelize.col('payment_date')),
+        date
+      )
+    });
     const totalPaymentsPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
     const totalCollections = totalPaymentsPaid + totalManualIncome;
 
@@ -347,75 +374,329 @@ class FinanceService {
       ]
     });
 
-    const mappedTransactions = allSessions.map(s => {
+    const mappedSessions = allSessions.map(s => {
+      const patientName = s.patient ? s.patient.name : 'Unknown Patient';
       const fee = s.sessionFee !== null && s.sessionFee !== undefined
         ? parseFloat(s.sessionFee)
         : (parseFloat(s.totalAmount) || 0);
 
+      const paidAmount = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
       const rawStatus = (s.paymentStatus || 'pending').toLowerCase();
+
+      let type = 'Pending';
       let paid = 0;
-      let status = 'pending';
 
       if (rawStatus === 'paid') {
+        type = 'Paid';
         paid = fee;
-        status = 'completed';
-      } else if (rawStatus === 'partial') {
-        paid = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
-        status = 'pending';
+      } else if (rawStatus === 'partial' || (paidAmount > 0 && paidAmount < fee)) {
+        type = 'Partial';
+        paid = paidAmount;
+      } else if (paidAmount >= fee && fee > 0) {
+        type = 'Paid';
+        paid = paidAmount;
       } else {
+        type = 'Pending';
         paid = 0;
-        status = 'pending';
       }
 
-      const paymentDate = s.payment ? s.payment.paymentDate : s.createdAt;
-      const dateStr = paymentDate ? new Date(paymentDate).toISOString().split('T')[0] : '—';
-      const timeStr = paymentDate ? new Date(paymentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+      const dateStr = s.sessionDate ? new Date(s.sessionDate).toISOString().split('T')[0] : '—';
 
       return {
-        id: s.id,
-        patient: s.patient ? s.patient.name : 'Unknown Patient',
+        id: `session-${s.id}`,
+        title: `Session Fee - ${patientName}`,
         branch: s.branch ? s.branch.name : 'Unknown Branch',
-        amount: fee,
-        paid: paid,
-        outstanding: Math.max(0, fee - paid),
-        method: s.payment ? (s.payment.paymentMethod || 'UPI') : (s.paymentMethod || '—'),
-        status,
+        category: 'Session Fee',
+        amount: type === 'Partial' ? paid : fee,
         date: dateStr,
-        time: timeStr
+        type,
+        paid,
+        outstanding: Math.max(0, fee - paid)
       };
     });
 
     const mappedManualIncome = incomeRecords.map(e => {
       const dateStr = e.date ? new Date(e.date).toISOString().split('T')[0] : '—';
-      const timeStr = e.date ? new Date(e.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
       const rawTitle = e.remarks || e.description || e.category || 'Manual Income';
-      
       return {
         id: `finance-${e.id}`,
-        patient: rawTitle.trim().replace(/\s+/g, ' '),
+        title: rawTitle.trim().replace(/\s+/g, ' '),
         branch: e.branch ? e.branch.name : 'Unknown Branch',
+        category: e.category || 'Income',
         amount: parseFloat(e.amount),
-        paid: parseFloat(e.amount),
-        outstanding: 0,
-        method: e.paymentMode || 'Cash',
-        status: 'completed',
         date: dateStr,
-        time: timeStr
+        type: 'Income',
+        paid: parseFloat(e.amount),
+        outstanding: 0
       };
     });
 
-    const mappedExpenses = expenseRecords.map(e => ({
-      id: e.id,
-      category: e.category,
-      branch: e.branch ? e.branch.name : 'Unknown Branch',
-      amount: parseFloat(e.amount),
-      date: e.date ? new Date(e.date).toISOString().split('T')[0] : '—',
-      status: 'paid'
-    }));
+    const mappedExpenses = expenseRecords.map(e => {
+      const dateStr = e.date ? new Date(e.date).toISOString().split('T')[0] : '—';
+      const rawTitle = e.remarks || e.description || e.category || 'Manual Expense';
+      return {
+        id: `finance-${e.id}`,
+        title: rawTitle.trim().replace(/\s+/g, ' '),
+        branch: e.branch ? e.branch.name : 'Unknown Branch',
+        category: e.category || 'Expense',
+        amount: parseFloat(e.amount),
+        date: dateStr,
+        type: 'Expense',
+        paid: parseFloat(e.amount),
+        outstanding: 0
+      };
+    });
+
+    const combinedRecords = [...mappedSessions, ...mappedManualIncome, ...mappedExpenses];
+
+    const totalIncome = mappedManualIncome.reduce((sum, item) => sum + item.amount, 0) +
+                        mappedSessions.reduce((sum, item) => sum + item.paid, 0);
+
+    const totalExpenses = mappedExpenses.reduce((sum, item) => sum + item.amount, 0);
+
+    const totalPending = mappedSessions.reduce((sum, item) => sum + item.outstanding, 0);
+
+    const netProfit = totalIncome - totalExpenses;
 
     return {
-      transactions: [...mappedTransactions, ...mappedManualIncome],
-      expenses: mappedExpenses
+      records: combinedRecords,
+      stats: {
+        totalIncome,
+        totalExpenses,
+        netProfit,
+        totalPending
+      }
+    };
+  }
+
+  async getDashboardStats(branchId) {
+    const { Finance, Payment, Visitor, Patient, Healer, Session, sequelize } = require('../models');
+    const { Op } = require('sequelize');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Daily Income
+    const manualIncomeToday = parseFloat(await Finance.sum('amount', {
+      where: {
+        type: 'Income',
+        branchId,
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('date')), todayStr)
+        ]
+      }
+    })) || 0;
+
+    const paymentsToday = parseFloat(await Payment.sum('amount', {
+      where: {
+        branchId,
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('payment_date')), todayStr)
+        ]
+      }
+    })) || 0;
+
+    const dailyIncome = manualIncomeToday + paymentsToday;
+
+    // 2. Daily Expense
+    const dailyExpense = parseFloat(await Finance.sum('amount', {
+      where: {
+        type: 'Expense',
+        branchId,
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('created_at')), todayStr)
+        ]
+      }
+    })) || 0;
+
+    // 3. Net Balance
+    const netBalance = dailyIncome - dailyExpense;
+
+    // 4. Today Visitors
+    const visitorsTodayCount = await Visitor.count({
+      where: {
+        branchId,
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('created_at')), todayStr)
+        ]
+      }
+    });
+
+    const visitorsInsideCount = await Visitor.count({
+      where: {
+        branchId,
+        checkOut: null,
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('created_at')), todayStr)
+        ]
+      }
+    });
+
+    // 5. Active Patients
+    const activePatientsCount = await Patient.count({
+      where: {
+        branchId,
+        status: {
+          [Op.in]: ['active', 'Active']
+        }
+      }
+    });
+
+    const newPatientsTodayCount = await Patient.count({
+      where: {
+        branchId,
+        [Op.and]: [
+          sequelize.where(sequelize.fn('DATE', sequelize.col('created_at')), todayStr)
+        ]
+      }
+    });
+
+    // 6. Pending Payments
+    const sessions = await Session.findAll({
+      where: { branchId },
+      include: [{ model: Payment, as: 'payment' }]
+    });
+
+    let pendingPaymentsCount = 0;
+    let partialPaymentsCount = 0;
+
+    sessions.forEach(s => {
+      const fee = parseFloat(s.sessionFee !== null && s.sessionFee !== undefined ? s.sessionFee : (s.totalAmount || 0));
+      const paid = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
+
+      if (paid === 0 && fee > 0) {
+        pendingPaymentsCount++;
+      } else if (paid > 0 && paid < fee) {
+        partialPaymentsCount++;
+      }
+    });
+
+    // 7. Active Healers
+    const activeHealersCount = await Healer.count({
+      where: {
+        branchId,
+        status: {
+          [Op.in]: ['active', 'Active']
+        }
+      }
+    });
+
+    // 8. Weekly Comparison Calculations
+    const today = new Date();
+    const currentDay = today.getDay();
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+
+    const startOfThisWeek = new Date(today);
+    startOfThisWeek.setDate(today.getDate() + distanceToMonday);
+    startOfThisWeek.setHours(0, 0, 0, 0);
+
+    const endOfThisWeek = new Date(startOfThisWeek);
+    endOfThisWeek.setDate(startOfThisWeek.getDate() + 6);
+    endOfThisWeek.setHours(23, 59, 59, 999);
+
+    const startOfPrevWeek = new Date(startOfThisWeek);
+    startOfPrevWeek.setDate(startOfThisWeek.getDate() - 7);
+    startOfPrevWeek.setHours(0, 0, 0, 0);
+
+    const endOfPrevWeek = new Date(startOfPrevWeek);
+    endOfPrevWeek.setDate(startOfPrevWeek.getDate() + 6);
+    endOfPrevWeek.setHours(23, 59, 59, 999);
+
+    // Fetch all finance records for the current and previous week range
+    const financeRecords = await Finance.findAll({
+      where: {
+        branchId,
+        date: {
+          [Op.between]: [startOfPrevWeek, endOfThisWeek]
+        }
+      }
+    });
+
+    // Fetch all payment records for the current and previous week range
+    const paymentRecords = await Payment.findAll({
+      where: {
+        branchId,
+        paymentDate: {
+          [Op.between]: [startOfPrevWeek, endOfThisWeek]
+        }
+      }
+    });
+
+    // Initialize the weekly data structure
+    const weeklyFinanceData = [
+      { day: 'Mon', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Tue', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Wed', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Thu', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Fri', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Sat', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Sun', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+    ];
+
+    const getDayIndex = (d) => {
+      const day = d.getDay();
+      return day === 0 ? 6 : day - 1;
+    };
+
+    financeRecords.forEach(r => {
+      const amt = parseFloat(r.amount) || 0;
+      const type = (r.type || '').toLowerCase();
+      const recordDate = new Date(r.date);
+      const recordTime = recordDate.getTime();
+      const dayIdx = getDayIndex(recordDate);
+
+      if (dayIdx >= 0 && dayIdx < 7) {
+        if (recordTime >= startOfThisWeek.getTime() && recordTime <= endOfThisWeek.getTime()) {
+          if (type === 'income') {
+            weeklyFinanceData[dayIdx].current.income += amt;
+          } else if (type === 'expense') {
+            weeklyFinanceData[dayIdx].current.expense += amt;
+          }
+        } else if (recordTime >= startOfPrevWeek.getTime() && recordTime <= endOfPrevWeek.getTime()) {
+          if (type === 'income') {
+            weeklyFinanceData[dayIdx].previous.income += amt;
+          } else if (type === 'expense') {
+            weeklyFinanceData[dayIdx].previous.expense += amt;
+          }
+        }
+      }
+    });
+
+    paymentRecords.forEach(p => {
+      const amt = parseFloat(p.amount) || 0;
+      const recordDate = new Date(p.paymentDate);
+      const recordTime = recordDate.getTime();
+      const dayIdx = getDayIndex(recordDate);
+
+      if (dayIdx >= 0 && dayIdx < 7) {
+        if (recordTime >= startOfThisWeek.getTime() && recordTime <= endOfThisWeek.getTime()) {
+          weeklyFinanceData[dayIdx].current.income += amt;
+        } else if (recordTime >= startOfPrevWeek.getTime() && recordTime <= endOfPrevWeek.getTime()) {
+          weeklyFinanceData[dayIdx].previous.income += amt;
+        }
+      }
+    });
+
+    let totalThisWeekIncome = 0;
+    let totalThisWeekExpense = 0;
+    weeklyFinanceData.forEach(day => {
+      totalThisWeekIncome += day.current.income;
+      totalThisWeekExpense += day.current.expense;
+    });
+
+    return {
+      dailyIncome,
+      dailyExpense,
+      netBalance,
+      visitorsTodayCount,
+      visitorsInsideCount,
+      activePatientsCount,
+      newPatientsTodayCount,
+      pendingPaymentsCount,
+      partialPaymentsCount,
+      activeHealersCount,
+      weeklyFinanceData,
+      totalThisWeekIncome,
+      totalThisWeekExpense
     };
   }
 }

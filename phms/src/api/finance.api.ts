@@ -34,3 +34,8 @@ export const getSuperAdminRevenueFinance = async () => {
   const response = await axiosInstance.get('/finance/super-admin/revenue');
   return response.data;
 };
+
+export const getBranchDashboardStats = async () => {
+  const response = await axiosInstance.get('/finance/dashboard-stats');
+  return response.data;
+};

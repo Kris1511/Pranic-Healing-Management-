@@ -40,6 +40,7 @@ import BAEditHealerPage from './pages/branch-admin/EditHealerPage';
 import BADetailHealerPage from './pages/branch-admin/DetailHealerPage';
 import BARegisterPatientPage from './pages/branch-admin/RegisterPatientPage';
 import BAPatientsPage from './pages/branch-admin/PatientsPage';
+import PatientDetailsPage from './pages/branch-admin/PatientDetailsPage';
 import BAEditPatientPage from './pages/branch-admin/EditPatientPages';
 import BAHealersPage from './pages/branch-admin/HealersPage';
 import BASessionsPage from './pages/branch-admin/SessionsPage';
@@ -219,6 +220,9 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.BRANCH_ADMIN.PATIENTS} exact={true}>
           <BAPatientsPage />
         </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.PATIENT_DETAILS} exact={true}>
+          <PatientDetailsPage />
+        </Route>
         <Route path={ROUTES.BRANCH_ADMIN.HEALERS} exact={true}>
           <BAHealersPage />
         </Route>
@@ -235,6 +239,9 @@ const AppContent: React.FC = () => {
           <BABookSessionPage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.EDIT_SESSION} exact={true}>
+          <BAEditSessionPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.FINANCE_EDIT_SESSION} exact={true}>
           <BAEditSessionPage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.SESSION_DETAILS} exact={true}>

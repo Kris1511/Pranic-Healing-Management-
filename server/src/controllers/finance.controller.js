@@ -33,6 +33,15 @@ class FinanceController {
     return sendResponse(res, 200, 'Finance summary retrieved successfully', summary);
   };
 
+  getDashboardStats = async (req, res) => {
+    const branchId = req.branchId;
+    if (!branchId) {
+      return sendResponse(res, 400, 'Branch ID is required');
+    }
+    const stats = await financeService.getDashboardStats(branchId);
+    return sendResponse(res, 200, 'Dashboard statistics retrieved successfully', stats);
+  };
+
   getSuperAdminDaily = async (req, res) => {
     let { date } = req.query;
     if (!date) {

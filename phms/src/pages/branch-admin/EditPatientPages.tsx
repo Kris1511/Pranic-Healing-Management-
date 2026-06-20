@@ -304,7 +304,7 @@ export default function EditPatientPages() {
 
   const closeAndRedirect = () => {
     setShowSuccessToast(false);
-    history.push(ROUTES.BRANCH_ADMIN.PATIENTS);
+    history.push(ROUTES.BRANCH_ADMIN.PATIENT_DETAILS.replace(':id', encodeURIComponent(id)));
   };
 
   if (!isBranchAdmin) {
@@ -1142,7 +1142,7 @@ export default function EditPatientPages() {
               </div>
 
               <button onClick={closeAndRedirect} className="sa-btn sa-btn--primary" style={{ width: '100%', justifyContent: 'center', margin: 0 }}>
-                Proceed to Patient Registry
+                Proceed to Patient Details
               </button>
             </div>
           </div>

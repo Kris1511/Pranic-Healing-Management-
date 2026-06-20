@@ -37,7 +37,7 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
-import { getSessions, deleteSession } from '../../api/session.api';
+import { getSessions, deleteSession, getSessionsSummary } from '../../api/session.api';
 import './branch-admin.css';
 
 export interface HealingSession {
@@ -73,6 +73,13 @@ const SessionsPage: React.FC = () => {
   const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState('All');
+  const [summaryStats, setSummaryStats] = useState({
+    totalSessions: 0,
+    scheduled: 0,
+    completed: 0,
+    cancelled: 0
+  });
   const [dateRange, setDateRange] = useState('All Sessions');
   const [selectedDate, setSelectedDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,7 +114,11 @@ const SessionsPage: React.FC = () => {
 
   const fetchSessions = async () => {
     try {
-      const res = await getSessions();
+      const params: any = {};
+      if (filterPaymentStatus !== 'All') {
+        params.paymentStatus = filterPaymentStatus.toLowerCase();
+      }
+      const res = await getSessions(params);
       if (res.success && res.data) {
         const mappedSessions: HealingSession[] = res.data.map((s: any, index: number) => ({
           id: s.id || index,
@@ -137,12 +148,29 @@ const SessionsPage: React.FC = () => {
     }
   };
 
+  const fetchSummary = async () => {
+    try {
+      const res = await getSessionsSummary();
+      if (res.success && res.data) {
+        setSummaryStats({
+          totalSessions: res.data.totalSessions || 0,
+          scheduled: res.data.scheduled || 0,
+          completed: res.data.completed || 0,
+          cancelled: res.data.cancelled || 0
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch sessions summary:', error);
+    }
+  };
+
   useEffect(() => {
     fetchSessions();
-  }, []);
+  }, [filterPaymentStatus]);
 
   useIonViewWillEnter(() => {
     fetchSessions();
+    fetchSummary();
   });
 
 
@@ -179,6 +207,7 @@ const SessionsPage: React.FC = () => {
           const updated = sessions.filter(s => s.id !== sessionToDelete);
           setSessions(updated);
           localStorage.setItem('phms_sessions', JSON.stringify(updated));
+          fetchSummary();
 
           // Audit Log recording
           const savedAudits = localStorage.getItem('phms_audits') || '[]';
@@ -235,6 +264,9 @@ const SessionsPage: React.FC = () => {
     // 3. Status Filters
     const matchesStatus = filterStatus === 'All' || session.status === filterStatus;
 
+    // 3b. Payment Status Filters
+    const matchesPaymentStatus = filterPaymentStatus === 'All' || session.paymentStatus.toLowerCase() === filterPaymentStatus.toLowerCase();
+
     // 4. Date Range Filters
     let matchesDate = true;
     if (dateRange === 'Today') {
@@ -248,14 +280,14 @@ const SessionsPage: React.FC = () => {
       matchesDate = session.date === selectedDate;
     }
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate && matchesPaymentStatus;
   });
 
-  // Calculate dynamic totals
-  const totalCount = filteredSessions.length;
-  const completedCount = filteredSessions.filter((s) => s.status === 'Completed').length;
-  const scheduledCount = filteredSessions.filter((s) => s.status === 'Scheduled').length;
-  const cancelledCount = filteredSessions.filter((s) => s.status === 'Cancelled').length;
+  // Calculate dynamic totals (not affected by filters)
+  const totalCount = summaryStats.totalSessions;
+  const completedCount = summaryStats.completed;
+  const scheduledCount = summaryStats.scheduled;
+  const cancelledCount = summaryStats.cancelled;
 
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
   const paginatedSessions = filteredSessions.slice(
@@ -265,7 +297,7 @@ const SessionsPage: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterStatus, dateRange, selectedDate]);
+  }, [searchQuery, filterStatus, filterPaymentStatus, dateRange, selectedDate]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
@@ -414,6 +446,18 @@ const SessionsPage: React.FC = () => {
               <select
                 className="sa-input"
                 style={{ flex: 1, minWidth: '140px' }}
+                value={filterPaymentStatus}
+                onChange={(e) => setFilterPaymentStatus(e.target.value)}
+              >
+                <option value="All">All Payment Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Partial">Partial</option>
+                <option value="Paid">Paid</option>
+              </select>
+
+              <select
+                className="sa-input"
+                style={{ flex: 1, minWidth: '140px' }}
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
               >
@@ -439,6 +483,7 @@ const SessionsPage: React.FC = () => {
                 onClick={() => {
                   setSearchQuery('');
                   setFilterStatus('All');
+                  setFilterPaymentStatus('All');
                   setDateRange('All Sessions');
                   setSelectedDate('');
                 }}

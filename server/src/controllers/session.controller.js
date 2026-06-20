@@ -4,10 +4,13 @@ const { sendResponse } = require('../helpers/response.helper');
 const mapSessionToResponse = (session) => {
   if (!session) return null;
   
-  let paymentStatus = session.paymentStatus;
-  if (paymentStatus) {
-    if (paymentStatus.toLowerCase() === 'paid') paymentStatus = 'Paid';
-    else if (paymentStatus.toLowerCase() === 'pending') paymentStatus = 'Pending';
+  const fee = parseFloat(session.sessionFee !== null && session.sessionFee !== undefined ? session.sessionFee : (session.totalAmount || 0));
+  const paid = session.payment ? parseFloat(session.payment.amount) || 0 : 0;
+  let paymentStatus = 'Pending';
+  if (paid >= fee && fee > 0) {
+    paymentStatus = 'Paid';
+  } else if (paid > 0 && paid < fee) {
+    paymentStatus = 'Partial';
   }
   
   let paymentMethod = session.paymentMethod;
@@ -36,11 +39,15 @@ const mapSessionToResponse = (session) => {
     notes: session.notes,
     status: session.status,
     total_amount: session.totalAmount,
+    totalAmount: session.totalAmount, // camelCase compatibility
     session_fee: session.sessionFee,
+    sessionFee: session.sessionFee, // camelCase compatibility
     created_at: session.createdAt,
     updated_at: session.updatedAt,
     payment_status: paymentStatus,
+    paymentStatus: paymentStatus, // camelCase compatibility
     payment_method: paymentMethod,
+    paymentMethod: paymentMethod, // camelCase compatibility
     followup_required: session.followupRequired,
     followup_priority: priority,
     followup_date: session.followupDate,
@@ -69,7 +76,16 @@ const mapSessionToResponse = (session) => {
       treatmentName: t.treatmentName,
       cost: t.cost,
       notes: t.notes
-    })) : []
+    })) : [],
+    payment: session.payment ? {
+      id: session.payment.id,
+      sessionId: session.payment.sessionId,
+      amount: session.payment.amount,
+      paymentMethod: session.payment.paymentMethod,
+      paymentDate: session.payment.paymentDate,
+      status: session.payment.status,
+      branchId: session.payment.branchId
+    } : null
   };
 };
 
@@ -166,9 +182,75 @@ class SessionController {
       }
     }
 
-    const sessions = await sessionService.getAllSessions(filter);
+    let sessions = await sessionService.getAllSessions(filter);
+
+    if (req.query.paymentStatus) {
+      const target = req.query.paymentStatus.toLowerCase();
+      sessions = sessions.filter(s => {
+        const fee = parseFloat(s.sessionFee !== null && s.sessionFee !== undefined ? s.sessionFee : (s.totalAmount || 0));
+        const paid = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
+        let status = 'pending';
+        if (paid >= fee && fee > 0) {
+          status = 'paid';
+        } else if (paid > 0 && paid < fee) {
+          status = 'partial';
+        }
+        return status === target;
+      });
+    }
+
     const mappedSessions = sessions.map(mapSessionToResponse);
     return sendResponse(res, 200, 'Sessions retrieved successfully', mappedSessions);
+  };
+
+  getDashboardSummary = async (req, res) => {
+    const filter = {};
+    if (req.branchId) filter.branchId = req.branchId;
+
+    // Restrict sessions to only those assigned to the logged-in healer
+    if (req.user && String(req.user.role).toUpperCase() === 'HEALER') {
+      const { Healer, sequelize } = require('../models');
+      const healer = await Healer.findOne({
+        where: sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('email')),
+          req.user.email.toLowerCase()
+        )
+      });
+      if (healer) {
+        filter.healerId = healer.id;
+      } else {
+        return sendResponse(res, 200, 'Dashboard summary retrieved successfully', {
+          totalSessions: 0,
+          scheduled: 0,
+          completed: 0,
+          cancelled: 0
+        });
+      }
+    }
+
+    // Restrict sessions to only those belonging to the logged-in patient
+    if (req.user && String(req.user.role).toUpperCase() === 'PATIENT') {
+      const { Patient, sequelize } = require('../models');
+      const patient = await Patient.findOne({
+        where: sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('email')),
+          req.user.email.toLowerCase()
+        )
+      });
+      if (patient) {
+        filter.patientId = patient.id;
+      } else {
+        return sendResponse(res, 200, 'Dashboard summary retrieved successfully', {
+          totalSessions: 0,
+          scheduled: 0,
+          completed: 0,
+          cancelled: 0
+        });
+      }
+    }
+
+    const summary = await sessionService.getDashboardSummary(filter);
+    return sendResponse(res, 200, 'Dashboard summary retrieved successfully', summary);
   };
 
   getById = async (req, res) => {

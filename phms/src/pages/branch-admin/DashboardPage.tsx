@@ -10,6 +10,7 @@ import {
   IonModal,
   IonTitle,
   IonButton,
+  useIonViewWillEnter,
 } from '@ionic/react';
 import {
   notificationsOutline,
@@ -29,6 +30,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { getVisitorLog } from '../../api/visitor.api';
 import { getPatients } from '../../api/patient.api';
 import { getHealers } from '../../api/healer.api';
+import { getBranchDashboardStats } from '../../api/finance.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
 
@@ -97,6 +99,29 @@ const DashboardPage: React.FC = () => {
   const isBranchAdmin = user?.role === 'BRANCH_ADMIN';
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [stats, setStats] = useState({
+    dailyIncome: 0,
+    dailyExpense: 0,
+    netBalance: 0,
+    visitorsTodayCount: 0,
+    visitorsInsideCount: 0,
+    activePatientsCount: 0,
+    newPatientsTodayCount: 0,
+    pendingPaymentsCount: 0,
+    partialPaymentsCount: 0,
+    activeHealersCount: 0,
+    weeklyFinanceData: [
+      { day: 'Mon', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Tue', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Wed', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Thu', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Fri', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Sat', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+      { day: 'Sun', current: { income: 0, expense: 0 }, previous: { income: 0, expense: 0 } },
+    ],
+    totalThisWeekIncome: 0,
+    totalThisWeekExpense: 0
+  });
 
   const [showAddTransactionModal, setShowAddTransactionModal] = useState<boolean>(false);
   const [showMarkAttendanceModal, setShowMarkAttendanceModal] = useState<boolean>(false);
@@ -131,18 +156,7 @@ const DashboardPage: React.FC = () => {
   const [newTxn, setNewTxn] = useState({ type: 'Income' as 'Income' | 'Expense', amount: 1000, category: 'General fee', method: 'UPI' as any });
   const [attendanceWorker, setAttendanceWorker] = useState({ name: 'Sanjay M.', status: 'Present' as any });
 
-  const weeklyFinanceData = [
-    { day: 'Mon', current: { income: 12000, expense: 4500 }, previous: { income: 10500, expense: 5000 } },
-    { day: 'Tue', current: { income: 15500, expense: 6200 }, previous: { income: 14000, expense: 5500 } },
-    { day: 'Wed', current: { income: 10800, expense: 7100 }, previous: { income: 12000, expense: 6800 } },
-    { day: 'Thu', current: { income: 14200, expense: 5800 }, previous: { income: 13500, expense: 6000 } },
-    { day: 'Fri', current: { income: 18000, expense: 4900 }, previous: { income: 16000, expense: 5200 } },
-    { day: 'Sat', current: { income: 16500, expense: 3200 }, previous: { income: 15000, expense: 3500 } },
-    { day: 'Sun', current: { income: 9500, expense: 2100 }, previous: { income: 8000, expense: 2500 } },
-  ];
 
-  const maxVal = 20000;
-  const scale = 180 / maxVal;
 
   const userInitials = user
     ? `${user.name?.[0] || user.firstName?.[0] || 'B'}${user.name?.split(' ')?.[1]?.[0] || user.lastName?.[0] || 'A'}`.toUpperCase()
@@ -153,47 +167,58 @@ const DashboardPage: React.FC = () => {
   const options: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric', year: 'numeric' };
   const formattedDate = today.toLocaleDateString('en-US', options);
 
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const [visRes, patRes, healRes, statsRes] = await Promise.all([
+        getVisitorLog(),
+        getPatients(),
+        getHealers(),
+        getBranchDashboardStats()
+      ]);
+      
+      // Ensure today's visitors are calculated properly or just pass them raw
+      const mappedVis = (visRes.data || []).map((v: any) => ({ ...v, status: v.checkOut ? 'Completed' : 'Inside' }));
+
+      setVisitors(mappedVis);
+      setPatients(patRes.data || []);
+      setHealersList(healRes.data || []);
+      if (statsRes && statsRes.success && statsRes.data) {
+        setStats(statsRes.data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch dashboard data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch dynamic data for Dashboard
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      setIsLoading(true);
-      try {
-        const [visRes, patRes, healRes] = await Promise.all([
-          getVisitorLog(),
-          getPatients(),
-          getHealers()
-        ]);
-        
-        // Ensure today's visitors are calculated properly or just pass them raw
-        // The stat logic uses .length so the exact schema map isn't fully required for counts,
-        // but it expects checkout as boolean logic in some places:
-        const mappedVis = (visRes.data || []).map((v: any) => ({ ...v, status: v.checkOut ? 'Completed' : 'Inside' }));
-
-        setVisitors(mappedVis);
-        setPatients(patRes.data || []);
-        setHealersList(healRes.data || []);
-      } catch (e) {
-        console.error('Failed to fetch dashboard data:', e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchDashboardData();
   }, []);
 
-  // Calculated Core Analytics Metrics
-  const totalIncomeToday = transactions.filter(t => t.type === 'Income' && t.date === '2026-05-26').reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenseToday = transactions.filter(t => t.type === 'Expense' && t.date === '2026-05-26').reduce((sum, t) => sum + t.amount, 0);
-  const netBalanceToday = totalIncomeToday - totalExpenseToday;
-  
-  const todayStr = new Date().toLocaleDateString('en-CA');
-  // For patients, assuming 'createdAt' from the real DB gives the registration date
-  const newPatientsCount = patients.filter(p => p.createdAt && new Date(p.createdAt as any).toLocaleDateString('en-CA') === todayStr).length;
-  // If 'status' is different from the mock ('Active' vs 'active'), we handle it safely:
-  const activeCasesCount = patients.filter(p => p.status === 'Active' || p.status === 'active').length;
+  useIonViewWillEnter(() => {
+    fetchDashboardData();
+  });
 
-  const pendingPaymentsCount = payments.filter(p => p.status === 'Pending' || p.status === 'Partial').length;
-  const activeHealersCount = healersList.length;
+  // Calculated Core Analytics Metrics
+  const totalIncomeToday = stats.dailyIncome;
+  const totalExpenseToday = stats.dailyExpense;
+  const netBalanceToday = stats.netBalance;
+
+  // Find the maximum value in both current and previous weeks to scale the chart dynamically
+  const maxVal = Math.max(
+    ...stats.weeklyFinanceData.map(d => Math.max(d.current.income, d.current.expense, d.previous.income, d.previous.expense)),
+    1000
+  );
+  const scale = 180 / maxVal;
+  
+  const newPatientsCount = stats.newPatientsTodayCount;
+  const activeCasesCount = stats.activePatientsCount;
+
+  const pendingPaymentsCount = stats.pendingPaymentsCount;
+  const activeHealersCount = stats.activeHealersCount;
 
   const presentWorkersCount = workerAttendanceList.filter(w => w.status === 'Present').length;
   const absentWorkersCount = workerAttendanceList.filter(w => w.status === 'Absent').length;
@@ -341,9 +366,9 @@ const DashboardPage: React.FC = () => {
                 <div className="sa-stat-card">
                   <div>
                     <div className="sa-stat-card__label">Today Visitors</div>
-                    <div className="sa-stat-card__value">{visitors.length}</div>
+                    <div className="sa-stat-card__value">{stats.visitorsTodayCount}</div>
                     <div className="sa-stat-card__detail">
-                      {visitors.filter(v => v.status === 'Inside').length} Inside
+                      {stats.visitorsInsideCount} Inside
                     </div>
                   </div>
                   <div className="sa-stat-card__icon">
@@ -374,7 +399,7 @@ const DashboardPage: React.FC = () => {
                     <div className="sa-stat-card__label">Pending Payments</div>
                     <div className="sa-stat-card__value" style={{ color: '#f59e0b' }}>{pendingPaymentsCount}</div>
                     <div className="sa-stat-card__detail">
-                      Unpaid/Partials
+                      {stats.pendingPaymentsCount} Pending • {stats.partialPaymentsCount} Partial
                     </div>
                   </div>
                   <div className="sa-stat-card__icon">
@@ -413,18 +438,18 @@ const DashboardPage: React.FC = () => {
                     <div className="sa-finance-grid">
                       <div className="sa-finance-card">
                         <div className="sa-finance-card__label">Total This Week Income</div>
-                        <div className="sa-finance-card__value" style={{ color: '#0D5C46', fontSize: '28px' }}>₹85,500</div>
+                        <div className="sa-finance-card__value" style={{ color: '#0D5C46', fontSize: '28px' }}>₹{stats.totalThisWeekIncome.toLocaleString()}</div>
                       </div>
                       <div className="sa-finance-card">
                         <div className="sa-finance-card__label">Total This Week Expenses</div>
-                        <div className="sa-finance-card__value" style={{ color: '#dc2626', fontSize: '28px' }}>₹33,800</div>
+                        <div className="sa-finance-card__value" style={{ color: '#dc2626', fontSize: '28px' }}>₹{stats.totalThisWeekExpense.toLocaleString()}</div>
                       </div>
                     </div>
 
                     {/* Weekly Comparison Chart */}
                     <div className="sa-chart-container">
                       <div className="sa-chart-plot-area">
-                        {weeklyFinanceData.map((data, i) => (
+                        {stats.weeklyFinanceData.map((data, i) => (
                           <div className="sa-chart-day-group sa-chart-group" key={i}>
                             <div className="sa-chart-bars-row">
                               {/* Income Pair */}
@@ -489,7 +514,7 @@ const DashboardPage: React.FC = () => {
                         ))}
                       </div>
                       <div className="sa-chart-x-axis">
-                        {weeklyFinanceData.map((data, i) => (
+                        {stats.weeklyFinanceData.map((data, i) => (
                           <div key={i} className="sa-chart-day-group">
                             <span className="sa-chart-label">{data.day}</span>
                           </div>

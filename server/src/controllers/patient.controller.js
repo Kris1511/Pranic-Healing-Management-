@@ -61,7 +61,10 @@ const mapPatientToResponse = (patient) => {
     healer: patient.healer ? {
       id: patient.healer.id,
       name: patient.healer.name
-    } : null
+    } : null,
+    sessions: patient.sessions || [],
+    feedbacks: patient.feedbacks || [],
+    documents: patient.documents || []
   };
 };
 
@@ -106,6 +109,22 @@ class PatientController {
 
   update = async (req, res) => {
     console.log("Updating patient ID:", req.params.id, "Payload received:", req.body);
+    
+    if (req.files) {
+      if (req.files.medicalReport && req.files.medicalReport[0]) {
+        req.body.medicalReport = `storage/temp/${req.files.medicalReport[0].filename}`;
+      }
+      if (req.files.labReport && req.files.labReport[0]) {
+        req.body.labReport = `storage/temp/${req.files.labReport[0].filename}`;
+      }
+      if (req.files.prescription && req.files.prescription[0]) {
+        req.body.prescription = `storage/temp/${req.files.prescription[0].filename}`;
+      }
+      if (req.files.idProof && req.files.idProof[0]) {
+        req.body.idProof = `storage/temp/${req.files.idProof[0].filename}`;
+      }
+    }
+
     const patient = await patientService.updatePatient(req.params.id, req.body, req.branchId);
     console.log("Patient updated successfully. Emergency Contact stored:", patient.emergencyContact);
     return sendResponse(res, 200, 'Patient updated successfully', mapPatientToResponse(patient));

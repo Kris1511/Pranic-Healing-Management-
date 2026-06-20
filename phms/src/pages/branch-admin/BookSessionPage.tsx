@@ -222,6 +222,22 @@ export default function CreateBookSession() {
     fetchPatientsAndHealers();
   });
 
+  // Auto-select patient from router state
+  useEffect(() => {
+    const state = history.location.state as { patientId?: string } | undefined;
+    if (state?.patientId && registeredPatients.length > 0) {
+      const selected = registeredPatients.find(p => p.id === state.patientId);
+      if (selected) {
+        setFormData(prev => ({
+          ...prev,
+          selectedPatientId: state.patientId!,
+          patientName: selected.name,
+          type: selected.caseType || prev.type
+        }));
+      }
+    }
+  }, [registeredPatients, history.location.state]);
+
   // Dynamic active healers list
   const activeHealers = registeredHealers.filter(h => h.status && h.status.toUpperCase() === 'ACTIVE');
 

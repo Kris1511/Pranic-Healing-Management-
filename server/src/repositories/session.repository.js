@@ -20,6 +20,32 @@ class SessionRepository {
     });
   }
 
+  async getDashboardSummary(filter = {}) {
+    const sessions = await Session.findAll({
+      where: filter,
+      attributes: ['status']
+    });
+
+    let totalSessions = sessions.length;
+    let scheduled = 0;
+    let completed = 0;
+    let cancelled = 0;
+
+    sessions.forEach(s => {
+      const status = String(s.status).toLowerCase();
+      if (status === 'scheduled') scheduled++;
+      else if (status === 'completed') completed++;
+      else if (status === 'cancelled') cancelled++;
+    });
+
+    return {
+      totalSessions,
+      scheduled,
+      completed,
+      cancelled
+    };
+  }
+
   async update(id, data) {
     const session = await Session.findByPk(id);
     if (!session) return null;

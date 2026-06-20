@@ -25,7 +25,7 @@ import {
   chatbubbleEllipsesOutline,
   pulseOutline,
 } from "ionicons/icons";
-import { useHistory, useParams } from "react-router-dom";
+import { useHistory, useParams, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/auth.store";
 import { ROUTES } from "../../constants/routes.constant";
 import { getSessionById } from "../../api/session.api";
@@ -63,10 +63,14 @@ export interface HealingSession {
 const DetialsSessionsPages: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const history = useHistory();
+  const location = useLocation<{ fromPatientId?: string; fromFinance?: boolean }>();
   const { user } = useAuthStore();
   const [session, setSession] = useState<HealingSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  const fromPatientId = location.state?.fromPatientId;
+  const fromFinance = location.state?.fromFinance;
 
   const rawRole = user?.role || "BRANCH_ADMIN";
 
@@ -163,9 +167,17 @@ const DetialsSessionsPages: React.FC = () => {
             </p>
             <button
               className="sa-btn sa-btn--primary"
-              onClick={() => history.push(ROUTES.BRANCH_ADMIN.SESSIONS)}
+              onClick={() => {
+                if (fromFinance) {
+                  history.push(ROUTES.BRANCH_ADMIN.FINANCE);
+                } else if (fromPatientId) {
+                  history.push(`${ROUTES.BRANCH_ADMIN.PATIENT_DETAILS.replace(':id', encodeURIComponent(fromPatientId))}?tab=financials`);
+                } else {
+                  history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
+                }
+              }}
             >
-              Return to Sessions Registry
+              {fromFinance ? "Return to Finance Ledger" : fromPatientId ? "Return to Patient Details" : "Return to Sessions Registry"}
             </button>
           </div>
         </IonContent>
@@ -217,7 +229,15 @@ const DetialsSessionsPages: React.FC = () => {
           <IonButtons slot="start">
             <button
               className="sa-btn sa-btn--icon-only"
-              onClick={() => history.push(ROUTES.BRANCH_ADMIN.SESSIONS)}
+              onClick={() => {
+                if (fromFinance) {
+                  history.push(ROUTES.BRANCH_ADMIN.FINANCE);
+                } else if (fromPatientId) {
+                  history.goBack();
+                } else {
+                  history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
+                }
+              }}
               style={{
                 background: "transparent",
                 border: "none",

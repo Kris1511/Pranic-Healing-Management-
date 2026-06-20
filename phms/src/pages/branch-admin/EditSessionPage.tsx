@@ -18,7 +18,7 @@ import {
   star,
   starOutline,
 } from 'ionicons/icons';
-import { useHistory, useParams } from 'react-router-dom';
+import { useHistory, useParams, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getHealers } from '../../api/healer.api';
@@ -185,7 +185,18 @@ const CustomTimeSelect = ({
 export default function EditSessionsPages() {
   const history = useHistory();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation<{ fromPatientId?: string }>();
   const { user } = useAuthStore();
+
+  const fromPatientId = location.state?.fromPatientId;
+  const isFromFinance = history.location.pathname.includes('/finance');
+  const redirectBack = () => {
+    if (fromPatientId) {
+      history.push(`${ROUTES.BRANCH_ADMIN.PATIENT_DETAILS.replace(':id', encodeURIComponent(fromPatientId))}?tab=financials`);
+    } else {
+      history.push(isFromFinance ? ROUTES.BRANCH_ADMIN.FINANCE : ROUTES.BRANCH_ADMIN.SESSIONS);
+    }
+  };
   const [present] = useIonToast();
 
   const isBranchAdmin = user?.role === 'BRANCH_ADMIN';
@@ -306,7 +317,7 @@ export default function EditSessionsPages() {
         });
       } else if (sessions.length > 0) {
         triggerToast(`Session ID ${id} not found in registry.`, 'danger');
-        history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
+        redirectBack();
       }
     };
     fetchData();
@@ -514,7 +525,7 @@ export default function EditSessionsPages() {
     localStorage.setItem('phms_audits', JSON.stringify([newAudit, ...audits]));
 
     triggerToast(`Session ${formData.sessionNo} details successfully saved!`);
-    history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
+    redirectBack();
   };
 
   if (!isBranchAdmin) {
@@ -627,7 +638,7 @@ export default function EditSessionsPages() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button 
                   className="db-corp-nav-icon-btn" 
-                  onClick={() => history.push(ROUTES.BRANCH_ADMIN.SESSIONS)} 
+                  onClick={() => redirectBack()} 
                   title="Back to Sessions Registry"
                   style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
@@ -989,7 +1000,7 @@ export default function EditSessionsPages() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '12px', marginBottom: '40px', borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
                   <button 
                     type="button"
-                    onClick={() => history.push(ROUTES.BRANCH_ADMIN.SESSIONS)} 
+                    onClick={() => redirectBack()} 
                     style={{
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',

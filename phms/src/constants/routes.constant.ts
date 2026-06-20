@@ -47,6 +47,7 @@ export const ROUTES = {
     SESSIONS: '/branch-admin/sessions',
     BOOK_SESSION: '/branch-admin/sessions/book',
     EDIT_SESSION: '/branch-admin/sessions/edit/:id',
+    FINANCE_EDIT_SESSION: '/branch-admin/finance/edit/:id',
     SESSION_DETAILS: '/branch-admin/sessions/details/:id',
     ATTENDANCE: '/branch-admin/attendance',
     VISITOR_LOG: '/branch-admin/visitor-log',

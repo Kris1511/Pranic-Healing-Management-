@@ -53,6 +53,7 @@ const mapSessionToLedgerEntry = (session) => {
   return {
     id:             `INV-${session.id.substring(0, 8).toUpperCase()}`,
     sessionId:      session.id,
+    paymentId:      payment ? payment.id : null,
     sessionNo:      session.sessionNo || `SES-${session.id.substring(0, 6).toUpperCase()}`,
     sessionDate:    session.sessionDate,
     treatmentType:  session.treatmentType || session.type || 'Pranic Healing',
@@ -116,6 +117,17 @@ class PaymentController {
   getById = async (req, res) => {
     const payment = await paymentService.getPaymentById(req.params.id, req.branchId);
     return sendResponse(res, 200, 'Payment retrieved successfully', payment);
+  };
+
+  update = async (req, res) => {
+    if (req.branchId) req.body.branchId = req.branchId;
+    const payment = await paymentService.updatePayment(req.params.id, req.body, req.branchId);
+    return sendResponse(res, 200, 'Payment updated successfully', payment);
+  };
+
+  delete = async (req, res) => {
+    await paymentService.deletePayment(req.params.id, req.branchId);
+    return sendResponse(res, 200, 'Payment deleted successfully');
   };
 }
 

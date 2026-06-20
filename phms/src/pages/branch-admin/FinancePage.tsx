@@ -112,7 +112,7 @@ const FinancePage: React.FC = () => {
   const [isPageActive, setIsPageActive] = useState(true);
 
   // Branch is fixed to current branch admin's branch (not selectable)
-  const BRANCH_NAME = (user as any)?.branchName || 'Current Branch';
+  const BRANCH_NAME = user?.branchName || 'Current Branch';
 
   // Tab control state
   const [activeTab, setActiveTab] = useState<'transactions' | 'payments' | 'reports'>('transactions');
@@ -457,7 +457,7 @@ const FinancePage: React.FC = () => {
     setNewTx({
       category: type === 'income' ? 'Session Fee' : 'Utilities',
       amount: '',
-      mode: type === 'income' ? 'UPI (GPay)' : 'Bank Trans',
+      mode: type === 'income' ? 'UPI (GPay)' : 'Cash',
       description: '',
     });
     setShowAddModal(true);
@@ -1064,7 +1064,6 @@ const FinancePage: React.FC = () => {
                     <option value="All">All Payment Modes</option>
                     <option value="Cash">Cash</option>
                     <option value="UPI">UPI / Online</option>
-                    <option value="Bank">Bank Transfers</option>
                   </select>
 
                   {/* Monthly Filter */}
@@ -1514,7 +1513,7 @@ const FinancePage: React.FC = () => {
                                   className="sa-table__action-btn"
                                   title="View Session Details"
                                   onClick={() => {
-                                    history.push(ROUTES.BRANCH_ADMIN.SESSION_DETAILS.replace(':id', p.caseId));
+                                    history.push(ROUTES.BRANCH_ADMIN.SESSION_DETAILS.replace(':id', p.caseId), { fromFinance: true });
                                   }}
                                 >
                                   <IonIcon icon={eyeOutline} />
@@ -1523,7 +1522,7 @@ const FinancePage: React.FC = () => {
                                   className="sa-table__action-btn"
                                   title="Edit Session"
                                   onClick={() => {
-                                    history.push(ROUTES.BRANCH_ADMIN.EDIT_SESSION.replace(':id', p.caseId));
+                                    history.push(ROUTES.BRANCH_ADMIN.FINANCE_EDIT_SESSION.replace(':id', p.caseId));
                                   }}
                                 >
                                   <IonIcon icon={pencilOutline} style={{ color: '#6366f1' }} />
@@ -1675,11 +1674,9 @@ const FinancePage: React.FC = () => {
                       <option value="UPI (GPay)">UPI (GPay)</option>
                       <option value="UPI (PhonePe)">UPI (PhonePe)</option>
                       <option value="Cash">Cash Ledger</option>
-                      <option value="Bank Trans">Bank NetBanking</option>
                     </>
                   ) : (
                     <>
-                      <option value="Bank Trans">Bank NetBanking</option>
                       <option value="Cash">Cash Ledger</option>
                       <option value="Card Payment">Debit/Credit Card</option>
                     </>
@@ -1784,7 +1781,6 @@ const FinancePage: React.FC = () => {
                   <option value="UPI (GPay)">UPI (GPay)</option>
                   <option value="UPI (PhonePe)">UPI (PhonePe)</option>
                   <option value="Cash">Cash Ledger</option>
-                  <option value="Bank Trans">Bank NetBanking</option>
                   <option value="Card Payment">Debit/Credit Card</option>
                 </select>
               </div>
@@ -1994,7 +1990,6 @@ const FinancePage: React.FC = () => {
               >
                 <option value="UPI">UPI</option>
                 <option value="Cash">Cash</option>
-                <option value="Bank Transfer">Bank NetBanking</option>
               </select>
             </div>
  
