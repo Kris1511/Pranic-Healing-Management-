@@ -23,6 +23,7 @@ import { ROUTES } from '../../constants/routes.constant';
 import { getPatients } from '../../api/patient.api';
 import { createSession } from '../../api/session.api';
 import { getHealers } from '../../api/healer.api';
+import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './branch-admin.css';
 
 interface Patient {
@@ -194,6 +195,7 @@ export default function CreateBookSession() {
   // Load healers and patients from database to provide responsive selectors
   const [registeredPatients, setRegisteredPatients] = useState<any[]>([]);
   const [registeredHealers, setRegisteredHealers] = useState<Healer[]>([]);
+  const [treatmentTypes, setTreatmentTypes] = useState<any[]>([]);
 
   const fetchPatientsAndHealers = useCallback(async () => {
     try {
@@ -206,6 +208,10 @@ export default function CreateBookSession() {
       if (healersRes.success) {
         setRegisteredHealers(healersRes.data);
         console.log('[BookSession] Loaded healers from DB:', healersRes.data.length);
+      }
+      const treatmentTypesRes = await getTreatmentTypes({ status: 'Active' });
+      if (treatmentTypesRes.success && Array.isArray(treatmentTypesRes.data)) {
+        setTreatmentTypes(treatmentTypesRes.data);
       }
     } catch (error) {
       console.error('[BookSession] Failed to fetch data:', error);
@@ -695,10 +701,10 @@ export default function CreateBookSession() {
                                 value={formData.type}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                               >
-                                <option>Basic Pranic Healing</option>
-                                <option>Advanced Pranic Healing</option>
-                                <option>Pranic Psychotherapy</option>
-                                <option>Crystal Healing</option>
+                                <option value="">Select Treatment Type</option>
+                                {treatmentTypes.map(t => (
+                                  <option key={t.id} value={t.name}>{t.name}</option>
+                                ))}
                               </select>
                             </div>
 

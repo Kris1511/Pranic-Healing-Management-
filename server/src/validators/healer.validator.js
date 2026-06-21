@@ -21,6 +21,7 @@ const register = {
     profilePhoto: Joi.string().allow('', null),
     idProof: Joi.string().allow('', null),
     certification: Joi.string().allow('', null),
+    bio: Joi.string().allow('', null),
   }),
 };
 
@@ -47,6 +48,7 @@ const update = {
     profilePhoto: Joi.string().allow('', null),
     idProof: Joi.string().allow('', null),
     certification: Joi.string().allow('', null),
+    bio: Joi.string().allow('', null),
   }).min(1),
 };
 

@@ -15,6 +15,18 @@ class PatientService {
     if (data.healerId === '') {
       data.healerId = null;
     }
+
+    // Automatically recalculate age from DOB if provided
+    if (data.dob) {
+      const birthDate = new Date(data.dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      data.age = age >= 0 ? age : 0;
+    }
     
 
 
@@ -69,6 +81,18 @@ class PatientService {
   async updatePatient(id, data, branchId) {
     const existing = await this.getPatientById(id, branchId); // reusing getPatientById for validation
     
+    // Automatically recalculate age from DOB if provided
+    if (data.dob) {
+      const birthDate = new Date(data.dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      data.age = age >= 0 ? age : 0;
+    }
+
     // Check if email is being changed and if new email already exists (for other patient or user)
     if (data.email && data.email !== existing.email) {
       // Check if new email exists in patients table

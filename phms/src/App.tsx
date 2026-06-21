@@ -15,6 +15,8 @@ import SACreateBranchAdminPage from './pages/super-admin/CreateBranchAdminPage';
 import SABranchAdminDetailsPage from './pages/super-admin/AdminDetailsPage';
 import SABranchAdminEditPage from './pages/super-admin/EditBranchAdminPage';
 import SAHealersPage from './pages/super-admin/HealersPage';
+import SAHealerDetailsPage from './pages/super-admin/HealerDetailsPage';
+import SAEditHealerPage from './pages/super-admin/EditHealerPage';
 import SABranchesPage from './pages/super-admin/BranchesPage';
 import SABranchDetailsPage from './pages/super-admin/BranchDetailsPage';
 import SACreateBranchPage from './pages/super-admin/CreateBranchPage';
@@ -22,14 +24,14 @@ import SAUsersPage from './pages/super-admin/UsersPage';
 import SAReportsPage from './pages/super-admin/ReportsPage';
 import SASettingsPage from './pages/super-admin/SettingsPage';
 import SAPatientsPage from './pages/super-admin/PatientsPage';
+import SAPatientsDetailsPage from './pages/super-admin/PatientsDetailsPage';
+import SAEditPatientPage from './pages/super-admin/EditPatientPages';
 import SAVisitorLogPage from './pages/super-admin/VisitorLogPage';
 import SAAttendancePage from './pages/super-admin/AttendancePage';
-import SATreatmentCategoriesPage from './pages/super-admin/TreatmentCategoriesPage';
-import SACreateTreatmentCategoryPage from './pages/super-admin/CreateTreatmentCategoryPage';
-import SAEditTreatmentCategoryPage from './pages/super-admin/EditTreatmentCategoryPage';
-import SATreatmentCategoryDetailsPage from './pages/super-admin/TreatmentCategoryDetailsPage';
 import SATreatmentTypePage from './pages/super-admin/TreatmentTypePage';
 import SACreateTreatmentTypePage from './pages/super-admin/CreateTreatmentTypePage';
+import SATreatmentTypeDetailsPage from './pages/super-admin/TreatmentTypeDetailsPage';
+import SAEditTreatmentTypePage from './pages/super-admin/EditTreatmentTypePage';
 import BAAttendancePage from './pages/branch-admin/AttendancePage';
 import SARevenuePage from './pages/super-admin/RevenuePage';
 import SADailyFinancePage from './pages/super-admin/DailyFinancePage';
@@ -52,6 +54,8 @@ import BADocumentManagementPage from './pages/branch-admin/DocumentManagementPag
 import BAReportPage from './pages/branch-admin/ReportPage';
 import BASettingsPage from './pages/branch-admin/SettingsPage';
 import BAVisitorsCheckInPage from './pages/branch-admin/VisitorsCheckInPage';
+import BAVisiterDetailsPage from './pages/branch-admin/VisiterDetials';
+import BAVisitorEditPage from './pages/branch-admin/VisitorEdit';
 
 /* Healer Pages */
 import HealerDashboardPage from './pages/healer/DashboardPage';
@@ -173,8 +177,20 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.SUPER_ADMIN.HEALERS} exact={true}>
           <SAHealersPage />
         </Route>
+        <Route path={ROUTES.SUPER_ADMIN.HEALER_DETAILS} exact={true}>
+          <SAHealerDetailsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.EDIT_HEALER} exact={true}>
+          <SAEditHealerPage />
+        </Route>
         <Route path={ROUTES.SUPER_ADMIN.PATIENTS} exact={true}>
           <SAPatientsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.PATIENT_DETAILS} exact={true}>
+          <SAPatientsDetailsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.EDIT_PATIENT} exact={true}>
+          <SAEditPatientPage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.VISITOR_LOG} exact={true}>
           <SAVisitorLogPage />
@@ -182,23 +198,17 @@ const AppContent: React.FC = () => {
         <Route path={ROUTES.SUPER_ADMIN.ATTENDANCE} exact={true}>
           <SAAttendancePage />
         </Route>
-        <Route path={ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES} exact={true}>
-          <SATreatmentCategoriesPage />
-        </Route>
-        <Route path={ROUTES.SUPER_ADMIN.CREATE_TREATMENT_CATEGORY} exact={true}>
-          <SACreateTreatmentCategoryPage />
-        </Route>
-        <Route path={ROUTES.SUPER_ADMIN.EDIT_TREATMENT_CATEGORY} exact={true}>
-          <SAEditTreatmentCategoryPage />
-        </Route>
-        <Route path={ROUTES.SUPER_ADMIN.TREATMENT_CATEGORY_DETAILS} exact={true}>
-          <SATreatmentCategoryDetailsPage />
-        </Route>
         <Route path={ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST} exact={true}>
           <SATreatmentTypePage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.CREATE_TREATMENT_TYPE} exact={true}>
           <SACreateTreatmentTypePage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.TREATMENT_TYPE_DETAILS} exact={true}>
+          <SATreatmentTypeDetailsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.EDIT_TREATMENT_TYPE} exact={true}>
+          <SAEditTreatmentTypePage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.SETTINGS} exact={true}>
           <SASettingsPage />
@@ -216,6 +226,12 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.VISITOR_CHECKIN} exact={true}>
           <BAVisitorsCheckInPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.VISITOR_DETAILS} exact={true}>
+          <BAVisiterDetailsPage />
+        </Route>
+        <Route path={ROUTES.BRANCH_ADMIN.VISITOR_EDIT} exact={true}>
+          <BAVisitorEditPage />
         </Route>
         <Route path={ROUTES.BRANCH_ADMIN.PATIENTS} exact={true}>
           <BAPatientsPage />

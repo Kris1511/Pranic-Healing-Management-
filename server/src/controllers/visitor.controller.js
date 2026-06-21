@@ -19,6 +19,16 @@ class VisitorController {
     const logs = await visitorService.getVisitorLog(filter);
     return sendResponse(res, 200, 'Visitor logs retrieved successfully', logs);
   };
+
+  getDetails = async (req, res) => {
+    const visitor = await visitorService.getVisitorDetails(req.params.id);
+    return sendResponse(res, 200, 'Visitor details retrieved successfully', visitor);
+  };
+
+  update = async (req, res) => {
+    const visitor = await visitorService.updateVisitor(req.params.id, req.body, req.branchId);
+    return sendResponse(res, 200, 'Visitor updated successfully', visitor);
+  };
 }
 
 module.exports = new VisitorController();

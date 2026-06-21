@@ -29,7 +29,6 @@ import {
 import { useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
 import { getTreatmentTypes, deleteTreatmentType, updateTreatmentType } from '../../api/treatmentType.api';
-import { getTreatmentCategories } from '../../api/treatmentCategory.api';
 import './super-admin.css';
 
 const TreatmentTypePage: React.FC = () => {
@@ -45,7 +44,7 @@ const TreatmentTypePage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterDate, setFilterDate] = useState('');
-  const [categories, setCategories] = useState<any[]>([]);
+  const CATEGORIES = ['General', 'Advanced', 'Psychotherapy', 'Crystal'];
   
   useIonViewWillEnter(() => {
     const loadData = async () => {
@@ -53,10 +52,6 @@ const TreatmentTypePage: React.FC = () => {
         const typeResponse = await getTreatmentTypes();
         if (typeResponse.success && typeResponse.data) {
           setTreatments(typeResponse.data);
-        }
-        const catResponse = await getTreatmentCategories();
-        if (catResponse.success && catResponse.data) {
-          setCategories(catResponse.data);
         }
       } catch (error) {
         console.error('Failed to fetch data', error);
@@ -150,7 +145,7 @@ const TreatmentTypePage: React.FC = () => {
             </div>
 
             <div className="sa-filter-group" style={{ display: 'flex', gap: '12px', flex: '1', minWidth: '300px' }}>
-              <div className="sa-filter-select-wrapper" style={{ flex: '1' }}>
+              {/* <div className="sa-filter-select-wrapper" style={{ flex: '1' }}>
                 <select 
                   className="sa-settings__input" 
                   style={{ height: '44px', margin: 0, background: '#f1f5f9', border: 'none', fontWeight: 600, color: '#64748b', width: '100%' }}
@@ -158,11 +153,11 @@ const TreatmentTypePage: React.FC = () => {
                   onChange={(e) => setFilterCategory(e.target.value)}
                 >
                   <option value="All">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-              </div>
+              </div> */}
               {/* <div className="sa-filter-date-wrapper" style={{ flex: '1' }}>
                 <input 
                   type="date" 
@@ -282,13 +277,13 @@ const TreatmentTypePage: React.FC = () => {
                           <div className="sa-table__actions" style={{ justifyContent: 'center' }}>
                             <button 
                               className="sa-table__action-btn sa-action-btn--view"
-                              // onClick={() => history.push(ROUTES.SUPER_ADMIN.TREATMENT_TYPE_DETAILS.replace(':id', treatment.id.toString()))}
+                              onClick={() => history.push(ROUTES.SUPER_ADMIN.TREATMENT_TYPE_DETAILS.replace(':id', treatment.id.toString()))}
                             >
                               <IonIcon icon={eyeOutline} />
                             </button>
                             <button 
                               className="sa-table__action-btn sa-action-btn--edit"
-                              // onClick={() => history.push(ROUTES.SUPER_ADMIN.EDIT_TREATMENT_TYPE.replace(':id', treatment.id.toString()))}
+                              onClick={() => history.push(ROUTES.SUPER_ADMIN.EDIT_TREATMENT_TYPE.replace(':id', treatment.id.toString()))}
                             >
                               <IonIcon icon={createOutline} />
                             </button>

@@ -8,7 +8,6 @@ import {
   IonButtons,
   IonIcon,
   IonBackButton,
-  IonButton,
 } from '@ionic/react';
 import {
   personOutline,
@@ -18,11 +17,9 @@ import {
   businessOutline,
   calendarOutline,
   shieldCheckmarkOutline,
-  createOutline,
-  lockClosedOutline,
-  keyOutline,
   peopleOutline,
   medkitOutline,
+  cashOutline,
 } from 'ionicons/icons';
 import { useParams, useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
@@ -35,27 +32,46 @@ const AdminDetailsPage: React.FC = () => {
   const [admin, setAdmin] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'healers' | 'patients' | 'sessions' | 'finances'>('healers');
 
   useEffect(() => {
-    const fetchAdminDetails = async () => {
-      setLoading(true);
-      setError(null);
+    let active = true;
+    const fetchAdminDetails = async (isFirst = false) => {
+      if (isFirst) {
+        setLoading(true);
+      }
       try {
         const response = await getBranchAdminById(id);
-        if (response.success && response.data) {
-          setAdmin(response.data);
-        } else {
-          setError('Failed to fetch administrator details');
+        if (active) {
+          if (response.success && response.data) {
+            setAdmin(response.data);
+            setError(null);
+          } else {
+            if (isFirst) setError('Failed to fetch administrator details');
+          }
         }
       } catch (err: any) {
         console.error('Error fetching admin details:', err);
-        setError(err?.response?.data?.message || 'Error loading administrator details');
+        if (active && isFirst) {
+          setError(err?.response?.data?.message || 'Error loading administrator details');
+        }
       } finally {
-        setLoading(false);
+        if (active && isFirst) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchAdminDetails();
+    fetchAdminDetails(true);
+
+    const interval = setInterval(() => {
+      fetchAdminDetails(false);
+    }, 3000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, [id]);
 
   if (loading) {
@@ -84,6 +100,19 @@ const AdminDetailsPage: React.FC = () => {
     );
   }
 
+  const branchAddress = admin.branch
+    ? admin.branch.address || [
+        admin.branch.addressLine1,
+        admin.branch.addressLine2,
+        admin.branch.city,
+        admin.branch.district,
+        admin.branch.state,
+        admin.branch.pincode,
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : 'N/A';
+
   return (
     <IonPage className="sa-page">
       <IonHeader className="ion-no-border">
@@ -92,17 +121,6 @@ const AdminDetailsPage: React.FC = () => {
             <IonBackButton defaultHref={ROUTES.SUPER_ADMIN.BRANCH_ADMINS} text="" />
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Administrator Profile</IonTitle>
-          <IonButtons slot="end" style={{ display: 'flex', alignItems: 'center' }}>
-            {/* <button 
-              className="sa-btn sa-btn--primary sa-btn--sm" 
-              style={{ marginRight: '8px' }}
-              onClick={() => history.push(ROUTES.SUPER_ADMIN.EDIT_BRANCH_ADMIN.replace(':id', id))}
-            >
-              <IonIcon icon={createOutline} />
-              <span className="sa-hide-on-mobile" style={{ marginLeft: '4px' }}>Edit Profile</span>
-              <span className="sa-show-on-mobile" style={{ marginLeft: '4px' }}>Edit</span>
-            </button> */}
-          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -128,13 +146,13 @@ const AdminDetailsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Performance Stats */}
-          <div className="sa-stats sa-stats--2" style={{ marginBottom: '24px' }}>
+          {/* Performance Stats Summary Cards */}
+          <div className="sa-stats sa-stats--4" style={{ marginBottom: '24px' }}>
             <div className="sa-stat-card">
               <div>
-                <div className="sa-stat-card__label">Healers Assigned</div>
+                <div className="sa-stat-card__label">Total Healers</div>
                 <div className="sa-stat-card__value">{admin.healersCount || 0}</div>
-                <div className="sa-stat-card__detail">Active practitioners in branch</div>
+                <div className="sa-stat-card__detail">Active practitioners</div>
               </div>
               <div className="sa-stat-card__icon" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
                 <IonIcon icon={medkitOutline} />
@@ -142,14 +160,25 @@ const AdminDetailsPage: React.FC = () => {
             </div>
             <div className="sa-stat-card">
               <div>
-                <div className="sa-stat-card__label">Patients Handled</div>
+                <div className="sa-stat-card__label">Total Patients</div>
                 <div className="sa-stat-card__value">{admin.patientsCount || 0}</div>
-                <div className="sa-stat-card__detail">Total assignments across branch</div>
+                <div className="sa-stat-card__detail">Registered patients</div>
               </div>
               <div className="sa-stat-card__icon" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
                 <IonIcon icon={peopleOutline} />
               </div>
             </div>
+            <div className="sa-stat-card">
+              <div>
+                <div className="sa-stat-card__label">Total Sessions</div>
+                <div className="sa-stat-card__value">{admin.sessionsCount || 0}</div>
+                <div className="sa-stat-card__detail">Conducted sessions</div>
+              </div>
+              <div className="sa-stat-card__icon" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>
+                <IonIcon icon={calendarOutline} />
+              </div>
+            </div>
+            
           </div>
 
           {/* Detailed Information Sections */}
@@ -164,6 +193,11 @@ const AdminDetailsPage: React.FC = () => {
                 <InfoItem label="Phone Number" value={admin.user?.phoneNumber || admin.phoneNumber || admin.phone || 'N/A'} icon={callOutline} />
                 <InfoItem label="Date of Birth" value={admin.dob || 'N/A'} icon={calendarOutline} />
                 <InfoItem label="Gender" value={admin.gender || 'N/A'} icon={personOutline} />
+                <InfoItem 
+                  label="Joined Date" 
+                  value={admin.user?.createdAt ? new Date(admin.user.createdAt).toLocaleDateString() : admin.createdAt ? new Date(admin.createdAt).toLocaleDateString() : 'N/A'} 
+                  icon={calendarOutline} 
+                />
               </div>
             </div>
 
@@ -172,6 +206,7 @@ const AdminDetailsPage: React.FC = () => {
               <SectionHeader icon={locationOutline} title="Branch & Address" />
               <div className="sa-details-grid">
                 <InfoItem label="Assigned Branch" value={admin.branch?.name || 'Unassigned'} icon={businessOutline} />
+                <InfoItem label="Branch Address" value={branchAddress} icon={locationOutline} />
                 <InfoItem label="Address Line 1" value={admin.addressLine1 || 'N/A'} icon={locationOutline} />
                 <InfoItem label="Address Line 2" value={admin.addressLine2 || 'N/A'} icon={locationOutline} />
                 <InfoItem label="City" value={admin.city || 'N/A'} icon={businessOutline} />
@@ -198,6 +233,214 @@ const AdminDetailsPage: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Branch Operations Tabbed Lists */}
+            {/* <div className="sa-section">
+              <SectionHeader icon={businessOutline} title="Branch Operations & Data" />
+              
+              <div className="sa-filters" style={{ marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', gap: '12px' }}>
+                <button 
+                  className={`sa-filter-tab ${activeTab === 'healers' ? 'sa-filter-tab--active' : ''}`}
+                  onClick={() => setActiveTab('healers')}
+                  style={{ borderRadius: '8px' }}
+                >
+                  Assigned Healers ({(admin.healersList || []).length})
+                </button>
+                <button 
+                  className={`sa-filter-tab ${activeTab === 'patients' ? 'sa-filter-tab--active' : ''}`}
+                  onClick={() => setActiveTab('patients')}
+                  style={{ borderRadius: '8px' }}
+                >
+                  Registered Patients ({(admin.patientsList || []).length})
+                </button>
+                <button 
+                  className={`sa-filter-tab ${activeTab === 'sessions' ? 'sa-filter-tab--active' : ''}`}
+                  onClick={() => setActiveTab('sessions')}
+                  style={{ borderRadius: '8px' }}
+                >
+                  Session History ({(admin.sessionsList || []).length})
+                </button>
+                <button 
+                  className={`sa-filter-tab ${activeTab === 'finances' ? 'sa-filter-tab--active' : ''}`}
+                  onClick={() => setActiveTab('finances')}
+                  style={{ borderRadius: '8px' }}
+                >
+                  Finance Summary ({(admin.financesList || []).length})
+                </button>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                {activeTab === 'healers' && (
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Healer ID</th>
+                        <th>Name</th>
+                        <th>Mobile</th>
+                        <th>Email</th>
+                        <th>Specialization</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(admin.healersList || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 16px' }}>
+                            No healers assigned to this branch.
+                          </td>
+                        </tr>
+                      ) : (
+                        (admin.healersList || []).map((healer: any) => (
+                          <tr key={healer.id}>
+                            <td style={{ fontWeight: 600, color: 'var(--color-primary-dark)' }}>{healer.healerId}</td>
+                            <td style={{ fontWeight: 500 }}>{healer.name}</td>
+                            <td>{healer.mobile || healer.phone || 'N/A'}</td>
+                            <td>{healer.email || 'N/A'}</td>
+                            <td>{healer.specialization || 'N/A'}</td>
+                            <td>
+                              <span className={`sa-badge sa-badge--${(healer.status || '').toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
+                                {healer.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {activeTab === 'patients' && (
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Patient ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(admin.patientsList || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 16px' }}>
+                            No patients registered in this branch.
+                          </td>
+                        </tr>
+                      ) : (
+                        (admin.patientsList || []).map((patient: any) => (
+                          <tr key={patient.id}>
+                            <td style={{ fontWeight: 600, color: 'var(--color-primary-dark)' }}>{patient.patientId}</td>
+                            <td style={{ fontWeight: 500 }}>{patient.name}</td>
+                            <td>{patient.phone || 'N/A'}</td>
+                            <td>{patient.email || 'N/A'}</td>
+                            <td>
+                              <span className={`sa-badge sa-badge--${(patient.status || '').toLowerCase() === 'active' ? 'active' : 'inactive'}`}>
+                                {patient.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {activeTab === 'sessions' && (
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Patient</th>
+                        <th>Healer</th>
+                        <th>Treatment Type</th>
+                        <th>Status</th>
+                        <th>Payment Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(admin.sessionsList || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 16px' }}>
+                            No sessions recorded for this branch.
+                          </td>
+                        </tr>
+                      ) : (
+                        (admin.sessionsList || []).map((session: any) => (
+                          <tr key={session.id}>
+                            <td style={{ fontWeight: 500 }}>{session.sessionDate}</td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 600 }}>{session.patient?.name || 'Unknown Patient'}</span>
+                                <span style={{ fontSize: '11px', color: '#94a3b8' }}>{session.patient?.patientId || ''}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 500 }}>{session.healer?.name || 'Unknown Healer'}</span>
+                                <span style={{ fontSize: '11px', color: '#94a3b8' }}>{session.healer?.healerId || ''}</span>
+                              </div>
+                            </td>
+                            <td>{session.treatmentType || 'N/A'}</td>
+                            <td>
+                              <span className={`sa-badge sa-badge--${(session.status || '').toLowerCase() === 'completed' ? 'active' : 'inactive'}`}>
+                                {session.status}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`sa-badge sa-badge--${(session.paymentStatus || '').toLowerCase() === 'paid' ? 'active' : 'inactive'}`}>
+                                {session.paymentStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+
+                {activeTab === 'finances' && (
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Payment Mode</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(admin.financesList || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 16px' }}>
+                            No finance records found for this branch.
+                          </td>
+                        </tr>
+                      ) : (
+                        (admin.financesList || []).map((finance: any) => (
+                          <tr key={finance.id}>
+                            <td>{new Date(finance.date).toLocaleDateString()}</td>
+                            <td>
+                              <span className={`sa-badge sa-badge--${(finance.type || '').toLowerCase() === 'income' ? 'active' : 'inactive'}`}>
+                                {finance.type}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 500 }}>{finance.category}</td>
+                            <td style={{ fontWeight: 600, color: (finance.type || '').toLowerCase() === 'income' ? '#10b981' : '#ef4444' }}>
+                              {(finance.type || '').toLowerCase() === 'income' ? '+' : '-'}₹{parseFloat(finance.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td>{finance.description || 'N/A'}</td>
+                            <td>{finance.paymentMode || 'N/A'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div> */}
 
           </div>
         </div>

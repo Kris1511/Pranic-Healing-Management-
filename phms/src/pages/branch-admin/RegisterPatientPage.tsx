@@ -21,6 +21,7 @@ import { ROUTES } from "../../constants/routes.constant";
 import { getHealers } from "../../api/healer.api";
 import { createPatient } from "../../api/patient.api";
 import { uploadDocument } from "../../api/document.api";
+import { getTreatmentTypes } from "../../api/treatmentType.api";
 import "./branch-admin.css";
 
 export default function BARegisterPatientPage() {
@@ -78,6 +79,7 @@ export default function BARegisterPatientPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [healers, setHealers] = useState<any[]>([]);
+  const [treatmentTypes, setTreatmentTypes] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchHealers = async () => {
@@ -90,7 +92,18 @@ export default function BARegisterPatientPage() {
         console.error("Failed to fetch healers", error);
       }
     };
+    const fetchTreatmentTypes = async () => {
+      try {
+        const response = await getTreatmentTypes({ status: 'Active' });
+        if (response.success && Array.isArray(response.data)) {
+          setTreatmentTypes(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch treatment types", error);
+      }
+    };
     fetchHealers();
+    fetchTreatmentTypes();
   }, []);
 
   const calculateAge = (dobString: string) => {
@@ -813,18 +826,11 @@ export default function BARegisterPatientPage() {
                           onChange={handleInputChange}
                         >
                           <option value="">Select Treatment Type</option>
-                          <option value="Pranic Psychotherapy">
-                            Pranic Psychotherapy
-                          </option>
-                          <option value="Advanced Pranic Healing">
-                            Advanced Pranic Healing
-                          </option>
-                          <option value="Crystal Pranic Healing">
-                            Crystal Pranic Healing
-                          </option>
-                          <option value="Basic Pranic Healing">
-                            Basic Pranic Healing
-                          </option>
+                          {treatmentTypes.map(t => (
+                            <option key={t.id} value={t.name}>
+                              {t.name}
+                            </option>
+                          ))}
                         </select>
                       </div>
 

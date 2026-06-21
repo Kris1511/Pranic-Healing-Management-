@@ -31,9 +31,13 @@ import { getSuperAdminDailyFinance, addFinanceTransaction } from '../../api/fina
 import './super-admin.css';
 
 const DailyFinancePage: React.FC = () => {
+  const todayStr = new Date().toISOString().split('T')[0];
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [showAddModal, setShowAddModal] = useState(false);
+  
+  const totalIncomeLabel = 'Total Daily Income';
+  const totalExpenseLabel = 'Total Daily Expense';
   
   const [present] = useIonToast();
   const triggerToast = (message: string, color: 'success' | 'danger' = 'success') => {
@@ -145,7 +149,7 @@ const DailyFinancePage: React.FC = () => {
                 <h1 className="sa-page__title">Daily Income & Expense</h1>
                 <p className="sa-page__subtitle">Track all daily cash flows and financial transactions</p>
               </div>
-              <div className="sa-page__header-actions">
+              <div className="sa-page__header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <div className="sa-date-picker">
                   <IonIcon icon={calendarOutline} />
                   <input 
@@ -154,6 +158,15 @@ const DailyFinancePage: React.FC = () => {
                     onChange={(e) => setSelectedDate(e.target.value)} 
                   />
                 </div>
+                {selectedDate !== todayStr && (
+                  <button 
+                    className="sa-btn sa-btn--outline" 
+                    style={{ margin: 0, height: '40px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    onClick={() => setSelectedDate(todayStr)}
+                  >
+                    Reset to Today
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -164,7 +177,7 @@ const DailyFinancePage: React.FC = () => {
                 <IonIcon icon={arrowUpOutline} />
               </div>
               <div>
-                <div className="sa-stat-card__label">Total Daily Income</div>
+                <div className="sa-stat-card__label">{totalIncomeLabel}</div>
                 <div className="sa-stat-card__value">₹{totalIncome.toLocaleString()}</div>
               </div>
             </div>
@@ -173,7 +186,7 @@ const DailyFinancePage: React.FC = () => {
                 <IonIcon icon={arrowDownOutline} />
               </div>
               <div>
-                <div className="sa-stat-card__label">Total Daily Expense</div>
+                <div className="sa-stat-card__label">{totalExpenseLabel}</div>
                 <div className="sa-stat-card__value">₹{totalExpense.toLocaleString()}</div>
               </div>
             </div>

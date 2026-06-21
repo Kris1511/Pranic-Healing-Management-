@@ -48,7 +48,64 @@ class HealerService {
     if (branchId && healer.branchId !== branchId) {
       throw new ApiError(403, 'Unauthorized access to branch data.');
     }
-    return healer;
+
+    const { Patient, Session, Payment } = require('../models');
+
+    // 1. Get counts
+    const patientsCount = await Patient.count({ where: { healerId: healer.id } });
+    const sessionsCount = await Session.count({ where: { healerId: healer.id } });
+
+    // Find all sessions to sum payments
+    const sessions = await Session.findAll({
+      where: { healerId: healer.id },
+      attributes: ['id']
+    });
+    const sessionIds = sessions.map(s => s.id);
+
+    const revenueSum = await Payment.sum('amount', {
+      where: {
+        sessionId: sessionIds,
+        status: 'paid'
+      }
+    });
+    const totalRevenue = parseFloat(revenueSum) || 0;
+
+    // 2. Fetch Lists
+    const patientsList = await Patient.findAll({
+      where: { healerId: healer.id },
+      order: [['created_at', 'DESC']]
+    });
+
+    const sessionsList = await Session.findAll({
+      where: { healerId: healer.id },
+      include: [
+        { model: Patient, as: 'patient', attributes: ['id', 'patientId', 'name'] }
+      ],
+      order: [['sessionDate', 'DESC'], ['created_at', 'DESC']]
+    });
+
+    const paymentsList = await Payment.findAll({
+      where: { sessionId: sessionIds },
+      include: [
+        {
+          model: Session,
+          as: 'session',
+          attributes: ['id', 'sessionDate'],
+          include: [{ model: Patient, as: 'patient', attributes: ['id', 'name'] }]
+        }
+      ],
+      order: [['paymentDate', 'DESC'], ['created_at', 'DESC']]
+    });
+
+    const healerData = healer.toJSON ? healer.toJSON() : { ...healer };
+    healerData.patientsCount = patientsCount;
+    healerData.sessionsCount = sessionsCount;
+    healerData.totalRevenue = totalRevenue;
+    healerData.patientsList = patientsList;
+    healerData.sessionsList = sessionsList;
+    healerData.paymentsList = paymentsList;
+
+    return healerData;
   }
 
   async updateHealer(id, data, branchId) {

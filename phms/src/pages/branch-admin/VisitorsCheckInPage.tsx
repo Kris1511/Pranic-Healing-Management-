@@ -43,7 +43,6 @@ export default function BAVisitorCheckInPage() {
   // Form states initialized as empty
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     mobile: '',
     gender: 'Male',
     visitorType: 'Session',
@@ -52,7 +51,10 @@ export default function BAVisitorCheckInPage() {
     address: '',
     entryDate: '',
     notes: '',
+    referralName: '',
   });
+
+  const [referenceSource, setReferenceSource] = useState<string[]>([]);
 
   // Success alert/modal control
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -75,8 +77,8 @@ export default function BAVisitorCheckInPage() {
       alert('Contact Number is required.');
       return;
     }
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      alert('A valid email address is required.');
+    if (referenceSource.length === 0) {
+      alert('Please select at least one Reference Source.');
       return;
     }
 
@@ -89,12 +91,12 @@ export default function BAVisitorCheckInPage() {
         branchId: typeof user?.branch === 'object' && user?.branch !== null 
           ? (user.branch as any).id 
           : (user as any)?.branchId || undefined,
-        // Optional fields from the form (not in standard model but passed just in case)
-        email: formData.email,
+        referenceSource,
         gender: formData.gender,
         idProof: formData.idProof,
         address: formData.address,
-        entryDate: formData.entryDate
+        entryDate: formData.entryDate,
+        referralName: formData.referralName,
       };
 
       console.log("Token:", localStorage.getItem('token'));
@@ -271,19 +273,6 @@ export default function BAVisitorCheckInPage() {
 
                           <div className="st-form-row">
                             <div className="st-form-group">
-                              <label style={customStyles.label}>EMAIL ADDRESS *</label>
-                              <input 
-                                type="email" 
-                                name="email" 
-                                style={customStyles.grayInput}
-                                value={formData.email} 
-                                onChange={handleInputChange} 
-                                required 
-                                placeholder="Enter Email Address"
-                              />
-                            </div>
-
-                            <div className="st-form-group">
                               <label style={customStyles.label}>CONTACT NUMBER *</label>
                               <input 
                                 type="tel" 
@@ -295,6 +284,46 @@ export default function BAVisitorCheckInPage() {
                                 placeholder="Enter Contact Number"
                               />
                             </div>
+                          </div>
+
+                          <div className="st-form-group">
+                            <label style={customStyles.label}>REFERENCE SOURCE *</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginTop: '6px' }}>
+                              {['Family', 'Online', 'Advertisement', 'Friend', 'Healing Camp'].map((option) => (
+                                <label key={option} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#1e293b', fontWeight: 600 }}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={referenceSource.includes(option)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setReferenceSource(prev => [...prev, option]);
+                                      } else {
+                                        setReferenceSource(prev => prev.filter(item => item !== option));
+                                      }
+                                    }}
+                                    style={{
+                                      width: '16px',
+                                      height: '16px',
+                                      cursor: 'pointer',
+                                      accentColor: '#0D5C46',
+                                    }}
+                                  />
+                                  <span>{option}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="st-form-group">
+                            <label style={customStyles.label}>REFERRAL NAME</label>
+                            <input 
+                              type="text" 
+                              name="referralName" 
+                              style={customStyles.grayInput}
+                              value={formData.referralName} 
+                              onChange={handleInputChange} 
+                              placeholder="Enter Referral Name (if referred)"
+                            />
                           </div>
 
                           <div className="st-form-group" style={{ maxWidth: '50%' }}>
@@ -328,6 +357,7 @@ export default function BAVisitorCheckInPage() {
                                 <option value="Session">Session</option>
                                 <option value="Camp">Camp</option>
                                 <option value="Healer">Healer</option>
+                                <option value="Conversion">Conversion</option>
                               </select>
                             </div>
 
@@ -344,7 +374,7 @@ export default function BAVisitorCheckInPage() {
                             </div> */}
                           </div>
 
-                          <div className="st-form-group">
+                          {/* <div className="st-form-group">
                             <label style={customStyles.label}>ID PROOF (AADHAR)</label>
                             <input 
                               type="text" 
@@ -354,7 +384,7 @@ export default function BAVisitorCheckInPage() {
                               onChange={handleInputChange} 
                               placeholder="Enter ID Proof (e.g. Aadhar)"
                             />
-                          </div>
+                          </div> */}
 
                           <div className="st-form-group">
                             <label style={customStyles.label}>ADDRESS</label>

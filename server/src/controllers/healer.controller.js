@@ -63,6 +63,28 @@ class HealerController {
   getAll = async (req, res) => {
     const filter = { ...req.query };
     if (req.branchId) filter.branchId = req.branchId;
+
+    if (filter.specialty) {
+      if (filter.specialty === 'All Specialties' || filter.specialty === '') {
+        delete filter.specialty;
+      } else {
+        filter.specialization = filter.specialty;
+        delete filter.specialty;
+      }
+    }
+
+    if (filter.branchId) {
+      if (filter.branchId === 'All Branches' || filter.branchId === '') {
+        delete filter.branchId;
+      }
+    }
+
+    if (filter.status) {
+      if (filter.status === 'All Status' || filter.status === '') {
+        delete filter.status;
+      }
+    }
+
     const healers = await healerService.getAllHealers(filter);
 
     return sendResponse(

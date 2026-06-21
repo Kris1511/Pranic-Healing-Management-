@@ -15,6 +15,8 @@ router.delete('/:id', financeController.deleteTransaction);
 router.delete('/transaction/:id', financeController.deleteTransaction);
 router.get('/super-admin/daily', financeController.getSuperAdminDaily);
 router.get('/super-admin/revenue', financeController.getSuperAdminRevenue);
+router.get('/super-admin/dashboard-stats', financeController.getSuperAdminDashboardStats);
+router.get('/super-admin/dashboard/weekly-finance', financeController.getWeeklyFinance);
 router.get('/dashboard-stats', financeController.getDashboardStats);
 router.get('/', financeController.getAll);
 router.get('/summary', financeController.getSummary);

@@ -58,14 +58,7 @@ const superAdminNav: NavItem[] = [
   { title: 'Worker Attendance', url: ROUTES.SUPER_ADMIN.ATTENDANCE, icon: timeOutline },
 
   /* Treatment Section */
-  { 
-    title: 'Treatment', 
-    icon: leafOutline, 
-    subItems: [
-      { title: 'Treatment Category', url: ROUTES.SUPER_ADMIN.TREATMENT_CATEGORIES, icon: listOutline },
-      { title: 'Treatment Type', url: ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST, icon: medkitOutline },
-    ] 
-  },
+  { title: 'Treatment Type', url: ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST, icon: leafOutline },
 
   /* Finance Section */
   { title: 'Daily Income & Expense', url: ROUTES.SUPER_ADMIN.DAILY_FINANCE, icon: cashOutline, section: 'Finance' },

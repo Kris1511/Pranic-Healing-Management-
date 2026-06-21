@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createHealer } from "../../api/healer.api";
+import { getTreatmentTypes } from "../../api/treatmentType.api";
 import { IonPage, IonContent, IonIcon } from "@ionic/react";
 import {
   arrowBackOutline,
@@ -87,6 +88,22 @@ export default function BACreateHealerPage() {
   const photoInputRef = React.useRef<HTMLInputElement>(null);
   const idProofInputRef = React.useRef<HTMLInputElement>(null);
   const certificationInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [treatmentTypes, setTreatmentTypes] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTreatmentTypes = async () => {
+      try {
+        const response = await getTreatmentTypes({ status: 'Active' });
+        if (response.success && Array.isArray(response.data)) {
+          setTreatmentTypes(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch treatment types", error);
+      }
+    };
+    fetchTreatmentTypes();
+  }, []);
 
   // Store healer name of submitted form for the success modal
   const [submittedName, setSubmittedName] = useState("");
@@ -717,14 +734,17 @@ export default function BACreateHealerPage() {
                               <label style={customStyles.label}>
                                 AREA OF SPECIALIZATION
                               </label>
-                              <input
-                                type="text"
+                              <select
                                 name="specialization"
-                                style={customStyles.grayInput}
+                                style={{ ...customStyles.grayInput, color: '#1e293b' }}
                                 value={formData.specialization}
                                 onChange={handleInputChange}
-                                placeholder="Energy Healing"
-                              />
+                              >
+                                <option value="">Select Specialization</option>
+                                {treatmentTypes.map(t => (
+                                  <option key={t.id} value={t.name}>{t.name}</option>
+                                ))}
+                              </select>
                             </div>
                           </div>
 

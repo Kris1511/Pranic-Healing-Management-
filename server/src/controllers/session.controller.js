@@ -7,10 +7,17 @@ const mapSessionToResponse = (session) => {
   const fee = parseFloat(session.sessionFee !== null && session.sessionFee !== undefined ? session.sessionFee : (session.totalAmount || 0));
   const paid = session.payment ? parseFloat(session.payment.amount) || 0 : 0;
   let paymentStatus = 'Pending';
-  if (paid >= fee && fee > 0) {
-    paymentStatus = 'Paid';
-  } else if (paid > 0 && paid < fee) {
-    paymentStatus = 'Partial';
+  if (session.paymentStatus) {
+    paymentStatus = session.paymentStatus.charAt(0).toUpperCase() + session.paymentStatus.slice(1).toLowerCase();
+  }
+  if (session.payment) {
+    if (paid >= fee && fee > 0) {
+      paymentStatus = 'Paid';
+    } else if (paid > 0 && paid < fee) {
+      paymentStatus = 'Partial';
+    } else if (paid === 0) {
+      paymentStatus = 'Pending';
+    }
   }
   
   let paymentMethod = session.paymentMethod;
@@ -205,13 +212,17 @@ class SessionController {
     if (req.query.paymentStatus) {
       const target = req.query.paymentStatus.toLowerCase();
       sessions = sessions.filter(s => {
-        const fee = parseFloat(s.sessionFee !== null && s.sessionFee !== undefined ? s.sessionFee : (s.totalAmount || 0));
-        const paid = s.payment ? parseFloat(s.payment.amount) || 0 : 0;
-        let status = 'pending';
-        if (paid >= fee && fee > 0) {
-          status = 'paid';
-        } else if (paid > 0 && paid < fee) {
-          status = 'partial';
+        let status = s.paymentStatus ? s.paymentStatus.toLowerCase() : 'pending';
+        if (s.payment) {
+          const fee = parseFloat(s.sessionFee !== null && s.sessionFee !== undefined ? s.sessionFee : (s.totalAmount || 0));
+          const paid = parseFloat(s.payment.amount) || 0;
+          if (paid >= fee && fee > 0) {
+            status = 'paid';
+          } else if (paid > 0 && paid < fee) {
+            status = 'partial';
+          } else if (paid === 0) {
+            status = 'pending';
+          }
         }
         return status === target;
       });

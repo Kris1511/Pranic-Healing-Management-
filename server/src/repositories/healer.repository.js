@@ -31,6 +31,7 @@ class HealerRepository {
       certification: sanitize(data.certification),
 
       branchId: sanitize(data.branchId),
+      bio: sanitize(data.bio),
     });
   }
 
@@ -83,6 +84,7 @@ class HealerRepository {
     if (updatedData.idProof !== undefined) updatedData.idProof = sanitize(updatedData.idProof);
     if (updatedData.certification !== undefined) updatedData.certification = sanitize(updatedData.certification);
     if (updatedData.branchId !== undefined) updatedData.branchId = sanitize(updatedData.branchId);
+    if (updatedData.bio !== undefined) updatedData.bio = sanitize(updatedData.bio);
 
     if (updatedData.experience !== undefined) {
       updatedData.experience = (updatedData.experience === '' || updatedData.experience === null) ? null : Number(updatedData.experience);
