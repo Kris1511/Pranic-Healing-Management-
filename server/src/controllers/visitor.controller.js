@@ -14,10 +14,15 @@ class VisitorController {
   };
 
   getLog = async (req, res) => {
-    const filter = { ...req.query };
-    if (req.branchId) filter.branchId = req.branchId;
-    const logs = await visitorService.getVisitorLog(filter);
-    return sendResponse(res, 200, 'Visitor logs retrieved successfully', logs);
+    try {
+      const filter = { ...req.query };
+      if (req.branchId) filter.branchId = req.branchId;
+      const logs = await visitorService.getVisitorLog(filter);
+      return sendResponse(res, 200, 'Visitor logs retrieved successfully', logs);
+    } catch (error) {
+      console.error('Error in getVisitorLog:', error);
+      return sendResponse(res, 500, 'Internal Server Error', null);
+    }
   };
 
   getDetails = async (req, res) => {

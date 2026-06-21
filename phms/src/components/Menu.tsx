@@ -58,7 +58,7 @@ const superAdminNav: NavItem[] = [
   { title: 'Worker Attendance', url: ROUTES.SUPER_ADMIN.ATTENDANCE, icon: timeOutline },
 
   /* Treatment Section */
-  { title: 'Treatment Type', url: ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST, icon: leafOutline },
+  { title: 'Treatment Type', url: ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST, icon: leafOutline, section: 'Treatment' },
 
   /* Finance Section */
   { title: 'Daily Income & Expense', url: ROUTES.SUPER_ADMIN.DAILY_FINANCE, icon: cashOutline, section: 'Finance' },
@@ -110,11 +110,12 @@ const Menu: React.FC = () => {
   const [expandedItems, setExpandedItems] = React.useState<string[]>([]);
 
   let navItems = branchAdminNav;
-  if (user?.role === 'SUPER_ADMIN') {
+  const role = user?.role?.toUpperCase() || '';
+  if (role === 'SUPER_ADMIN' || role === 'SUPER ADMIN') {
     navItems = superAdminNav;
-  } else if (user?.role === 'HEALER') {
+  } else if (role === 'HEALER') {
     navItems = healerNav;
-  } else if (user?.role === 'PATIENT') {
+  } else if (role === 'PATIENT') {
     navItems = patientNav;
   }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -25,29 +25,89 @@ import {
   downloadOutline,
 } from 'ionicons/icons';
 import './super-admin.css';
+import { getReportsSummary, getReportsGrowth } from '../../api/report.api';
 
 const ReportsPage: React.FC = () => {
-  const [activeToggle, setActiveToggle] = useState('Income');
+  const [activeToggle, setActiveToggle] = useState('All');
   const [timeRange, setTimeRange] = useState('Last 7 Days');
 
+  const [summaryData, setSummaryData] = useState<any>(null);
+  const [growthData, setGrowthData] = useState<any>([]);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const summaryRes = await getReportsSummary({ timeRange });
+        if (summaryRes?.data) {
+          setSummaryData(summaryRes.data);
+        }
+        
+        const growthRes = await getReportsGrowth({ timeRange });
+        if (growthRes?.data) {
+          setGrowthData(growthRes.data);
+        }
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+      }
+    };
+    fetchReports();
+  }, [timeRange]);
+
+  const downloadPDF = () => {
+    // We use the browser's native print functionality to allow saving as PDF
+    window.print();
+  };
+
+  const downloadExcel = () => {
+    if (!summaryData) return;
+    
+    const headers = ['Metric', 'Value'];
+    const rows = [
+      ['Total Sessions', summaryData.sessionCount || 0],
+      ['Total Patients', summaryData.patientCount || 0],
+      ['Total Revenue', summaryData.totalRevenue || 0],
+      ['Total Expenses', summaryData.totalExpenses || 0],
+      ['Net Profit', summaryData.netProfit || 0],
+    ];
+
+    let csvContent = 'data:text/csv;charset=utf-8,' 
+      + headers.join(',') + '\n' 
+      + rows.map(e => e.join(',')).join('\n');
+
+    csvContent += '\n\nDay,Income,Expense\n';
+    const chartBars: any[] = summaryData.chartBars || [];
+    csvContent += chartBars.map(b => `${b.d},${b.h1},${b.h2}`).join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `PHMS_Report_${timeRange.replace(/ /g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const stats = [
-    { label: 'Total Sessions', value: '2,450', change: '+8%', icon: flashOutline },
-    { label: 'New Patients', value: '184', change: '+4%', icon: peopleOutline },
-    { label: 'Total Revenue', value: '₹12.5L', change: '+6%', icon: cashOutline },
-    { label: 'Avg. Rating', value: '4.9', change: '', icon: starOutline },
+    { label: 'Total Sessions', value: summaryData?.sessionCount || '0', change: '', icon: flashOutline },
+    { label: 'Total Patients', value: summaryData?.patientCount || '0', change: '', icon: peopleOutline },
+    { label: 'Total Revenue', value: `₹${summaryData?.totalRevenue || 0}`, change: '', icon: cashOutline },
+    { label: 'Net Profit', value: `₹${summaryData?.netProfit || 0}`, change: '', icon: cashOutline },
   ];
 
-  const chartBars = [
-    { d: 'Mon', h1: 30000, h2: 15000 },
-    { d: 'Tue', h1: 45000, h2: 25000 },
-    { d: 'Wed', h1: 35000, h2: 20000 },
-    { d: 'Thu', h1: 55000, h2: 18000 },
-    { d: 'Fri', h1: 40000, h2: 30000 },
-    { d: 'Sat', h1: 60000, h2: 22000 },
-    { d: 'Sun', h1: 25000, h2: 12000 },
+  const defaultChartBars = [
+    { d: 'Mon', h1: 0, h2: 0 },
+    { d: 'Tue', h1: 0, h2: 0 },
+    { d: 'Wed', h1: 0, h2: 0 },
+    { d: 'Thu', h1: 0, h2: 0 },
+    { d: 'Fri', h1: 0, h2: 0 },
+    { d: 'Sat', h1: 0, h2: 0 },
+    { d: 'Sun', h1: 0, h2: 0 },
   ];
 
-  const maxVal = 70000;
+  const chartBars = summaryData?.chartBars || defaultChartBars;
+
+  const maxVal = Math.max(...chartBars.map((b: any) => Math.max(b.h1, b.h2)), 1000);
+  const hasChartData = chartBars.some((b: any) => b.h1 > 0 || b.h2 > 0);
 
   const specializedReports = [
     {
@@ -77,13 +137,6 @@ const ReportsPage: React.FC = () => {
     },
   ];
 
-  const healingTypes = [
-    { name: 'Energy Healing', pct: 25, color: 'var(--color-primary)' },
-    { name: 'Pranic Healing', pct: 25, color: '#2a9d8f' },
-    { name: 'Meditation', pct: 20, color: '#e9c46a' },
-    { name: 'Chakra Healing', pct: 15, color: '#f4a261' },
-    { name: 'Others', pct: 15, color: '#e76f51' },  
-  ];
 
   return (
     <IonPage className="sa-page">
@@ -114,13 +167,26 @@ const ReportsPage: React.FC = () => {
                 <p className="sa-page__subtitle">Consolidated performance data across all sanctuaries</p>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button className="sa-btn sa-btn--outline sa-btn--sm">
-                  <IonIcon icon={calendarOutline} /> {timeRange}
-                </button>
-                <button className="sa-btn sa-btn--primary sa-btn--sm">
+                <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '0 10px' }}>
+                  <IonIcon icon={calendarOutline} style={{ color: 'var(--color-text-secondary)' }} />
+                  <select 
+                    value={timeRange} 
+                    onChange={(e) => setTimeRange(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', outline: 'none', padding: '6px 10px', fontSize: '13px', color: 'var(--color-text-primary)' }}
+                  >
+                    <option value="Today">Today</option>
+                    <option value="Yesterday">Yesterday</option>
+                    <option value="Last 7 Days">Last 7 Days</option>
+                    <option value="This Month">This Month</option>
+                    <option value="All Time">All Time</option>
+                  </select>
+                </div>
+                <button className="sa-btn sa-btn--primary sa-btn--sm" onClick={downloadPDF}>
                   <IonIcon icon={downloadOutline} /> Export PDF
                 </button>
-                <button className="sa-btn sa-btn--outline sa-btn--sm">Excel</button>
+                <button className="sa-btn sa-btn--outline sa-btn--sm" onClick={downloadExcel}>
+                  Excel
+                </button>
               </div>
             </div>
           </div>
@@ -143,9 +209,7 @@ const ReportsPage: React.FC = () => {
             ))}
           </div>
 
-          {/* Charts Grid */}
-          <div className="sa-grid-2">
-            {/* Financial Performance */}
+          {/* Financial Performance Chart */}
             <div className="sa-section">
               <div className="sa-section__header">
                 <div>
@@ -153,7 +217,7 @@ const ReportsPage: React.FC = () => {
                   <p className="sa-section__subtitle">Consolidated Income vs Expenses</p>
                 </div>
                 <div className="sa-toggle-tabs">
-                  {['Income', 'Expenses'].map(tab => (
+                  {['All', 'Income', 'Expenses'].map(tab => (
                     <button
                       key={tab}
                       className={`sa-toggle-tab ${activeToggle === tab ? 'sa-toggle-tab--active' : ''}`}
@@ -164,36 +228,54 @@ const ReportsPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <div className="sa-chart-placeholder" style={{ height: 240 }}>
-                {chartBars.map((bar, i) => (
-                  <React.Fragment key={i}>
-                    <div className="sa-chart-bar" style={{ height: (bar.h1 / maxVal) * 200 }} />
-                    <div className="sa-chart-bar sa-chart-bar--secondary" style={{ height: (bar.h2 / maxVal) * 200 }} />
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-
-            {/* Case Distribution */}
-            <div className="sa-section">
-              <div>
-                <h2 className="sa-section__title">Case Distribution</h2>
-                <p className="sa-section__subtitle">Healing Specializations</p>
-              </div>
-              <div style={{ padding: '20px 0' }}>
-                <div className="sa-donut-placeholder" />
-                <div className="sa-donut-legend">
-                  {healingTypes.map((type, i) => (
-                    <div className="sa-donut-legend__item" key={i}>
-                      <span className="sa-donut-legend__dot" style={{ background: type.color }} />
-                      <span>{type.name}</span>
-                      <span style={{ marginLeft: 'auto', fontWeight: 600 }}>{type.pct}%</span>
+              <div className="sa-chart-container">
+                {!hasChartData ? (
+                  <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontStyle: 'italic' }}>
+                    No financial data available for the selected period
+                  </div>
+                ) : (
+                  <>
+                    <div className="sa-chart-plot-area" style={{ height: 240, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                      {chartBars.map((bar: any, i: number) => (
+                        <div className="sa-chart-day-group sa-chart-group" key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', position: 'relative' }}>
+                          <div className="sa-chart-bars-row" style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: '100%', width: '100%', justifyItems: 'center', justifyContent: 'center' }}>
+                            {(activeToggle === 'Income' || activeToggle === 'All') && (
+                              <div
+                                className="sa-chart-bar sa-chart-bar--income-current"
+                                style={{ height: `${(bar.h1 / (maxVal || 1)) * 100}%`, width: 16 }}
+                              />
+                            )}
+                            {(activeToggle === 'Expenses' || activeToggle === 'All') && (
+                              <div
+                                className="sa-chart-bar sa-chart-bar--expense-current"
+                                style={{ height: `${(bar.h2 / (maxVal || 1)) * 100}%`, width: 16 }}
+                              />
+                            )}
+                          </div>
+                          <div className="sa-chart-tooltip" style={{ bottom: '100%', marginBottom: 8 }}>
+                            <div className="sa-chart-tooltip-grid">
+                              <div className="sa-chart-tooltip-section">
+                                <span style={{color: '#94a3b8', fontSize: 10, textTransform: 'uppercase'}}>Income</span>
+                                <strong style={{ fontSize: 14 }}>₹{bar.h1}</strong>
+                              </div>
+                              <div className="sa-chart-tooltip-section">
+                                <span style={{color: '#94a3b8', fontSize: 10, textTransform: 'uppercase'}}>Expense</span>
+                                <strong style={{ fontSize: 14 }}>₹{bar.h2}</strong>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    <div className="sa-chart-x-axis" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
+                      {chartBars.map((bar: any, i: number) => (
+                        <span className="sa-chart-label" key={i} style={{ flex: 1, textAlign: 'center', fontSize: 12, color: '#64748b' }}>{bar.d}</span>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-          </div>
 
           {/* Specialized Reports */}
           {/* <div style={{ marginTop: 8 }}>

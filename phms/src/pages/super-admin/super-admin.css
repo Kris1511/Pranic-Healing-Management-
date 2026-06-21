@@ -1656,3 +1656,45 @@
   border-radius: 0;
   box-shadow: none;
 }
+
+/* ============================================
+   Print Styles for PDF Export
+   ============================================ */
+@media print {
+  /* Hide UI elements not meant for the report */
+  .sa-page__toolbar,
+  .sa-page__header-row > div:nth-child(2),
+  ion-menu,
+  ion-header,
+  ion-button,
+  .sa-btn {
+    display: none !important;
+  }
+
+  .sa-page__body {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .sa-page__content {
+    --background: white !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .sa-stat-card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .sa-section {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}

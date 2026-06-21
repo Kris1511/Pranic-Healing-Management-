@@ -27,6 +27,7 @@ import './super-admin.css';
 
 const VisitorLogPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<any>(null);
@@ -102,9 +103,22 @@ const VisitorLogPage: React.FC = () => {
 
   const filteredVisitors = visitors.filter(visitor => {
     const branchName = visitor.branch?.name || '';
-    return visitor.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = visitor.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
            branchName.toLowerCase().includes(searchQuery.toLowerCase()) ||
            visitor.purpose?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    let visitorDateStr = '';
+    if (visitor.checkIn) {
+      const d = new Date(visitor.checkIn);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      visitorDateStr = `${year}-${month}-${day}`;
+    }
+
+    const matchesDate = !selectedDate || visitorDateStr === selectedDate;
+
+    return matchesSearch && matchesDate;
   });
 
   const getStatus = (visitor: any) => visitor.checkOut ? 'checked-out' : 'checked-in';
@@ -132,6 +146,14 @@ const VisitorLogPage: React.FC = () => {
                 <p className="sa-page__subtitle">Real-time log of all visitors across branch locations</p>
               </div>
               <div className="sa-page__header-actions">
+                <div className="sa-date-picker">
+                  <IonIcon icon={calendarOutline} />
+                  <input 
+                    type="date" 
+                    value={selectedDate} 
+                    onChange={(e) => setSelectedDate(e.target.value)} 
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -194,60 +216,68 @@ const VisitorLogPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVisitors.map((visitor) => {
-                  const checkInDate = new Date(visitor.checkIn);
-                  const checkOutDate = visitor.checkOut ? new Date(visitor.checkOut) : null;
-                  const status = getStatus(visitor);
-                  
-                  return (
-                    <tr key={visitor.id}>
-                      <td>
-                        <div className="sa-table__user">
-                          <div className="sa-table__avatar sa-table__avatar--visitor">
-                            {visitor.name?.split(' ').map((n: string) => n[0]).join('').substring(0,2).toUpperCase() || 'V'}
+                {filteredVisitors.length > 0 ? (
+                  filteredVisitors.map((visitor) => {
+                    const checkInDate = new Date(visitor.checkIn);
+                    const checkOutDate = visitor.checkOut ? new Date(visitor.checkOut) : null;
+                    const status = getStatus(visitor);
+                    
+                    return (
+                      <tr key={visitor.id}>
+                        <td>
+                          <div className="sa-table__user">
+                            <div className="sa-table__avatar sa-table__avatar--visitor">
+                              {visitor.name?.split(' ').map((n: string) => n[0]).join('').substring(0,2).toUpperCase() || 'V'}
+                            </div>
+                            <div className="sa-table__user-info">
+                              <span className="sa-table__user-name">{visitor.name}</span>
+                              <span className="sa-table__user-email">{visitor.phone || 'No Phone'}</span>
+                            </div>
                           </div>
-                          <div className="sa-table__user-info">
-                            <span className="sa-table__user-name">{visitor.name}</span>
-                            <span className="sa-table__user-email">{visitor.phone || 'No Phone'}</span>
+                        </td>
+                        <td>
+                          <span className="sa-visitor-purpose">{visitor.purpose || visitor.visitorType || 'N/A'}</span>
+                        </td>
+                        <td>
+                          <div className="sa-table__branch-info">
+                            <IonIcon icon={businessOutline} /> {visitor.branch?.name || 'Unknown'}
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="sa-visitor-purpose">{visitor.purpose || visitor.visitorType || 'N/A'}</span>
-                      </td>
-                      <td>
-                        <div className="sa-table__branch-info">
-                          <IonIcon icon={businessOutline} /> {visitor.branch?.name || 'Unknown'}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="sa-table__time">
-                          <IonIcon icon={timeOutline} /> {checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="sa-table__time">
-                          {checkOutDate ? (
-                            <><IonIcon icon={timeOutline} /> {checkOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</>
-                          ) : (
-                            <span className="sa-text-muted">--:--</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`sa-badge sa-badge--${status}`}>
-                          {status.replace('-', ' ')}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="sa-table__date">
-                          <IonIcon icon={calendarOutline} />
-                          {checkInDate.toLocaleDateString()}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                        <td>
+                          <div className="sa-table__time">
+                            <IonIcon icon={timeOutline} /> {checkInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="sa-table__time">
+                            {checkOutDate ? (
+                              <><IonIcon icon={timeOutline} /> {checkOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</>
+                            ) : (
+                              <span className="sa-text-muted">--:--</span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`sa-badge sa-badge--${status}`}>
+                            {status.replace('-', ' ')}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="sa-table__date">
+                            <IonIcon icon={calendarOutline} />
+                            {checkInDate.toLocaleDateString()}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
+                      No visitors found matching your criteria.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

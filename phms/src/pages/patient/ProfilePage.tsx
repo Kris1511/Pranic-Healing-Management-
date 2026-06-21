@@ -265,10 +265,10 @@ const ProfilePage: React.FC = () => {
                       <span style={{ color: '#64748b' }}>Registered On</span>
                       <strong style={{ color: '#0f172a' }}>{patient.regDate}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    {/* <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                       <span style={{ color: '#64748b' }}>Last Visit</span>
                       <strong style={{ color: '#0f172a' }}>{patient.lastVisitDate}</strong>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </AppCard>
@@ -362,7 +362,7 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '12px' }}>
+                  {/* <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '12px' }}>
                     <span className="healer-credential-card__label" style={{ fontSize: '10px' }}>CLINICAL NOTES & HISTORY</span>
                     <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
                       {patient.name === 'Valued Patient' || patient.name === defaultPatient.name
@@ -370,7 +370,7 @@ const ProfilePage: React.FC = () => {
                         : 'No detailed clinical notes available in primary records.'
                       }
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </AppCard>
 

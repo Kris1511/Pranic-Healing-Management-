@@ -24,19 +24,24 @@ import {
   closeCircleOutline,
   checkmarkCircleOutline,
 } from 'ionicons/icons';
-import { useParams } from 'react-router-dom';
+import { useParams, useHistory } from 'react-router-dom';
 import { getBranchById, updateBranch } from '../../api/branch.api';
 import { getPatients } from '../../api/patient.api';
 import { getHealers } from '../../api/healer.api';
+import { getSessions } from '../../api/session.api';
+import { getSuperAdminRevenueFinance } from '../../api/finance.api';
 import './super-admin.css';
 
 const BranchDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const history = useHistory();
 
   const [branchData, setBranchData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activePatientsCount, setActivePatientsCount] = useState<number | string>('...');
   const [activeStaffCount, setActiveStaffCount] = useState<number | string>('...');
+  const [totalSessionsCount, setTotalSessionsCount] = useState<number | string>('...');
+  const [monthlyRevenue, setMonthlyRevenue] = useState<number | string>('...');
   const [staffList, setStaffList] = useState<any[]>([]);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [patientsList, setPatientsList] = useState<any[]>([]);
@@ -64,10 +69,12 @@ const BranchDetailsPage: React.FC = () => {
     const fetchBranchData = async () => {
       setLoading(true);
       try {
-        const [res, patientsRes, healersRes] = await Promise.all([
+        const [res, patientsRes, healersRes, sessionsRes, revenueRes] = await Promise.all([
           getBranchById(id),
           getPatients({ branchId: id, status: 'active' }),
-          getHealers({ branchId: id })
+          getHealers({ branchId: id }),
+          getSessions({ branchId: id }),
+          getSuperAdminRevenueFinance({ branchId: id, period: '1month' })
         ]);
         
         setBranchData(res.data || res);
@@ -90,6 +97,21 @@ const BranchDetailsPage: React.FC = () => {
         } else {
           setStaffList([]);
           setActiveStaffCount('0');
+        }
+
+        const sessionsListData = sessionsRes.data || sessionsRes;
+        if (Array.isArray(sessionsListData)) {
+          setTotalSessionsCount(sessionsListData.length.toString());
+        } else {
+          setTotalSessionsCount('0');
+        }
+
+        const revenueData = revenueRes.data || revenueRes;
+        if (revenueData && revenueData.stats) {
+          const formattedRevenue = (revenueData.stats.totalIncome || 0).toLocaleString('en-IN');
+          setMonthlyRevenue(`₹${formattedRevenue}`);
+        } else {
+          setMonthlyRevenue('₹0');
         }
       } catch (error) {
         console.error("Failed to load branch details:", error);
@@ -144,8 +166,8 @@ const BranchDetailsPage: React.FC = () => {
   const displayAddress = branchData.address || [branchData.addressLine1, branchData.addressLine2, branchData.city, branchData.state, branchData.pincode].filter(Boolean).join(', ') || 'N/A';
 
   const stats = [
-    { label: 'Total Sessions', value: '1,248', icon: flashOutline, onClick: undefined },
-    { label: 'Monthly Revenue', value: '₹145k', icon: barChartOutline, onClick: undefined },
+    { label: 'Total Sessions', value: totalSessionsCount, icon: flashOutline, onClick: undefined },
+    { label: 'Monthly Revenue', value: monthlyRevenue, icon: barChartOutline, onClick: undefined },
     { label: 'Staff Count', value: activeStaffCount, icon: peopleOutline, onClick: () => setShowStaffModal(true) },
     { label: 'Active Patients', value: activePatientsCount, icon: peopleOutline, onClick: () => setShowPatientsModal(true) }
   ];
@@ -286,7 +308,7 @@ const BranchDetailsPage: React.FC = () => {
                 <div className="sa-section__header">
                   <h2 className="sa-section__title">Administration</h2>
                 </div>
-                <div className="sa-branch-card__admin" style={{ cursor: 'default' }}>
+                <div className="sa-branch-card__admin" style={{ cursor: 'pointer' }} onClick={() => history.push('/super-admin/branch-admins/create')}>
                   <div>
                     <div className="sa-branch-card__admin-label">Primary Branch Admin</div>
                     <div className="sa-branch-card__admin-name" style={{ fontSize: '16px' }}>{adminName}</div>

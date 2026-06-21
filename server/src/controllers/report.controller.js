@@ -3,8 +3,8 @@ const { sendResponse } = require('../helpers/response.helper');
 
 class ReportController {
   getSummary = async (req, res) => {
-    const { branchId } = req.query;
-    const summary = await reportService.getBranchSummary(branchId);
+    const { branchId, timeRange } = req.query;
+    const summary = await reportService.getBranchSummary(branchId, timeRange);
     return sendResponse(res, 200, 'Branch summary report retrieved successfully', summary);
   };
 

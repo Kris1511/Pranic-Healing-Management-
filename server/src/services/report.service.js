@@ -3,14 +3,57 @@ const patientRepository = require('../repositories/patient.repository');
 const financeRepository = require('../repositories/finance.repository');
 const { sequelize } = require('../models');
 
+const { Op } = require('sequelize');
+
 class ReportService {
   /**
    * @desc    Generate General Summary Report for a Branch
    */
-  async getBranchSummary(branchId) {
-    const totalPatients = await patientRepository.findAll({ branchId });
-    const totalSessions = await sessionRepository.findAll({ branchId });
-    const financialRecords = await financeRepository.findAll({ branchId });
+  async getBranchSummary(branchId, timeRange) {
+    const filter = branchId ? { branchId } : {};
+
+    if (timeRange && timeRange !== 'All Time') {
+      let startDate = new Date();
+      let endDate = new Date();
+
+      switch (timeRange.toLowerCase()) {
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        case 'yesterday':
+          startDate.setDate(startDate.getDate() - 1);
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setDate(endDate.getDate() - 1);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        case 'last week':
+        case 'last 7 days':
+          startDate.setDate(startDate.getDate() - 7);
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        case 'this month':
+          startDate.setDate(1);
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        default:
+          startDate = null;
+      }
+
+      if (startDate) {
+        filter.createdAt = {
+          [Op.between]: [startDate, endDate]
+        };
+      }
+    }
+
+    const totalPatients = await patientRepository.findAll(filter);
+    const totalSessions = await sessionRepository.findAll(filter);
+    
+    // For finance, if we used createdAt in filter, we can use it.
+    const financialRecords = await financeRepository.findAll(filter);
 
     const revenue = financialRecords
       .filter(r => r.type === 'income')
@@ -20,12 +63,32 @@ class ReportService {
       .filter(r => r.type === 'expense')
       .reduce((sum, r) => sum + parseFloat(r.amount), 0);
 
+    const daysMap = { 'Mon': {h1:0, h2:0}, 'Tue': {h1:0, h2:0}, 'Wed': {h1:0, h2:0}, 'Thu': {h1:0, h2:0}, 'Fri': {h1:0, h2:0}, 'Sat': {h1:0, h2:0}, 'Sun': {h1:0, h2:0} };
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    financialRecords.forEach(r => {
+      const date = new Date(r.date || r.createdAt);
+      const dayName = dayNames[date.getDay()];
+      if (r.type === 'income') {
+        daysMap[dayName].h1 += parseFloat(r.amount);
+      } else if (r.type === 'expense') {
+        daysMap[dayName].h2 += parseFloat(r.amount);
+      }
+    });
+
+    const chartBars = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => ({
+      d,
+      h1: daysMap[d].h1,
+      h2: daysMap[d].h2
+    }));
+
     return {
       patientCount: totalPatients.length,
       sessionCount: totalSessions.length,
       totalRevenue: revenue,
       totalExpenses: expenses,
-      netProfit: revenue - expenses
+      netProfit: revenue - expenses,
+      chartBars
     };
   }
 
@@ -33,11 +96,12 @@ class ReportService {
    * @desc    Generate Patient Growth Report (Monthly)
    */
   async getPatientGrowth(branchId) {
+    const whereClause = branchId ? 'WHERE branch_id = :branchId' : '';
     // Example using raw query via sequelize for complex grouping
     const results = await sequelize.query(`
       SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count 
       FROM patients 
-      WHERE branch_id = :branchId 
+      ${whereClause} 
       GROUP BY month 
       ORDER BY month DESC
     `, {

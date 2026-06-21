@@ -152,9 +152,9 @@ const AttendancePage: React.FC = () => {
                     onChange={(e) => setSelectedDate(e.target.value)} 
                   />
                 </div>
-                <button className="sa-btn sa-btn--primary">
+                {/* <button className="sa-btn sa-btn--primary">
                   <IonIcon icon={downloadOutline} /> Export Report
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
