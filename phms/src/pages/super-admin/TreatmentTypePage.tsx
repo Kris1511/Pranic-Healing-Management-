@@ -169,7 +169,7 @@ const TreatmentTypePage: React.FC = () => {
                 />
               </div> */}
             </div>
-            <div className="sa-filter-tabs" style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
+            {/* <div className="sa-filter-tabs" style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
               <button 
                 onClick={() => setFilterStatus('All')}
                 style={{ 
@@ -218,7 +218,7 @@ const TreatmentTypePage: React.FC = () => {
               >
                 Inactive
               </button>
-            </div>
+            </div> */}
           </div>
 
           <div className="sa-section" style={{ padding: 0, overflow: 'hidden' }}>

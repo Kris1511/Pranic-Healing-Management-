@@ -30,7 +30,7 @@ export const getAllDocuments = async () => {
 
 export const getDocumentBlob = async (id: string) => {
   const response = await axiosInstance.get(`/documents/${id}/download`, {
-    responseType: 'blob',
+    responseType: 'arraybuffer',
   });
   return response.data;
 };

@@ -855,7 +855,7 @@ const VisitorLogPage: React.FC = () => {
                             </td>
                             <td>
                               <div className="sa-table__actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                {visitor.status === 'Inside' ? (
+                                {/* {visitor.status === 'Inside' ? (
                                   <button
                                     className="sa-btn sa-btn--sm sa-btn--primary"
                                     onClick={() => handleCheckOut(visitor.id as number)}
@@ -869,7 +869,7 @@ const VisitorLogPage: React.FC = () => {
                                   >
                                     Exited
                                   </button>
-                                )}
+                                )} */}
                                 <button 
                                   className="sa-btn sa-btn--sm sa-btn--outline" 
                                   onClick={() => history.push(`/branch-admin/visitor-log/details/${visitor.id}`)}

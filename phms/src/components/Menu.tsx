@@ -97,6 +97,7 @@ const healerNav: NavItem[] = [
 const patientNav: NavItem[] = [
   { title: 'Dashboard', url: ROUTES.PATIENT.DASHBOARD, icon: gridOutline, section: 'Main' },
   { title: 'Session History', url: ROUTES.PATIENT.SESSION_HISTORY, icon: timeOutline },
+  { title: 'Session Notes', url: ROUTES.PATIENT.SESSION_NOTES, icon: documentTextOutline },
   { title: 'Health Records', url: ROUTES.PATIENT.HEALTH_RECORDS, icon: documentTextOutline },
   { title: 'Payments', url: ROUTES.PATIENT.PAYMENT_HISTORY, icon: cashOutline },
   { title: 'Feedback', url: ROUTES.PATIENT.FEEDBACK, icon: chatboxOutline },

@@ -32,7 +32,6 @@ import './super-admin.css';
 const DashboardPage: React.FC = () => {
   const history = useHistory();
   const [showAdminModal, setShowAdminModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [weeklyFinance, setWeeklyFinance] = useState<any>(null);
@@ -265,7 +264,7 @@ const DashboardPage: React.FC = () => {
                 <span className="sa-quick-action__label">Create Branch Admins</span>
                 <IonIcon icon={peopleCircleOutline} className="sa-quick-action__icon" />
               </div>
-              <div className="sa-quick-action" onClick={() => setShowReportModal(true)}>
+              <div className="sa-quick-action" onClick={() => history.push(ROUTES.SUPER_ADMIN.REPORTS)}>
                 <span className="sa-quick-action__label">Organization Reports</span>
                 <IonIcon icon={gridOutline} className="sa-quick-action__icon" />
               </div>
@@ -311,39 +310,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </IonModal>
 
-      {/* 3. Organization Reports Modal */}
-      <IonModal isOpen={showReportModal} onDidDismiss={() => setShowReportModal(false)} className="sa-modal sa-modal--sm">
-        <div className="sa-modal__content">
-          <div className="sa-modal__header">
-            <h2>Generate Quick Report</h2>
-            <button className="sa-modal__close-btn" onClick={() => setShowReportModal(false)}>×</button>
-          </div>
-          <div className="sa-modal__body">
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Report Type</label>
-              <select className="sa-settings__input">
-                <option>Financial Summary</option>
-                <option>Patient Sessions Volume</option>
-                <option>Visitor Logs</option>
-                <option>Branch Performance Comparison</option>
-              </select>
-            </div>
-            <div className="sa-settings__form-group">
-              <label className="sa-settings__label">Time Range</label>
-              <select className="sa-settings__input">
-                <option>Today</option>
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-                <option>Year to Date</option>
-              </select>
-            </div>
-          </div>
-          <div className="sa-modal__footer">
-            <button className="sa-btn sa-btn--outline" onClick={() => setShowReportModal(false)}>Cancel</button>
-            <button className="sa-btn sa-btn--primary">Generate & Download</button>
-          </div>
-        </div>
-      </IonModal>
+
 
     </IonPage>
   );

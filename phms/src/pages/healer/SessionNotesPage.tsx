@@ -26,6 +26,7 @@ import AppButton from '../../components/common/AppButton';
 import AppCard from '../../components/common/AppCard';
 import { getPatients } from '../../api/patient.api';
 import { createSession, updateSession, getSessionById } from '../../api/session.api';
+import { getTreatmentTypes } from '../../api/treatmentType.api';
 import '../branch-admin/branch-admin.css';
 import './Healers.css';
 
@@ -34,14 +35,10 @@ interface AssignedPatient {
   patientId: string;
   name: string;
   branchId: string;
+  treatmentType?: string;
 }
 
-const treatmentOptions = [
-  { label: 'Basic Pranic Healing', value: 'Basic Pranic Healing' },
-  { label: 'Advanced Pranic Healing', value: 'Advanced Pranic Healing' },
-  { label: 'Pranic Psychotherapy', value: 'Pranic Psychotherapy' },
-  { label: 'Pranic Crystal Healing', value: 'Pranic Crystal Healing' },
-];
+
 
 const SessionNotesPage: React.FC = () => {
   const history = useHistory();
@@ -49,6 +46,7 @@ const SessionNotesPage: React.FC = () => {
   const [present] = useIonToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [patients, setPatients] = useState<AssignedPatient[]>([]);
+  const [treatmentOptions, setTreatmentOptions] = useState<{label: string, value: string}[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Parse query params
@@ -72,15 +70,26 @@ const SessionNotesPage: React.FC = () => {
       try {
         setLoading(true);
         const patientsRes = await getPatients();
-        const apiPatients = Array.isArray(patientsRes) ? patientsRes : (patientsRes.data || patientsRes);
+        const treatmentsRes = await getTreatmentTypes();
         
+        const apiPatients = Array.isArray(patientsRes) ? patientsRes : (patientsRes.data || patientsRes);
+        const apiTreatments = Array.isArray(treatmentsRes) ? treatmentsRes : (treatmentsRes.data || treatmentsRes);
+        
+        if (Array.isArray(apiTreatments)) {
+          setTreatmentOptions(apiTreatments.map((t: any) => ({
+            label: t.name,
+            value: t.name
+          })));
+        }
+
         let fetchedPatients: AssignedPatient[] = [];
         if (Array.isArray(apiPatients)) {
           fetchedPatients = apiPatients.map((p: any) => ({
             id: p.id,
             patientId: p.patientId || 'N/A',
             name: p.name,
-            branchId: p.branchId || ''
+            branchId: p.branchId || '',
+            treatmentType: p.treatmentType || ''
           }));
           setPatients(fetchedPatients);
         }
@@ -120,6 +129,7 @@ const SessionNotesPage: React.FC = () => {
               followUp,
             });
           }
+          console.log('session',session);
         } else {
           // If not editing (fresh note), reset form fields and errors to empty
           setFormData({
@@ -144,7 +154,32 @@ const SessionNotesPage: React.FC = () => {
 
   const handleInputChange = (e: any) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      
+      // Auto-populate treatment type when patient changes
+      if (name === 'patientId') {
+        const selectedPatient = patients.find(p => p.id === value);
+        if (selectedPatient && selectedPatient.treatmentType) {
+          // Only auto-fill if the treatment type exists in the options or we can add logic to support any.
+          // We'll set it here.
+          updated.treatmentType = selectedPatient.treatmentType;
+          
+          // Clear treatment type error if it exists
+          setErrors(prevErr => {
+            const newErr = { ...prevErr };
+            delete newErr.treatmentType;
+            return newErr;
+          });
+        } else {
+          updated.treatmentType = ''; // Reset if patient doesn't have one
+        }
+      }
+      
+      return updated;
+    });
+
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -189,11 +224,15 @@ const SessionNotesPage: React.FC = () => {
         const branchId = selectedPatientObj ? selectedPatientObj.branchId : undefined;
 
         await createSession({
-          patientId: formData.patientId,
+          patient_id: formData.patientId,
+          treatment_type: formData.treatmentType,
           notes: combinedNotes,
           status: 'completed',
-          sessionDate: new Date().toISOString(),
-          branchId,
+          session_date: new Date().toISOString(),
+          branch_id: branchId,
+          start_time: '00:00',
+          end_time: '00:00',
+          total_amount: 0,
         });
       }
       
@@ -271,7 +310,7 @@ const SessionNotesPage: React.FC = () => {
                       ) : (
                         patients.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} ({p.patientId})
+                            {p.name} 
                           </option>
                         ))
                       )}
@@ -300,6 +339,11 @@ const SessionNotesPage: React.FC = () => {
                           {option.label}
                         </option>
                       ))}
+                      {formData.treatmentType && !treatmentOptions.some(o => o.value === formData.treatmentType) && (
+                        <option value={formData.treatmentType}>
+                          {formData.treatmentType}
+                        </option>
+                      )}
                     </select>
                     {errors.treatmentType && (
                       <span className="healer-form-error-text">

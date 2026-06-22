@@ -32,8 +32,12 @@ class UserService {
           try {
             const fbUser = await admin.auth().getUserByEmail(data.email);
             firebaseUid = fbUser.uid;
+            // Update the password of the existing Firebase user to keep it in sync with the new temporary password
+            await admin.auth().updateUser(firebaseUid, {
+              password: data.password,
+            });
           } catch (getFbError) {
-            throw new ApiError(500, `Authentication service error (get user): ${getFbError.message}`);
+            throw new ApiError(500, `Authentication service error (get/update user): ${getFbError.message}`);
           }
         } else {
           throw new ApiError(500, `Authentication service error: ${fbError.message}`);

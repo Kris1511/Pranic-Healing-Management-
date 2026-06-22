@@ -69,6 +69,7 @@ import PatientsDetialsPages from './pages/healer/PatientsDetialsPages';
 /* Patient Pages */
 import PatientDashboardPage from './pages/patient/DashboardPage';
 import SessionHistoryPage from './pages/patient/SessionHistoryPage';
+import PatientSessionNotesPage from './pages/patient/SessionNotesPage';
 import PaymentHistoryPage from './pages/patient/PaymentHistoryPage';
 import PatientProfilePage from './pages/patient/ProfilePage';
 import FeedbackPage from './pages/patient/FeedbackPage';
@@ -320,6 +321,9 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path={ROUTES.PATIENT.SESSION_HISTORY} exact={true}>
           <SessionHistoryPage />
+        </Route>
+        <Route path={ROUTES.PATIENT.SESSION_NOTES} exact={true}>
+          <PatientSessionNotesPage />
         </Route>
         <Route path={ROUTES.PATIENT.PAYMENT_HISTORY} exact={true}>
           <PaymentHistoryPage />

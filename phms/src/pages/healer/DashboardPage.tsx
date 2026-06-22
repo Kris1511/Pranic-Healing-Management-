@@ -146,7 +146,7 @@ const HealerDashboardPage: React.FC = () => {
       <IonContent className="sa-page__content">
         <div className="healer-container">
           {/* Urgent Follow-Up Alerts Widget (BRD 6.6) */}
-          <div className="healer-alert-widget">
+          {/* <div className="healer-alert-widget">
             <div className="healer-alert-widget__left">
               <IonIcon icon={alertCircleOutline} className="healer-alert-widget__icon" />
               <div>
@@ -155,7 +155,7 @@ const HealerDashboardPage: React.FC = () => {
               </div>
             </div>
             <span className="healer-alert-widget__count">2</span>
-          </div>
+          </div> */}
 
           <h3 className="healer-section-title">
             Quick Stats

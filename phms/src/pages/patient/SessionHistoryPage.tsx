@@ -155,7 +155,7 @@ const SessionHistoryPage: React.FC = () => {
       </IonHeader>
 
       <IonContent className="sa-page__content">
-        <div className="healer-container pat-container-narrow-900">
+        <div className="healer-container pat-container-narrow">
 
           <div className="healer-header-box">
             <h1 className="healer-page-title">Session History</h1>
@@ -238,12 +238,12 @@ const SessionHistoryPage: React.FC = () => {
                           {session.status}
                         </span>
 
-                        <button
+                        {/* <button
                           className="pat-btn-notes-outline"
                           onClick={() => setSelectedSession(session)}
                         >
                           View Details
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   </div>

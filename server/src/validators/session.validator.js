@@ -3,7 +3,7 @@ const Joi = require('joi');
 const create = {
   body: Joi.object().keys({
     patient_id: Joi.string().guid({ version: ['uuidv4'] }).required(),
-    healer_id: Joi.string().guid({ version: ['uuidv4'] }).required(),
+    healer_id: Joi.string().guid({ version: ['uuidv4'] }),
     branch_id: Joi.string().guid({ version: ['uuidv4'] }).required(),
     treatment_type: Joi.string().required(),
     session_date: Joi.date().iso().required(),

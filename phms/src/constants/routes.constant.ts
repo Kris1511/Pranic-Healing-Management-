@@ -89,6 +89,7 @@ export const ROUTES = {
     PROFILE: '/patient/profile',
     HEALTH_RECORDS: '/patient/health-records',
     SESSION_HISTORY: '/patient/session-history',
+    SESSION_NOTES: '/patient/session-notes',
     PAYMENT_HISTORY: '/patient/payment-history',
     VISITORS: '/patient/visitors',
     FEEDBACK: '/patient/feedback',

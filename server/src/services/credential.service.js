@@ -17,7 +17,7 @@ class CredentialService {
           name: user.name,
           email: user.email,
           password: password,
-          loginUrl: 'http://localhost:5173/auth/signin', // Update with actual URL
+          loginUrl: process.env.CLIENT_URL ? `${process.env.CLIENT_URL}/auth/signin` : 'http://localhost:5173/auth/signin',
         },
       };
 

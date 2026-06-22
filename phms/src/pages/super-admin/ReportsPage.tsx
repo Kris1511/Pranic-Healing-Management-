@@ -91,7 +91,6 @@ const ReportsPage: React.FC = () => {
     { label: 'Total Sessions', value: summaryData?.sessionCount || '0', change: '', icon: flashOutline },
     { label: 'Total Patients', value: summaryData?.patientCount || '0', change: '', icon: peopleOutline },
     { label: 'Total Revenue', value: `₹${summaryData?.totalRevenue || 0}`, change: '', icon: cashOutline },
-    { label: 'Net Profit', value: `₹${summaryData?.netProfit || 0}`, change: '', icon: cashOutline },
   ];
 
   const defaultChartBars = [
@@ -192,7 +191,7 @@ const ReportsPage: React.FC = () => {
           </div>
 
           {/* Stat Cards */}
-          <div className="sa-stats sa-stats--4">
+          <div className="sa-stats sa-stats--3">
             {stats.map((stat, i) => (
               <div className="sa-stat-card" key={i}>
                 <div>

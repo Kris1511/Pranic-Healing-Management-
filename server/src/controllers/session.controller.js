@@ -1,5 +1,6 @@
 const sessionService = require('../services/session.service');
 const { sendResponse } = require('../helpers/response.helper');
+const { sendEmail } = require('../helpers/email.helper');
 
 const mapSessionToResponse = (session) => {
   if (!session) return null;
@@ -148,6 +149,26 @@ class SessionController {
 
     const session = await sessionService.createSession(mappedBody);
     const fullSession = await sessionService.getSessionById(session.id, req.branchId);
+
+    const isAddingNotes = fullSession.notes && fullSession.notes.trim() !== '';
+    if (isAddingNotes && fullSession.patient && fullSession.patient.email) {
+      try {
+        await sendEmail({
+          to: fullSession.patient.email,
+          subject: 'Your Healing Session Notes',
+          template: 'session-notes',
+          context: {
+            patientName: fullSession.patient.name,
+            healerName: fullSession.healer ? fullSession.healer.name : 'Your Healer',
+            sessionDate: new Date(fullSession.sessionDate).toLocaleDateString(),
+            notes: fullSession.notes,
+          }
+        });
+      } catch (err) {
+        console.error('Failed to send session notes email:', err);
+      }
+    }
+
     return sendResponse(res, 201, 'Session created successfully', mapSessionToResponse(fullSession));
   };
 
@@ -289,8 +310,29 @@ class SessionController {
 
   update = async (req, res) => {
     const mappedBody = mapRequestToSession(req.body);
+    const isAddingNotes = mappedBody.notes && mappedBody.notes.trim() !== '';
+
     await sessionService.updateSession(req.params.id, mappedBody, req.branchId);
     const fullSession = await sessionService.getSessionById(req.params.id, req.branchId);
+
+    if (isAddingNotes && fullSession.patient && fullSession.patient.email) {
+      try {
+        await sendEmail({
+          to: fullSession.patient.email,
+          subject: 'Your Healing Session Notes',
+          template: 'session-notes',
+          context: {
+            patientName: fullSession.patient.name,
+            healerName: fullSession.healer ? fullSession.healer.name : 'Your Healer',
+            sessionDate: new Date(fullSession.sessionDate).toLocaleDateString(),
+            notes: fullSession.notes,
+          }
+        });
+      } catch (err) {
+        console.error('Failed to send session notes email:', err);
+      }
+    }
+
     return sendResponse(res, 200, 'Session updated successfully', mapSessionToResponse(fullSession));
   };
 

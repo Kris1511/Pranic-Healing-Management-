@@ -224,7 +224,7 @@ const FeedbackPage: React.FC = () => {
       </IonHeader>
 
       <IonContent className="sa-page__content">
-        <div className="healer-container pat-container-narrow-900">
+        <div className="healer-container pat-container-narrow">
           
           <div className="healer-header-box">
             <h1 className="healer-page-title">Give Session Reviews</h1>
