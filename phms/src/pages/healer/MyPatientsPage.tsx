@@ -72,7 +72,18 @@ const MyPatientsPage: React.FC = () => {
         const apiPatients = Array.isArray(response) ? response : (response.data || response);
 
         if (Array.isArray(apiPatients)) {
-          const formattedPatients: Patient[] = apiPatients.map((p: any) => {
+          let relevantPatients = apiPatients;
+          if (user?.role?.toUpperCase() === 'HEALER') {
+            const currentUserName = user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+            relevantPatients = apiPatients.filter((p: any) => {
+              if (!currentUserName) return false;
+              const isAssigned = p.healer?.name === currentUserName || p.healerName === currentUserName;
+              const hasSession = p.sessions?.some((s: any) => s.healer?.name === currentUserName || s.healerName === currentUserName);
+              return isAssigned || hasSession;
+            });
+          }
+
+          const formattedPatients: Patient[] = relevantPatients.map((p: any) => {
             const completedSessions = p.sessions ? p.sessions.filter((s: any) => s.status === 'completed') : [];
             const scheduledSessions = p.sessions ? p.sessions.filter((s: any) => s.status === 'scheduled') : [];
             

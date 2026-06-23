@@ -33,6 +33,9 @@ interface SessionHistoryItem {
   protocol: string;
   notes: string;
   healerName: string;
+  followupRequired: boolean;
+  followupPriority: string;
+  followupDate: string;
 }
 
 interface DocumentItem {
@@ -118,14 +121,15 @@ const PatientsDetialsPages: React.FC = () => {
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
           })()
         : 'N/A',
-      time: s.sessionDate 
-        ? new Date(s.sessionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-        : 'N/A',
+      time: s.startTime ? (s.endTime ? `${s.startTime} - ${s.endTime}` : s.startTime) : 'N/A',
       protocol: s.treatments && s.treatments.length > 0 
         ? s.treatments.map((t: any) => t.treatmentName).join(', ') 
         : 'Pranic Restoration',
       notes: s.notes || 'No notes added.',
-      healerName: s.healer?.name || 'Unknown Healer'
+      healerName: s.healer?.name || 'Unknown Healer',
+      followupRequired: !!s.followupRequired || !!s.followup_required,
+      followupPriority: (s.followupPriority || s.followup_priority || 'NONE').toUpperCase(),
+      followupDate: s.followupDate || s.followup_date || '',
     }));
   }, [patient?.sessions]);
 
@@ -298,9 +302,25 @@ const PatientsDetialsPages: React.FC = () => {
 
                   {sessionHistory.length > 0 ? (
                     sessionHistory.map((session) => (
-                      <div key={session.id} className="history-item-card" style={{ borderLeftColor: '#0ea5e9' }}>
+                      <div key={session.id} className={`history-item-card ${session.followupRequired && session.followupPriority === 'URGENT' ? 'history-item-card--urgent' : ''}`} style={{ borderLeftColor: session.followupRequired && session.followupPriority === 'URGENT' ? 'var(--color-danger)' : '#0ea5e9' }}>
                         <div className="history-item-header">
-                          <h4 className="history-item-title">{session.protocol}</h4>
+                          <h4 className="history-item-title" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                            {session.protocol}
+                            {session.followupRequired && session.followupPriority !== 'NONE' && (
+                              <span style={{ 
+                                padding: '2px 8px', 
+                                borderRadius: '4px', 
+                                fontSize: '0.75rem', 
+                                fontWeight: 600, 
+                                background: session.followupPriority === 'URGENT' ? 'rgba(231,76,60,0.1)' : 'rgba(243,156,18,0.1)', 
+                                color: session.followupPriority === 'URGENT' ? 'var(--color-danger)' : 'var(--color-warning)',
+                                border: `1px solid ${session.followupPriority === 'URGENT' ? 'var(--color-danger)' : 'var(--color-warning)'}`,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                Follow-up: {session.followupPriority} {session.followupDate ? `(${session.followupDate})` : ''}
+                              </span>
+                            )}
+                          </h4>
                           <span className="history-item-date">
                             {session.date} | {session.time}
                           </span>

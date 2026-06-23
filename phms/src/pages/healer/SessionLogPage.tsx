@@ -93,7 +93,7 @@ const SessionLogPage: React.FC = () => {
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
           })()
         : 'N/A',
-      time: s.sessionDate ? new Date(s.sessionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      time: s.startTime ? (s.endTime ? `${s.startTime} - ${s.endTime}` : s.startTime) : 'N/A',
       status: mapStatus(s.status),
       protocol: s.treatments && s.treatments.length > 0 
         ? s.treatments.map((t: any) => t.treatmentName).join(', ') 
@@ -101,6 +101,7 @@ const SessionLogPage: React.FC = () => {
       notesAdded: !!s.notes,
     }));
   }, [apiSessionsRes]);
+  // console.log('session: ', sessions)
 
   const loading = isLoading;
   const errorMsg = error ? 'Failed to retrieve sessions log.' : null;

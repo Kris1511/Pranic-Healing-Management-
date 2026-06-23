@@ -368,7 +368,7 @@ const SessionNotesPage: React.FC = () => {
                   </div>
 
                   {/* Follow-up flag */}
-                  <div className="healer-form-toggle-box">
+                  {/* <div className="healer-form-toggle-box">
                     <div>
                       <span className="healer-form-toggle-label">Follow-up Required</span>
                       <span className="healer-form-toggle-sub">Flag this patient for a scheduled follow-up review.</span>
@@ -378,7 +378,7 @@ const SessionNotesPage: React.FC = () => {
                       onIonChange={handleToggleChange}
                       className="healer-toggle-custom"
                     />
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Right Column */}

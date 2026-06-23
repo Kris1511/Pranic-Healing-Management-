@@ -130,7 +130,8 @@ const HealerDashboardPage: React.FC = () => {
 
   const weeklyData = getWeeklyData();
   const maxSessions = Math.max(...weeklyData.map(d => Math.max(d.scheduled, d.completed)), 1);
-  const scale = 140 / maxSessions;
+  const urgentFollowUpSessions = sessions.filter(s => s.followup_required && s.followup_priority === 'Urgent');
+  const urgentFollowUpsCount = urgentFollowUpSessions.length;
 
   return (
     <IonPage className="sa-page">
@@ -146,16 +147,43 @@ const HealerDashboardPage: React.FC = () => {
       <IonContent className="sa-page__content">
         <div className="healer-container">
           {/* Urgent Follow-Up Alerts Widget (BRD 6.6) */}
-          {/* <div className="healer-alert-widget">
-            <div className="healer-alert-widget__left">
-              <IonIcon icon={alertCircleOutline} className="healer-alert-widget__icon" />
-              <div>
-                <h4 className="healer-alert-widget__title">Urgent Follow-Ups</h4>
-                <p className="healer-alert-widget__desc">Sessions flagged for urgent follow-up action</p>
+          <div className="healer-alert-widget" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="healer-alert-widget__left">
+                <IonIcon icon={alertCircleOutline} className="healer-alert-widget__icon" />
+                <div>
+                  <h4 className="healer-alert-widget__title">Urgent Follow-Ups</h4>
+                  <p className="healer-alert-widget__desc">Sessions flagged for urgent follow-up action</p>
+                </div>
               </div>
+              <span className="healer-alert-widget__count">
+                {loading ? <IonSpinner name="dots" style={{ height: '20px' }} /> : urgentFollowUpsCount}
+              </span>
             </div>
-            <span className="healer-alert-widget__count">2</span>
-          </div> */}
+            {urgentFollowUpsCount > 0 && !loading && (
+              <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(231, 76, 60, 0.2)', paddingTop: '0.75rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-danger)' }}>Patients requiring attention:</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {urgentFollowUpSessions.map((session: any) => (
+                    <div key={session.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(231, 76, 60, 0.05)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: '1px solid rgba(231, 76, 60, 0.1)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-danger)' }}>{session.patient?.name || 'Unknown Patient'}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-light)' }}>Session Date: {new Date(session.sessionDate).toLocaleDateString()}</span>
+                      </div>
+                      <button 
+                        onClick={() => history.push(`/healer/patients/details/${session.patient?.id || session.patientId}`)}
+                        style={{ background: 'transparent', border: '1px solid rgba(231, 76, 60, 0.5)', color: 'var(--color-danger)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(231, 76, 60, 0.1)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                      >
+                        View Profile
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <h3 className="healer-section-title">
             Quick Stats
@@ -202,7 +230,7 @@ const HealerDashboardPage: React.FC = () => {
             </div>
 
             {/* Pending Notes */}
-            <div className="healer-stat-card">
+            {/* <div className="healer-stat-card">
               <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--amber">
                 <IonIcon icon={documentTextOutline} />
               </div>
@@ -212,7 +240,7 @@ const HealerDashboardPage: React.FC = () => {
                   {loading ? <IonSpinner name="dots" style={{ height: '20px' }} /> : pendingNotesCount}
                 </span>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Weekly Sessions Chart Section */}
