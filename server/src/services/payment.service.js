@@ -29,6 +29,20 @@ class PaymentService {
     }
 
     const financeService = require('./finance.service');
+    
+    // Auto-record the payment as income in the finance ledger
+    await financeService.recordTransaction({
+      branchId,
+      type: 'Income',
+      category: 'Session Fee',
+      amount: parseFloat(amount),
+      paymentMode: paymentMethod || 'Cash',
+      description: `Payment for Session (ID: ${sessionId.substring(0, 8)})`,
+      remarks: 'Auto-generated from patient payment',
+      createdBy: 'System',
+      date: new Date()
+    });
+
     const todayStr = new Date().toISOString().split('T')[0];
     const summaryBefore = await financeService.getSuperAdminDaily(todayStr);
     const financeSummary = {

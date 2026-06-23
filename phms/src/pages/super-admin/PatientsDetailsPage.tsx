@@ -24,16 +24,21 @@ import {
   timeOutline,
   waterOutline,
   lockClosedOutline,
+  star,
+  starOutline,
+  chatbubblesOutline,
 } from 'ionicons/icons';
 import { useParams, useHistory } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes.constant';
 import { getPatientById } from '../../api/patient.api';
+import { getFeedbacks } from '../../api/feedback.api';
 import './super-admin.css';
 
 const PatientsDetailsPage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const history = useHistory();
   const [patient, setPatient] = useState<any>(null);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +54,15 @@ const PatientsDetailsPage: React.FC = () => {
         setError(null);
       } else {
         if (isFirst) setError('Failed to fetch patient details');
+      }
+
+      try {
+        const feedbackResponse = await getFeedbacks({ patientId });
+        if (feedbackResponse && feedbackResponse.data) {
+          setFeedbacks(feedbackResponse.data);
+        }
+      } catch (fbErr) {
+        console.error('Error fetching patient feedbacks:', fbErr);
       }
     } catch (err: any) {
       console.error('Error fetching patient details:', err);
@@ -234,6 +248,47 @@ const PatientsDetailsPage: React.FC = () => {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Section 7: Patient Feedbacks */}
+            <div className="sa-section">
+              <SectionHeader icon={chatbubblesOutline} title="Patient Feedback & Reviews" />
+              {feedbacks.length === 0 ? (
+                <div style={{ color: '#64748b', fontSize: '14px', fontStyle: 'italic', padding: '16px', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  No feedback provided by this patient yet.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {feedbacks.map((fb: any, index: number) => (
+                    <div key={index} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+                            Session #{fb.sessionId}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                            {new Date(fb.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <IonIcon 
+                              key={s} 
+                              icon={s <= fb.rating ? star : starOutline} 
+                              style={{ color: s <= fb.rating ? '#f59e0b' : '#cbd5e1', fontSize: '16px' }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {fb.comment && (
+                        <div style={{ fontSize: '13px', color: '#334155', marginTop: '8px', lineHeight: '1.5', padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
+                          "{fb.comment}"
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Back Button Footer Action */}

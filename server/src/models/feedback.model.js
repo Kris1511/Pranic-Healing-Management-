@@ -11,6 +11,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
     },
+    sessionId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
     rating: {
       type: DataTypes.INTEGER,
       allowNull: false,

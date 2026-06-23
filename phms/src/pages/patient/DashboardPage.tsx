@@ -18,12 +18,14 @@ import {
   personOutline,
   chatboxOutline,
   businessOutline,
-  personCircleOutline
+  personCircleOutline,
+  cashOutline
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useHistory } from 'react-router-dom';
 import { getPatients } from '../../api/patient.api';
 import { getSessions } from '../../api/session.api';
+import { getPayments } from '../../api/payment.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 
@@ -34,7 +36,7 @@ const PatientDashboardPage: React.FC = () => {
   const userName = user?.name || 'Valued Patient';
 
   const [patientData, setPatientData] = React.useState<any>(null);
-  const [upcomingCount, setUpcomingCount] = React.useState(0);
+  const [totalPaid, setTotalPaid] = React.useState(0);
   const [completedCount, setCompletedCount] = React.useState(0);
   const [recordsCount, setRecordsCount] = React.useState(0);
 
@@ -59,17 +61,25 @@ const PatientDashboardPage: React.FC = () => {
       getSessions({ patientId: patientData.id })
         .then((res: any) => {
           if (res.data) {
-            const upcoming = res.data.filter((s: any) => s.status === 'Scheduled').length;
-            const completed = res.data.filter((s: any) => s.status === 'Completed').length;
-            setUpcomingCount(upcoming);
+            const completed = res.data.filter((s: any) => (s.status || '').toLowerCase() === 'completed').length;
             setCompletedCount(completed);
             setRecordsCount(patientData.documents?.length || 0);
           }
         })
         .catch(console.error);
+
+      getPayments()
+        .then((res: any) => {
+          if (res.data) {
+            const raw = Array.isArray(res.data) ? res.data : [];
+            const sumPaid = raw.reduce((sum, item) => sum + (parseFloat(item.paid) || 0), 0);
+            setTotalPaid(sumPaid);
+          }
+        })
+        .catch(console.error);
     } else {
       // Fallback for UI if patient not loaded yet
-      setUpcomingCount(0);
+      setTotalPaid(0);
       setCompletedCount(0);
       setRecordsCount(0);
     }
@@ -166,17 +176,25 @@ const PatientDashboardPage: React.FC = () => {
           </h3>
 
           <div className="healer-stats-grid">
-            <div className="healer-stat-card">
+            <div 
+              className="healer-stat-card"
+              onClick={() => history.push('/patient/payment-history')}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--teal">
-                <IonIcon icon={calendarOutline} />
+                <IonIcon icon={cashOutline} />
               </div>
               <div className="healer-stat-card__info">
-                <span className="healer-stat-card__label">Upcoming Sessions</span>
-                <span className="healer-stat-card__value">{upcomingCount}</span>
+                <span className="healer-stat-card__label">Total Paid</span>
+                <span className="healer-stat-card__value">₹{totalPaid.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
               </div>
             </div>
 
-            <div className="healer-stat-card">
+            <div 
+              className="healer-stat-card"
+              onClick={() => history.push('/patient/session-history')}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--blue">
                 <IonIcon icon={medkitOutline} />
               </div>

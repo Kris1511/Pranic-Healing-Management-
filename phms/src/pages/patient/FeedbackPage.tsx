@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -8,6 +8,7 @@ import {
   IonButtons,
   IonMenuButton,
   IonIcon,
+  IonSpinner,
 } from '@ionic/react';
 import {
   arrowBackOutline,
@@ -21,190 +22,153 @@ import {
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import AppCard from '../../components/common/AppCard';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getSessions } from '../../api/session.api';
+import { getFeedbacks, createFeedback } from '../../api/feedback.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 import './Patient.css';
 
+interface SessionRecord {
+  id: string;
+  sessionNo: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  healer: string;
+  type: string;
+  status: 'Completed' | 'Scheduled' | 'Cancelled';
+  patient: string; // added to submit feedback properly
+  patientId: string;
+  branchId: string;
+}
+
 interface Feedback {
-  id: number;
-  sessionId: number;
+  id: string | number;
+  sessionId: string | number;
   sessionNo: string;
   patientName: string;
   healerName: string;
   rating: number;
-  comments: string;
+  comment?: string;
+  comments?: string; // mapped from comment
   date: string;
+  createdAt?: string;
 }
+
+const toLocalDate = (raw: string | null | undefined): string => {
+  if (!raw) return 'N/A';
+  if (raw.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+  if (raw.includes('T')) {
+    return raw.split('T')[0];
+  }
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return 'N/A';
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+};
+
+const normaliseStatus = (s: string): 'Completed' | 'Scheduled' | 'Cancelled' => {
+  const lower = (s || '').toLowerCase();
+  if (lower === 'completed') return 'Completed';
+  if (lower === 'cancelled') return 'Cancelled';
+  return 'Scheduled';
+};
+
+const mapApiSession = (s: any): SessionRecord => ({
+  id: s.id,
+  sessionNo: s.sessionNo || `SES-${String(s.id).substring(0, 6).toUpperCase()}`,
+  date: toLocalDate(s.sessionDate || s.session_date || s.createdAt),
+  startTime: s.startTime || s.start_time || '—',
+  endTime: s.endTime || s.end_time || '—',
+  healer: s.healer?.name
+    ? (s.healer.name.startsWith('Dr.') ? s.healer.name : `Dr. ${s.healer.name}`)
+    : (s.healer_name ? `Dr. ${s.healer_name}` : 'Unknown Healer'),
+  type: s.treatmentType || s.treatment_type || s.type || 'Pranic Healing',
+  status: normaliseStatus(s.status),
+  patient: s.patient?.name || s.patient_name || 'Valued Patient',
+  patientId: s.patientId || s.patient_id,
+  branchId: s.branchId || s.branch_id,
+});
 
 const FeedbackPage: React.FC = () => {
   const history = useHistory();
   const { user } = useAuthStore();
-
-  const userName = user?.name || 'Valued Patient';
-  const userEmail = user?.email || 'patient@phms.com';
+  const queryClient = useQueryClient();
 
   // State
-  const [sessions, setSessions] = React.useState<any[]>([]);
-  const [feedbacks, setFeedbacks] = React.useState<Feedback[]>([]);
-  const [selectedSession, setSelectedSession] = React.useState<any | null>(null);
+  const [selectedSession, setSelectedSession] = useState<SessionRecord | null>(null);
   
   // Form State
-  const [rating, setRating] = React.useState<number>(5);
-  const [comments, setComments] = React.useState<string>('');
-  const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
+  const [rating, setRating] = useState<number>(5);
+  const [comments, setComments] = useState<string>('');
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Load from localStorage
-  React.useEffect(() => {
-    // 1. Load patient name and healer
-    let patientName = userName;
-    let currentHealer = 'Dr. Shailesh';
-    const savedPatients = localStorage.getItem('phms_patients');
-    if (savedPatients) {
-      try {
-        const parsed = JSON.parse(savedPatients);
-        const found = parsed.find((p: any) => p.email?.toLowerCase() === userEmail.toLowerCase());
-        if (found) {
-          patientName = found.name;
-          currentHealer = found.assignedHealer || 'Dr. Shailesh';
-        }
-      } catch (e) {
-        console.error(e);
-      }
+  const { data: sessions = [], isLoading, isError } = useQuery<SessionRecord[]>({
+    queryKey: ['patient-sessions-completed', user?.email],
+    queryFn: async () => {
+      const res = await getSessions();
+      const raw: any[] = Array.isArray(res?.data) ? res.data : [];
+      return raw
+        .map(mapApiSession)
+        .filter(s => s.status === 'Completed')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    },
+    enabled: !!user,
+  });
+
+  const { data: rawFeedbacks = [] } = useQuery<any[]>({
+    queryKey: ['feedbacks', user?.email],
+    queryFn: async () => {
+      const res = await getFeedbacks();
+      return Array.isArray(res?.data) ? res.data : [];
+    },
+    enabled: !!user,
+  });
+
+  const feedbacks: Feedback[] = rawFeedbacks.map(f => ({
+    id: f.id,
+    sessionId: f.sessionId || f.session_id,
+    sessionNo: '', // Not strictly needed for mapping, display handles it
+    patientName: f.patient?.name || '',
+    healerName: '',
+    rating: f.rating,
+    comments: f.comment || '',
+    date: new Date(f.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }));
+
+  const createFeedbackMutation = useMutation({
+    mutationFn: createFeedback,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feedbacks'] });
+      setSuccessMsg(`Feedback submitted successfully for session ${selectedSession?.sessionNo}!`);
+      setSelectedSession(null);
+      setComments('');
+      setRating(5);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || 'Failed to submit feedback');
     }
-
-    // 2. Load sessions matching patient name and status 'Completed'
-    const savedSessions = localStorage.getItem('phms_sessions');
-    let completedList: any[] = [];
-    if (savedSessions) {
-      try {
-        const parsed = JSON.parse(savedSessions);
-        completedList = parsed.filter(
-          (s: any) => 
-            s.patient?.toLowerCase().trim() === patientName.toLowerCase().trim() &&
-            s.status === 'Completed'
-        );
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // Fallback completed sessions if empty
-    const session2035Id = Date.now() - 3600000 * 48; // keep matching timestamp reference
-    if (completedList.length === 0) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-      const twoDaysAgo = new Date();
-      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-      const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
-
-      completedList = [
-        {
-          id: Date.now() - 3600000 * 12, // 12 hours ago
-          sessionNo: 'SESS-2038',
-          date: yesterdayStr,
-          startTime: '03:00 PM',
-          endTime: '04:00 PM',
-          patient: patientName,
-          healer: currentHealer,
-          type: 'Advanced Pranic Healing',
-          status: 'Completed'
-        },
-        {
-          id: session2035Id,
-          sessionNo: 'SESS-2035',
-          date: twoDaysAgoStr,
-          startTime: '11:00 AM',
-          endTime: '12:00 PM',
-          patient: patientName,
-          healer: currentHealer,
-          type: 'Basic Pranic Healing',
-          status: 'Completed'
-        }
-      ];
-    }
-    setSessions(completedList);
-
-    // 3. Load feedbacks list
-    const savedFeedbacks = localStorage.getItem('phms_feedbacks');
-    let feedbacksList: Feedback[] = [];
-    if (savedFeedbacks) {
-      try {
-        feedbacksList = JSON.parse(savedFeedbacks);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    const patientFeedbacks = feedbacksList.filter(
-      (f) => f.patientName?.toLowerCase().trim() === patientName.toLowerCase().trim()
-    );
-    if (patientFeedbacks.length === 0) {
-      const sampleFeedback: Feedback = {
-        id: Date.now() - 3600000 * 24, // 1 day ago
-        sessionId: session2035Id,
-        sessionNo: 'SESS-2035',
-        patientName: patientName,
-        healerName: currentHealer,
-        rating: 5,
-        comments: 'Excellent healing session. I felt immediate relief from my shoulder tension and felt very calm and energized afterwards. The healer was highly professional and compassionate.',
-        date: new Date(Date.now() - 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      };
-      
-      feedbacksList = [sampleFeedback, ...feedbacksList];
-      localStorage.setItem('phms_feedbacks', JSON.stringify(feedbacksList));
-    }
-    setFeedbacks(feedbacksList);
-  }, [userEmail, userName]);
+  });
 
   const handleSubmitFeedback = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSession) return;
 
-    const newFeedback: Feedback = {
-      id: Date.now(),
+    createFeedbackMutation.mutate({
       sessionId: selectedSession.id,
-      sessionNo: selectedSession.sessionNo,
-      patientName: selectedSession.patient,
-      healerName: selectedSession.healer,
+      patientId: selectedSession.patientId,
+      branchId: selectedSession.branchId,
       rating,
-      comments,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    };
+      comment: comments,
+    });
 
-    const updatedFeedbacks = [newFeedback, ...feedbacks];
-    setFeedbacks(updatedFeedbacks);
-    localStorage.setItem('phms_feedbacks', JSON.stringify(updatedFeedbacks));
-
-    // Also write an audit log
-    const savedAudits = localStorage.getItem('phms_audits') || '[]';
-    try {
-      const audits = JSON.parse(savedAudits);
-      const newAudit = {
-        id: `A-${Math.floor(1000 + Math.random() * 9000)}`,
-        action: 'PATIENT_FEEDBACK',
-        details: `Patient ${selectedSession.patient} submitted rating of ${rating}/5 for session ${selectedSession.sessionNo}.`,
-        changedBy: user?.name || user?.email || 'Patient',
-        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      };
-      localStorage.setItem('phms_audits', JSON.stringify([newAudit, ...audits]));
-    } catch (err) {
-      console.error(err);
-    }
-
-    setSuccessMsg(`Feedback submitted successfully for session ${selectedSession.sessionNo}!`);
-    setSelectedSession(null);
-    setComments('');
-    setRating(5);
-
-    setTimeout(() => {
-      setSuccessMsg(null);
-    }, 4000);
   };
 
-  const getFeedbackForSession = (sessionId: number) => {
-    return feedbacks.find(f => f.sessionId === sessionId);
+  const getFeedbackForSession = (sessionId: string | number) => {
+    return feedbacks.find(f => String(f.sessionId) === String(sessionId));
   };
 
   return (
@@ -249,85 +213,102 @@ const FeedbackPage: React.FC = () => {
                   Completed Healing Sessions ({sessions.length})
                 </h3>
 
-                {sessions.length === 0 ? (
+                {isLoading && (
+                  <div style={{ textAlign: 'center', padding: '40px 16px', color: '#0d9488' }}>
+                    <IonSpinner name="crescent" style={{ color: '#0d9488' }} />
+                    <p style={{ marginTop: '12px', fontWeight: 600, color: '#64748b' }}>
+                      Loading your completed sessions…
+                    </p>
+                  </div>
+                )}
+
+                {!isLoading && isError && (
+                  <div style={{ textAlign: 'center', padding: '40px 16px', color: '#ef4444' }}>
+                    <p style={{ margin: 0, fontWeight: 600 }}>Failed to load sessions.</p>
+                  </div>
+                )}
+
+                {!isLoading && !isError && sessions.length === 0 ? (
                   <div className="pat-empty-state-container-32">
                     <IonIcon icon={timeOutline} className="pat-empty-state-icon" />
                     <p className="pat-empty-state-text">No completed sessions found to rate.</p>
                   </div>
                 ) : (
-                  <div className="pat-vertical-list-12">
-                    {sessions.map((session) => {
-                      const submittedFeedback = getFeedbackForSession(session.id);
-                      const isSelected = selectedSession?.id === session.id;
+                  !isLoading && !isError && (
+                    <div className="pat-vertical-list-12">
+                      {sessions.map((session) => {
+                        const submittedFeedback = getFeedbackForSession(session.id);
+                        const isSelected = selectedSession?.id === session.id;
 
-                      return (
-                        <div 
-                          key={session.id} 
-                          className={isSelected ? 'pat-feedback-card-selected' : 'pat-feedback-card-normal'}
-                        >
-                          <div className="pat-card-header-flex">
-                            <div>
-                              <div className="pat-flex-align-center-gap8">
-                                <strong className="pat-session-no-text">{session.sessionNo}</strong>
-                                <span className="pat-session-badge-teal">
-                                  {session.type}
-                                </span>
-                              </div>
-                              <p className="pat-card-line-p6">
-                                <IonIcon icon={personOutline} /> Healer: {session.healer}
-                              </p>
-                              <p className="pat-card-line-p4">
-                                <IonIcon icon={calendarOutline} /> Conducted: {session.date} • {session.startTime}
-                              </p>
-                            </div>
-
-                            <div>
-                              {submittedFeedback ? (
-                                <div className="pat-flex-col-align-end">
-                                  <span className="pat-status-submitted-label">
-                                    <IonIcon icon={checkmarkCircleOutline} /> Submitted
+                        return (
+                          <div 
+                            key={session.id} 
+                            className={isSelected ? 'pat-feedback-card-selected' : 'pat-feedback-card-normal'}
+                          >
+                            <div className="pat-card-header-flex">
+                              <div>
+                                <div className="pat-flex-align-center-gap8">
+                                  <strong className="pat-session-no-text">{session.sessionNo}</strong>
+                                  <span className="pat-session-badge-teal">
+                                    {session.type}
                                   </span>
-                                  <div className="pat-flex-gap2">
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                      <IonIcon 
-                                        key={s} 
-                                        icon={s <= (submittedFeedback.rating || 5) ? star : starOutline} 
-                                        className="pat-star-icon"
-                                      />
-                                    ))}
-                                  </div>
                                 </div>
-                              ) : (
-                                <button 
-                                  className={isSelected ? 'pat-action-btn-selected' : 'pat-action-btn-normal'}
-                                  onClick={() => {
-                                    setSelectedSession(session);
-                                    setComments('');
-                                    setRating(5);
-                                  }}
-                                >
-                                  Submit Review
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                                <p className="pat-card-line-p6">
+                                  <IonIcon icon={personOutline} /> Healer: {session.healer}
+                                </p>
+                                <p className="pat-card-line-p4">
+                                  <IonIcon icon={calendarOutline} /> Conducted: {session.date} • {session.startTime}
+                                </p>
+                              </div>
 
-                           {submittedFeedback && (
-                             <div className="pat-feedback-details-box">
-                               {submittedFeedback.comments && (
-                                 <span className="pat-feedback-text">
-                                   "{submittedFeedback.comments}"
+                              <div>
+                                {submittedFeedback ? (
+                                  <div className="pat-flex-col-align-end">
+                                    <span className="pat-status-submitted-label">
+                                      <IonIcon icon={checkmarkCircleOutline} /> Submitted
+                                    </span>
+                                    <div className="pat-flex-gap2">
+                                      {[1, 2, 3, 4, 5].map((s) => (
+                                        <IonIcon 
+                                          key={s} 
+                                          icon={s <= (submittedFeedback.rating || 5) ? star : starOutline} 
+                                          className="pat-star-icon"
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button 
+                                    className={isSelected ? 'pat-action-btn-selected' : 'pat-action-btn-normal'}
+                                    onClick={() => {
+                                      setSelectedSession(session);
+                                      setComments('');
+                                      setRating(5);
+                                    }}
+                                  >
+                                    Submit Review
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                             {submittedFeedback && (
+                               <div className="pat-feedback-details-box">
+                                 {submittedFeedback.comments && (
+                                   <span className="pat-feedback-text">
+                                     "{submittedFeedback.comments}"
+                                   </span>
+                                 )}
+                                 <span className="pat-feedback-date">
+                                   Submitted On: {submittedFeedback.date}
                                  </span>
-                               )}
-                               <span className="pat-feedback-date">
-                                 Submitted On: {submittedFeedback.date}
-                               </span>
-                             </div>
-                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                               </div>
+                             )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
                 )}
               </AppCard>
             </div>
@@ -375,13 +356,14 @@ const FeedbackPage: React.FC = () => {
                     <div className="pat-button-row">
                       <button 
                         type="submit" 
-                        className="healer-btn-primary pat-btn-submit"
+                        className="healer-btn pat-btn-submit"
+                        disabled={createFeedbackMutation.isPending}
                       >
-                        Submit Feedback
+                        {createFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
                       </button>
                       <button 
                         type="button" 
-                        className="healer-btn-secondary pat-btn-cancel" 
+                        className="healer-btn healer-btn--secondary pat-btn-cancel" 
                         onClick={() => setSelectedSession(null)}
                       >
                         Cancel

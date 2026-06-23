@@ -148,7 +148,26 @@ class SessionController {
     }
 
     const session = await sessionService.createSession(mappedBody);
-    const fullSession = await sessionService.getSessionById(session.id, req.branchId);
+    let fullSession = await sessionService.getSessionById(session.id, req.branchId);
+
+    // Auto-process payment if created with 'paid' status
+    if (mappedBody.paymentStatus === 'paid') {
+      const paymentService = require('../services/payment.service');
+      const fee = parseFloat(fullSession.sessionFee) || parseFloat(fullSession.totalAmount) || 0;
+      if (fee > 0) {
+        try {
+          await paymentService.processPayment({
+            sessionId: fullSession.id,
+            amount: fee,
+            paymentMethod: fullSession.paymentMethod || 'Cash',
+            branchId: fullSession.branchId
+          });
+          fullSession = await sessionService.getSessionById(session.id, req.branchId);
+        } catch (e) {
+          console.error('Auto payment processing failed on creation:', e);
+        }
+      }
+    }
 
     const isAddingNotes = fullSession.notes && fullSession.notes.trim() !== '';
     if (isAddingNotes && fullSession.patient && fullSession.patient.email) {
@@ -312,8 +331,30 @@ class SessionController {
     const mappedBody = mapRequestToSession(req.body);
     const isAddingNotes = mappedBody.notes && mappedBody.notes.trim() !== '';
 
+    const prevSession = await sessionService.getSessionById(req.params.id, req.branchId);
     await sessionService.updateSession(req.params.id, mappedBody, req.branchId);
-    const fullSession = await sessionService.getSessionById(req.params.id, req.branchId);
+    let fullSession = await sessionService.getSessionById(req.params.id, req.branchId);
+
+    // Auto-process remaining payment if status changed to 'paid'
+    if (mappedBody.paymentStatus === 'paid' && prevSession.paymentStatus !== 'paid') {
+      const paymentService = require('../services/payment.service');
+      const fee = parseFloat(fullSession.sessionFee) || parseFloat(fullSession.totalAmount) || 0;
+      const currentPaid = fullSession.payment ? parseFloat(fullSession.payment.amount) : 0;
+      
+      if (currentPaid < fee && fee > 0) {
+        try {
+          await paymentService.processPayment({
+            sessionId: fullSession.id,
+            amount: fee - currentPaid,
+            paymentMethod: fullSession.paymentMethod || prevSession.paymentMethod || 'Cash',
+            branchId: fullSession.branchId
+          });
+          fullSession = await sessionService.getSessionById(req.params.id, req.branchId);
+        } catch (e) {
+          console.error('Auto payment processing failed on update:', e);
+        }
+      }
+    }
 
     if (isAddingNotes && fullSession.patient && fullSession.patient.email) {
       try {

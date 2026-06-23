@@ -498,13 +498,7 @@ const DocumentManagementPage: React.FC = () => {
                             >
                               <IonIcon icon={eyeOutline} /> View
                             </button>
-                            <button
-                              onClick={() => handleDownloadDoc(doc.id, doc.documentName)}
-                              style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                              title="Download Document"
-                            >
-                              <IonIcon icon={downloadOutline} /> Download
-                            </button>
+                            
                             <button
                                onClick={() => handleDeleteDoc(doc)}
                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
