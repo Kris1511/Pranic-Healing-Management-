@@ -895,14 +895,14 @@ const AttendancePage: React.FC = () => {
                 <h2 className="sa-section__title">Historical Attendance Logs</h2>
                 <p className="sa-section__subtitle">View and manage past attendance records across the enterprise.</p>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              {/* <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="sa-btn sa-btn--outline">
                   <IonIcon icon={downloadOutline} /> Export PDF
                 </button>
                 <button className="sa-btn sa-btn--outline">
                   <IonIcon icon={documentTextOutline} /> Export Excel
                 </button>
-              </div>
+              </div> */}
             </div>
 
             <div className="sa-filters">

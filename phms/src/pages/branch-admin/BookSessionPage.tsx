@@ -488,6 +488,61 @@ export default function CreateBookSession() {
     };
     localStorage.setItem('phms_audits', JSON.stringify([newAudit, ...audits]));
 
+    // Dispatch real-time simulated notifications to patient portal (In-App, SMS, Email)
+    const savedNotifications = localStorage.getItem('phms_notifications') || '[]';
+    const notificationsList = JSON.parse(savedNotifications);
+    
+    const timestampStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const selectedPatient = registeredPatients.find(p => 
+      p.id === formData.selectedPatientId || 
+      (p.name && p.name.toLowerCase().trim() === finalPatientName.toLowerCase().trim())
+    );
+    const patientEmail = selectedPatient?.email;
+    const patientPhone = selectedPatient?.phone;
+    const patientId = selectedPatient?.id || formData.selectedPatientId;
+
+    // 1. In-App Notification (Visible on Patient Dashboard)
+    const newInAppNotif = {
+      id: `N-${Math.floor(1000 + Math.random() * 9000)}`,
+      type: 'In-App',
+      recipient: patientEmail || patientId,
+      recipientName: finalPatientName,
+      message: `Your healing session ${sessionNo} for ${formData.type} has been scheduled with ${healerFullName} on ${formData.date} at ${formData.startTime}.`,
+      timestamp: timestampStr,
+      status: 'unread',
+      title: 'New Session Scheduled',
+      sessionNo: sessionNo,
+      date: formData.date,
+      time: formData.startTime,
+      healer: healerFullName,
+      treatmentType: formData.type
+    };
+
+    // 2. Email Notification Log
+    const newEmailNotif = {
+      id: `N-${Math.floor(1000 + Math.random() * 9000)}`,
+      type: 'Email',
+      recipient: patientEmail || 'No Email Registered',
+      message: `Email Sent to ${patientEmail || 'patient'}: Dear ${finalPatientName}, your healing session ${sessionNo} with ${healerFullName} is booked for ${formData.date} at ${formData.startTime}.`,
+      timestamp: timestampStr,
+      status: 'sent',
+      title: 'Session Confirmation Email'
+    };
+
+    // 3. SMS Notification Log
+    const newSmsNotif = {
+      id: `N-${Math.floor(1000 + Math.random() * 9000)}`,
+      type: 'SMS',
+      recipient: patientPhone || 'No Phone Registered',
+      message: `SMS Sent to ${patientPhone || 'patient'}: Hello ${finalPatientName}, your session ${sessionNo} with ${healerFullName} has been booked for ${formData.date} at ${formData.startTime}.`,
+      timestamp: timestampStr,
+      status: 'sent',
+      title: 'Session Booking SMS'
+    };
+
+    notificationsList.push(newInAppNotif, newEmailNotif, newSmsNotif);
+    localStorage.setItem('phms_notifications', JSON.stringify(notificationsList));
+
     triggerToast(`Session ${sessionNo} successfully booked! Patient received SMS & Push reminders.`);
     history.push(ROUTES.BRANCH_ADMIN.SESSIONS);
   };

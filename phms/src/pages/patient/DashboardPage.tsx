@@ -8,6 +8,7 @@ import {
   IonButtons,
   IonMenuButton,
   IonIcon,
+  IonModal,
 } from '@ionic/react';
 import {
   calendarOutline,
@@ -19,7 +20,8 @@ import {
   chatboxOutline,
   businessOutline,
   personCircleOutline,
-  cashOutline
+  cashOutline,
+  notificationsOutline,
 } from 'ionicons/icons';
 import { useAuthStore } from '../../store/auth.store';
 import { useHistory } from 'react-router-dom';
@@ -39,6 +41,93 @@ const PatientDashboardPage: React.FC = () => {
   const [totalPaid, setTotalPaid] = React.useState(0);
   const [completedCount, setCompletedCount] = React.useState(0);
   const [recordsCount, setRecordsCount] = React.useState(0);
+
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+  const [showNotificationsModal, setShowNotificationsModal] = React.useState(false);
+
+  // Load patient notifications from localStorage
+  const loadNotifications = React.useCallback(() => {
+    try {
+      const saved = localStorage.getItem('phms_notifications') || '[]';
+      const parsed = JSON.parse(saved);
+      
+      const targetEmail = user?.email?.toLowerCase();
+      const targetName = (patientData?.name || user?.name || '').toLowerCase().trim();
+      const targetId = patientData?.id;
+      
+      // Filter for In-App notifications destined for this patient
+      const patientNotifs = parsed.filter((n: any) => {
+        if (n.type !== 'In-App') return false;
+        
+        const matchesEmail = n.recipient && targetEmail && n.recipient.toLowerCase() === targetEmail;
+        const matchesId = targetId && n.recipient === targetId;
+        const matchesName = n.recipientName && targetName && n.recipientName.toLowerCase().trim() === targetName;
+        const matchesRecipientAsName = n.recipient && targetName && n.recipient.toLowerCase().trim() === targetName;
+        
+        return matchesEmail || matchesId || matchesName || matchesRecipientAsName;
+      });
+      // Sort notifications by timestamp descending (newest first)
+      patientNotifs.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setNotifications(patientNotifs);
+    } catch (e) {
+      console.error('Failed to load notifications from localStorage:', e);
+    }
+  }, [user?.email, user?.name, patientData?.id, patientData?.name]);
+
+  React.useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications, showNotificationsModal]);
+
+  const markAsRead = (notifId: string) => {
+    try {
+      const saved = localStorage.getItem('phms_notifications') || '[]';
+      const parsed = JSON.parse(saved);
+      const updated = parsed.map((n: any) => {
+        if (n.id === notifId) {
+          return { ...n, status: 'read' };
+        }
+        return n;
+      });
+      localStorage.setItem('phms_notifications', JSON.stringify(updated));
+      loadNotifications();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const deleteNotification = (notifId: string) => {
+    try {
+      const saved = localStorage.getItem('phms_notifications') || '[]';
+      const parsed = JSON.parse(saved);
+      const updated = parsed.filter((n: any) => n.id !== notifId);
+      localStorage.setItem('phms_notifications', JSON.stringify(updated));
+      loadNotifications();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const markAllAsRead = () => {
+    if (!user?.email) return;
+    try {
+      const saved = localStorage.getItem('phms_notifications') || '[]';
+      const parsed = JSON.parse(saved);
+      const updated = parsed.map((n: any) => {
+        const matchesEmail = n.recipient && n.recipient.toLowerCase() === user.email.toLowerCase();
+        const matchesId = patientData?.id && n.recipient === patientData.id;
+        if (n.type === 'In-App' && (matchesEmail || matchesId)) {
+          return { ...n, status: 'read' };
+        }
+        return n;
+      });
+      localStorage.setItem('phms_notifications', JSON.stringify(updated));
+      loadNotifications();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => n.status === 'unread').length;
 
   React.useEffect(() => {
     const fetchPatientData = async () => {
@@ -72,7 +161,7 @@ const PatientDashboardPage: React.FC = () => {
         .then((res: any) => {
           if (res.data) {
             const raw = Array.isArray(res.data) ? res.data : [];
-            const sumPaid = raw.reduce((sum, item) => sum + (parseFloat(item.paid) || 0), 0);
+            const sumPaid = raw.reduce((sum: number, item: any) => sum + (parseFloat(item.paid) || 0), 0);
             setTotalPaid(sumPaid);
           }
         })
@@ -93,6 +182,53 @@ const PatientDashboardPage: React.FC = () => {
             <IonMenuButton />
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Patient Portal</IonTitle>
+          <IonButtons slot="end">
+            <div className="sa-page__toolbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '12px' }}>
+              <button 
+                onClick={() => setShowNotificationsModal(true)} 
+                style={{ 
+                  background: 'transparent', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  fontSize: '24px', 
+                  color: '#0D5C46', 
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px',
+                  borderRadius: '50%',
+                  transition: 'background 0.2s',
+                  outline: 'none'
+                }}
+                title="Notifications"
+              >
+                <IonIcon icon={notificationsOutline} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '2px',
+                    right: '2px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    borderRadius: '50%',
+                    minWidth: '16px',
+                    height: '16px',
+                    padding: '0 3px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 0 0 2px #ffffff',
+                    transform: 'translate(20%, -20%)'
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -309,6 +445,128 @@ const PatientDashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Notifications Drawer Modal */}
+        <IonModal 
+          isOpen={showNotificationsModal} 
+          onDidDismiss={() => setShowNotificationsModal(false)}
+          className="sa-modal sa-modal--sm"
+        >
+          <div className="sa-modal__content" style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '550px', background: '#ffffff', borderRadius: '16px', overflow: 'hidden' }}>
+            <div className="sa-modal__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <IonIcon icon={notificationsOutline} style={{ fontSize: '22px', color: '#0D5C46' }} />
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Your Notifications</h2>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {unreadCount > 0 && (
+                  <button 
+                    onClick={markAllAsRead} 
+                    style={{ background: 'none', border: 'none', color: '#0D5C46', fontSize: '12px', fontWeight: 700, cursor: 'pointer', outline: 'none' }}
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                <button 
+                  onClick={() => setShowNotificationsModal(false)}
+                  style={{ background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer', lineHeight: 1, padding: '0 4px', outline: 'none' }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div className="sa-modal__body" style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {notifications.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: '#94a3b8', textAlign: 'center', gap: '12px' }}>
+                  <IonIcon icon={notificationsOutline} style={{ fontSize: '48px', color: '#cbd5e1' }} />
+                  <div>
+                    <p style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px 0', color: '#64748b' }}>No notifications yet</p>
+                    <p style={{ fontSize: '12px', margin: 0, color: '#94a3b8' }}>You will receive updates here when your sessions are booked.</p>
+                  </div>
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div 
+                    key={n.id} 
+                    style={{
+                      background: n.status === 'unread' ? '#f0fdf4' : '#ffffff',
+                      border: n.status === 'unread' ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      position: 'relative',
+                      transition: 'all 0.2s',
+                      boxShadow: n.status === 'unread' ? '0 2px 4px rgba(13, 92, 70, 0.05)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <span style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: '#10b981',
+                          display: n.status === 'unread' ? 'inline-block' : 'none',
+                        }} />
+                        <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: 0 }}>{n.title || 'Notification'}</h4>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>{n.timestamp ? n.timestamp.split(' ')[0] : ''}</span>
+                    </div>
+                    
+                    <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5 }}>{n.message}</p>
+                    
+                    {n.sessionNo && (
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px', fontSize: '12px' }}>
+                        <span style={{ color: '#64748b' }}>Session: <strong style={{ color: '#0f172a' }}>{n.sessionNo}</strong></span>
+                        <span style={{ color: '#64748b' }}>Healer: <strong style={{ color: '#0f172a' }}>{n.healer}</strong></span>
+                        <span style={{ color: '#64748b' }}>Date: <strong style={{ color: '#0f172a' }}>{n.date}</strong></span>
+                        <span style={{ color: '#64748b' }}>Time: <strong style={{ color: '#0f172a' }}>{n.time}</strong></span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '6px' }}>
+                      {n.status === 'unread' && (
+                        <button 
+                          onClick={() => markAsRead(n.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#0D5C46',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => deleteNotification(n.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </IonModal>
       </IonContent>
     </IonPage>
   );

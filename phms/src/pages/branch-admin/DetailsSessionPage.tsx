@@ -161,7 +161,7 @@ const DetialsSessionsPages: React.FC = () => {
               style={{ fontSize: "64px", color: "#e11d48" }}
             />
             <h2>Session Not Found</h2>
-            <p>
+            <p style={{ color: "#9ca3af", fontSize: "14px", marginBottom: "24px" }}>
               The requested healing session ID does not exist or has been
               deleted.
             </p>

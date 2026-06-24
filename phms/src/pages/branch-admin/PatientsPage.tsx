@@ -904,7 +904,7 @@ const PatientsPage: React.FC = () => {
                               key={patient.id}
                               className={`sa-table-row ${isSelected ? 'sa-table-row--selected' : ''}`}
                               // onClick={() => { setSelectedPatientId(patient.id); setViewMode('detail'); }}
-                              style={{ cursor: 'pointer', borderLeft: isSelected ? '4px solid #1f7a6a' : 'none' }}
+                              style={{ borderLeft: isSelected ? '4px solid #1f7a6a' : 'none' }}
                             >
                               <td style={{ fontWeight: '700', color: '#1f7a6a' }}>{patient.patientId}</td>
                               <td>

@@ -1532,7 +1532,7 @@ export default function BARegisterPatientPage() {
               <p
                 style={{
                   fontSize: "13px",
-                  color: "white",
+                  color: "red",
                   margin: "0",
                   lineHeight: 1.5,
                 }}
