@@ -29,6 +29,8 @@
     "dayjs": "^1.11.0",
     "firebase": "^10.0.0",
     "ionicons": "^7.4.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-hook-form": "^7.50.0",

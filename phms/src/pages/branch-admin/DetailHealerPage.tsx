@@ -223,7 +223,7 @@ export default function BADetailHealerPage() {
           <main className="db-corp-canvas">
             
             {/* Horizontal Header Navbar */}
-            <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <header className="db-corp-navbar ba-detail-header" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button 
                   className="db-corp-nav-icon-btn" 
@@ -268,12 +268,12 @@ export default function BADetailHealerPage() {
             </header>
 
             {/* Main Details Workspace */}
-            <div className="db-hc-layout" style={{ padding: '28px' }}>
+            <div className="db-hc-layout ba-detail-workspace" style={{ padding: '28px' }}>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 
                 {/* 2-Column Grid Layout */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="ba-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
                   
                   {/* LEFT COLUMN: Basic Information, Professional Details */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -303,7 +303,7 @@ export default function BADetailHealerPage() {
                             </div>
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="ba-detail-row-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div style={customStyles.detailRow}>
                               <span style={customStyles.label}>GENDER</span>
                               <span style={customStyles.valueText}>{healer.gender || 'Not Specified'}</span>
@@ -314,7 +314,7 @@ export default function BADetailHealerPage() {
                             </div>
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="ba-detail-row-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div style={customStyles.detailRow}>
                               <span style={customStyles.label}>PHONE NUMBER</span>
                               <span style={customStyles.valueText}>{healer.phone}</span>
@@ -343,7 +343,7 @@ export default function BADetailHealerPage() {
                         </div>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="ba-detail-row-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div style={customStyles.detailRow}>
                               <span style={customStyles.label}>CERTIFICATION LEVEL</span>
                               <span style={customStyles.valueText}>{healer.certificationLevel}</span>

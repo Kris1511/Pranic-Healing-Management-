@@ -303,9 +303,9 @@ const DashboardPage: React.FC = () => {
           <IonTitle className="sa-page__toolbar-title">Branch Admin Dashboard</IonTitle>
           <IonButtons slot="end">
             <div className="sa-page__toolbar-actions">
-              <IonButton fill="clear">
+              {/* <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
-              </IonButton>
+              </IonButton> */}
               <div className="sa-page__toolbar-avatar">{userInitials}</div>
             </div>
           </IonButtons>

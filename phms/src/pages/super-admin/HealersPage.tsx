@@ -373,7 +373,7 @@ const HealersPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sa-section" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="sa-section" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table className="sa-table">
               <thead>
                 <tr>

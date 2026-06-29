@@ -6,6 +6,7 @@ import {
   IonHeader,
   IonFooter,
 } from '@ionic/react';
+import { menuController } from '@ionic/core/components';
 import { useLocation, useHistory } from 'react-router-dom';
 import {
   gridOutline,
@@ -129,11 +130,13 @@ const Menu: React.FC = () => {
       );
     } else if (item.url) {
       history.push(item.url);
+      menuController.close();
     }
   };
 
   const handleSubNavClick = (url: string) => {
     history.push(url);
+    menuController.close();
   };
 
   const handleLogout = () => {

@@ -149,19 +149,18 @@ const DailyFinancePage: React.FC = () => {
                 <h1 className="sa-page__title">Daily Income & Expense</h1>
                 <p className="sa-page__subtitle">Track all daily cash flows and financial transactions</p>
               </div>
-              <div className="sa-page__header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div className="sa-page__header-actions">
                 <div className="sa-date-picker">
-                  <IonIcon icon={calendarOutline} />
                   <input 
                     type="date" 
                     value={selectedDate} 
                     onChange={(e) => setSelectedDate(e.target.value)} 
                   />
+                  <IonIcon icon={calendarOutline} />
                 </div>
                 {selectedDate !== todayStr && (
                   <button 
                     className="sa-btn sa-btn--outline" 
-                    style={{ margin: 0, height: '40px', display: 'flex', alignItems: 'center', gap: '4px' }}
                     onClick={() => setSelectedDate(todayStr)}
                   >
                     Reset to Today
@@ -252,7 +251,7 @@ const DailyFinancePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sa-section" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="sa-section" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table className="sa-table">
               <thead>
                 <tr>

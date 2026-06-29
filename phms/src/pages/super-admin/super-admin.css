@@ -65,6 +65,12 @@
   gap: 16px;
 }
 
+.sa-page__header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .sa-page__title {
   font-size: 26px;
   font-weight: 700;
@@ -234,6 +240,16 @@
 .sa-btn--outline:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.sa-btn--danger {
+  background: var(--color-danger, #ef4444);
+  color: white;
+}
+
+.sa-btn--danger:hover {
+  background: #dc2626;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
 .sa-table__footer {
@@ -742,6 +758,8 @@
    ========================================================================= */
 .sa-chart-container {
   margin-top: 24px;
+  overflow-x: auto;
+  padding-bottom: 8px; /* Give space for scrollbar */
 }
 
 .sa-chart-plot-area {
@@ -752,6 +770,7 @@
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 8px;
   position: relative;
+  min-width: 500px;
 }
 
 .sa-chart-day-group {
@@ -800,6 +819,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
+  min-width: 500px;
 }
 
 .sa-chart-label {
@@ -1074,6 +1094,22 @@
 
 .sa-donut-placeholder::after {
   content: '100%';
+}
+
+.sa-donut-inner {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
  /* Healer Loading Bar */
 .sa-table__load {
   display: flex;
@@ -1126,18 +1162,6 @@
 .sa-modal--sm {
   --width: 400px;
   --height: auto;
-}
-  position: absolute;
-  width: 90px;
-  height: 90px;
-  background: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-primary);
 }
 
 .sa-donut-legend {
@@ -1271,6 +1295,13 @@
   border-radius: 0 0 16px 16px;
 }
 
+.sa-edit-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .sa-grid-2 {
@@ -1299,6 +1330,15 @@
     grid-template-columns: 1fr;
   }
   
+  .sa-edit-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .st-form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
   .sa-page__body {
     padding: 12px 16px;
   }
@@ -1308,7 +1348,68 @@
   }
 
   .sa-section {
+    overflow-x: visible !important;
+    padding: 16px;
+  }
+
+  .sa-table {
+    display: block;
+    width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sa-table th,
+  .sa-table td {
+    white-space: nowrap;
+  }
+
+  .sa-search {
+    max-width: 100%;
+  }
+
+  .sa-modal__header {
+    padding: 16px 20px;
+  }
+  
+  .sa-modal__body {
+    padding: 16px 20px;
+  }
+  
+  .sa-modal__footer {
+    padding: 12px 20px;
+  }
+
+  .sa-page__toolbar-title {
+    font-size: 18px;
+  }
+
+  .sa-filters {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding-bottom: 8px;
+  }
+  
+  .sa-filter-tab {
+    white-space: nowrap;
+  }
+  
+  .sa-page__header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .sa-page__header-row > div:nth-child(2) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .sa-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -1321,6 +1422,30 @@
   
   .sa-report-cards {
     grid-template-columns: 1fr;
+  }
+
+  .sa-page__body {
+    padding: 10px 12px;
+  }
+  
+  .sa-page__header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .sa-page__header-row > div:nth-child(2) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .sa-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .sa-pagination__btn {
+    width: auto;
   }
 }
 
@@ -1480,6 +1605,7 @@
   border-radius: 8px;
   padding: 8px 12px;
   transition: border-color 0.2s ease;
+  position: relative;
 }
 
 .sa-date-picker:focus-within {
@@ -1489,6 +1615,7 @@
 .sa-date-picker ion-icon {
   color: var(--color-text-muted);
   font-size: 18px;
+  pointer-events: none;
 }
 
 .sa-date-picker input {
@@ -1497,6 +1624,17 @@
   outline: none;
   font-size: 14px;
   color: var(--color-text-primary);
+  cursor: pointer;
+  flex: 1;
+}
+
+.sa-date-picker input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
   cursor: pointer;
 }
 

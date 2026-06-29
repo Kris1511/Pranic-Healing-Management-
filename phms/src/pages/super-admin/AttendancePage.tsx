@@ -145,12 +145,12 @@ const AttendancePage: React.FC = () => {
               </div>
               <div className="sa-page__header-actions">
                 <div className="sa-date-picker">
-                  <IonIcon icon={calendarOutline} />
                   <input 
                     type="date" 
                     value={selectedDate} 
                     onChange={(e) => setSelectedDate(e.target.value)} 
                   />
+                  <IonIcon icon={calendarOutline} />
                 </div>
                 {/* <button className="sa-btn sa-btn--primary">
                   <IonIcon icon={downloadOutline} /> Export Report
@@ -212,7 +212,7 @@ const AttendancePage: React.FC = () => {
             </button>
           </div>
 
-          <div className="sa-section" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="sa-section" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table className="sa-table">
               <thead>
                 <tr>

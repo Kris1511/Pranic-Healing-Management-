@@ -893,7 +893,7 @@ const HealersPage: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
               {/* Subtitle + Add Healer Button (top right) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="ba-healers-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <p className="sa-page__subtitle" style={{ margin: 0 }}>
                   Healer Registry, Certifications, Caseload and Reassignments
                 </p>
@@ -907,23 +907,23 @@ const HealersPage: React.FC = () => {
               </div>
 
               {/* Dynamic Dashboard Widgets */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid var(--ba-color-primary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Total Healers</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{totalHealers}</span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>All registered staff</span>
+              <div className="ba-dashboard-widgets" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid var(--ba-color-primary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Total Healers</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{totalHealers}</span>
+                  <span className="ba-widget-subtitle" style={{ fontSize: '11px', color: '#94a3b8' }}>All registered staff</span>
                 </div>
 
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #10b981', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Active Healers</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#10b981' }}>{activeHealers}</span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>Online & Available</span>
+                <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #10b981', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Active Healers</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#10b981' }}>{activeHealers}</span>
+                  <span className="ba-widget-subtitle" style={{ fontSize: '11px', color: '#94a3b8' }}>Online & Available</span>
                 </div>
 
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #64748b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Inactive Healers</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#64748b' }}>{inactiveHealers}</span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>On leave/deactivated</span>
+                <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #64748b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Inactive Healers</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#64748b' }}>{inactiveHealers}</span>
+                  <span className="ba-widget-subtitle" style={{ fontSize: '11px', color: '#94a3b8' }}>On leave/deactivated</span>
                 </div>
 
                 {/* <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -948,7 +948,7 @@ const HealersPage: React.FC = () => {
               </div>
 
               {/* Search & Filters */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+              <div className="ba-healers-filters" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '300px' }}>
                   <div className="sa-search" style={{ margin: 0, width: '100%', maxWidth: '350px' }}>
                     <IonIcon icon={searchOutline} />

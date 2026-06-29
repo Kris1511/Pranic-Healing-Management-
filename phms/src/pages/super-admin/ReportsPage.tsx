@@ -165,13 +165,13 @@ const ReportsPage: React.FC = () => {
                 <h1 className="sa-page__title">Organization Analytics</h1>
                 <p className="sa-page__subtitle">Consolidated performance data across all sanctuaries</p>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '0 10px' }}>
+              <div className="sa-page__header-actions">
+                <div className="sa-date-picker">
                   <IonIcon icon={calendarOutline} style={{ color: 'var(--color-text-secondary)' }} />
                   <select 
                     value={timeRange} 
                     onChange={(e) => setTimeRange(e.target.value)}
-                    style={{ border: 'none', background: 'transparent', outline: 'none', padding: '6px 10px', fontSize: '13px', color: 'var(--color-text-primary)' }}
+                    style={{ border: 'none', background: 'transparent', outline: 'none', padding: '6px 0', fontSize: '14px', color: 'var(--color-text-primary)', flex: 1, width: '100%', cursor: 'pointer' }}
                   >
                     <option value="Today">Today</option>
                     <option value="Yesterday">Yesterday</option>
@@ -180,10 +180,10 @@ const ReportsPage: React.FC = () => {
                     <option value="All Time">All Time</option>
                   </select>
                 </div>
-                <button className="sa-btn sa-btn--primary sa-btn--sm" onClick={downloadPDF}>
+                <button className="sa-btn sa-btn--primary sa-btn--sm" onClick={downloadPDF} style={{ margin: 0, height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                   <IonIcon icon={downloadOutline} /> Export PDF
                 </button>
-                <button className="sa-btn sa-btn--outline sa-btn--sm" onClick={downloadExcel}>
+                <button className="sa-btn sa-btn--outline sa-btn--sm" onClick={downloadExcel} style={{ margin: 0, height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   Excel
                 </button>
               </div>

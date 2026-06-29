@@ -488,7 +488,7 @@ export default function EditPatientPages() {
         <div className="db-corp-layout" style={{ background: '#f8fafc' }}>
           <main className="db-corp-canvas">
             
-            <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button 
                   className="db-corp-nav-icon-btn" 
@@ -526,7 +526,7 @@ export default function EditPatientPages() {
             <div className="db-hc-layout" style={{ padding: '28px' }}>
               <form onSubmit={handleSaveChanges} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="sa-edit-grid">
                   
                   {/* LEFT COLUMN */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -540,7 +540,7 @@ export default function EditPatientPages() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="sa-grid-2">
                         <div>
                           <label style={customStyles.label}>Patient Full Name *</label>
                           <input 
@@ -568,7 +568,7 @@ export default function EditPatientPages() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="sa-grid-2">
                         <div>
                           <label style={customStyles.label}>Date of Birth *</label>
                           <input 
@@ -592,7 +592,7 @@ export default function EditPatientPages() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="sa-grid-2">
                         <div>
                           <label style={customStyles.label}>Blood Group *</label>
                           <select 
@@ -634,7 +634,7 @@ export default function EditPatientPages() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="sa-grid-2">
                         <div>
                           <label style={customStyles.label}>Phone Number *</label>
                           <input 
@@ -777,10 +777,10 @@ export default function EditPatientPages() {
 
                       <div>
                         <label style={customStyles.label}>Password (Enter to Reset)</label>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                           <input 
                             name="password"
-                            style={{ ...customStyles.grayInput, flex: 1 }}
+                            style={{ ...customStyles.grayInput, flex: '1 1 200px' }}
                             value={formData.password}
                             onChange={handleInputChange}
                             placeholder="Reset password key"
@@ -788,7 +788,7 @@ export default function EditPatientPages() {
                           <button 
                             type="button" 
                             className="sa-btn sa-btn--primary" 
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '0 16px' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '0 16px', flex: '1 1 auto', height: '42px' }}
                             onClick={handleGeneratePassword}
                           >
                             <IonIcon icon={keyOutline} /> Generate

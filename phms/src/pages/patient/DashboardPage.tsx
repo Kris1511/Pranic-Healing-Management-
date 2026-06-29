@@ -45,86 +45,45 @@ const PatientDashboardPage: React.FC = () => {
   const [notifications, setNotifications] = React.useState<any[]>([]);
   const [showNotificationsModal, setShowNotificationsModal] = React.useState(false);
 
-  // Load patient notifications from localStorage
-  const loadNotifications = React.useCallback(() => {
+  // Manage notification state (read/deleted) in local storage
+  const getNotificationState = () => {
     try {
-      const saved = localStorage.getItem('phms_notifications') || '[]';
-      const parsed = JSON.parse(saved);
-      
-      const targetEmail = user?.email?.toLowerCase();
-      const targetName = (patientData?.name || user?.name || '').toLowerCase().trim();
-      const targetId = patientData?.id;
-      
-      // Filter for In-App notifications destined for this patient
-      const patientNotifs = parsed.filter((n: any) => {
-        if (n.type !== 'In-App') return false;
-        
-        const matchesEmail = n.recipient && targetEmail && n.recipient.toLowerCase() === targetEmail;
-        const matchesId = targetId && n.recipient === targetId;
-        const matchesName = n.recipientName && targetName && n.recipientName.toLowerCase().trim() === targetName;
-        const matchesRecipientAsName = n.recipient && targetName && n.recipient.toLowerCase().trim() === targetName;
-        
-        return matchesEmail || matchesId || matchesName || matchesRecipientAsName;
-      });
-      // Sort notifications by timestamp descending (newest first)
-      patientNotifs.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setNotifications(patientNotifs);
+      return JSON.parse(localStorage.getItem(`patient_notif_state_${user?.email}`) || '{}');
     } catch (e) {
-      console.error('Failed to load notifications from localStorage:', e);
+      return {};
     }
-  }, [user?.email, user?.name, patientData?.id, patientData?.name]);
+  };
 
-  React.useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications, showNotificationsModal]);
+  const saveNotificationState = (state: any) => {
+    try {
+      localStorage.setItem(`patient_notif_state_${user?.email}`, JSON.stringify(state));
+    } catch (e) {}
+  };
 
   const markAsRead = (notifId: string) => {
-    try {
-      const saved = localStorage.getItem('phms_notifications') || '[]';
-      const parsed = JSON.parse(saved);
-      const updated = parsed.map((n: any) => {
-        if (n.id === notifId) {
-          return { ...n, status: 'read' };
-        }
-        return n;
-      });
-      localStorage.setItem('phms_notifications', JSON.stringify(updated));
-      loadNotifications();
-    } catch (e) {
-      console.error(e);
-    }
+    const state = getNotificationState();
+    state[notifId] = { ...state[notifId], status: 'read' };
+    saveNotificationState(state);
+    
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, status: 'read' } : n));
   };
 
   const deleteNotification = (notifId: string) => {
-    try {
-      const saved = localStorage.getItem('phms_notifications') || '[]';
-      const parsed = JSON.parse(saved);
-      const updated = parsed.filter((n: any) => n.id !== notifId);
-      localStorage.setItem('phms_notifications', JSON.stringify(updated));
-      loadNotifications();
-    } catch (e) {
-      console.error(e);
-    }
+    const state = getNotificationState();
+    state[notifId] = { ...state[notifId], status: 'deleted' };
+    saveNotificationState(state);
+    
+    setNotifications(prev => prev.filter(n => n.id !== notifId));
   };
 
   const markAllAsRead = () => {
-    if (!user?.email) return;
-    try {
-      const saved = localStorage.getItem('phms_notifications') || '[]';
-      const parsed = JSON.parse(saved);
-      const updated = parsed.map((n: any) => {
-        const matchesEmail = n.recipient && n.recipient.toLowerCase() === user.email.toLowerCase();
-        const matchesId = patientData?.id && n.recipient === patientData.id;
-        if (n.type === 'In-App' && (matchesEmail || matchesId)) {
-          return { ...n, status: 'read' };
-        }
-        return n;
-      });
-      localStorage.setItem('phms_notifications', JSON.stringify(updated));
-      loadNotifications();
-    } catch (e) {
-      console.error(e);
-    }
+    const state = getNotificationState();
+    notifications.forEach(n => {
+      state[n.id] = { ...state[n.id], status: 'read' };
+    });
+    saveNotificationState(state);
+    
+    setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
   };
 
   const unreadCount = notifications.filter((n) => n.status === 'unread').length;
@@ -153,6 +112,55 @@ const PatientDashboardPage: React.FC = () => {
             const completed = res.data.filter((s: any) => (s.status || '').toLowerCase() === 'completed').length;
             setCompletedCount(completed);
             setRecordsCount(patientData.documents?.length || 0);
+
+            const state = getNotificationState();
+            const generatedNotifs: any[] = [];
+            
+            res.data.forEach((s: any) => {
+               const sessionNo = s.sessionNo || `SES-${String(s.id).substring(0, 6).toUpperCase()}`;
+               const healerName = s.healer?.name ? `Dr. ${s.healer.name.replace(/^Dr\.\s*/i, '')}` : (s.healer_name ? `Dr. ${s.healer_name}` : 'your healer');
+               const dateStr = s.sessionDate || s.session_date || s.createdAt || new Date().toISOString();
+               
+               if (s.notes && s.notes.trim() !== '' && s.notes !== '—') {
+                 const id = `note_${s.id}`;
+                 if (state[id]?.status !== 'deleted') {
+                   generatedNotifs.push({
+                     id,
+                     type: 'In-App',
+                     title: 'New Session Notes',
+                     message: `Healer notes have been added for your session ${sessionNo} by ${healerName}.`,
+                     timestamp: new Date(dateStr).toISOString().replace('T', ' ').substring(0, 19),
+                     sessionNo,
+                     healer: healerName,
+                     date: dateStr.split('T')[0],
+                     time: s.startTime || s.start_time || 'N/A',
+                     status: state[id]?.status === 'read' ? 'read' : 'unread'
+                   });
+                 }
+                 
+                 // If notes indicate a follow up is required
+                 if (s.notes.toLowerCase().includes('follow-up required: yes')) {
+                   const followupId = `followup_${s.id}`;
+                   if (state[followupId]?.status !== 'deleted') {
+                     generatedNotifs.push({
+                       id: followupId,
+                       type: 'In-App',
+                       title: 'Follow-up Required',
+                       message: `A follow-up is recommended for session ${sessionNo} by ${healerName}.`,
+                       timestamp: new Date(dateStr).toISOString().replace('T', ' ').substring(0, 19),
+                       sessionNo,
+                       healer: healerName,
+                       date: dateStr.split('T')[0],
+                       time: s.startTime || s.start_time || 'N/A',
+                       status: state[followupId]?.status === 'read' ? 'read' : 'unread'
+                     });
+                   }
+                 }
+               }
+            });
+
+            generatedNotifs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setNotifications(generatedNotifs);
           }
         })
         .catch(console.error);
@@ -172,7 +180,7 @@ const PatientDashboardPage: React.FC = () => {
       setCompletedCount(0);
       setRecordsCount(0);
     }
-  }, [patientData]);
+  }, [patientData, user?.email]);
 
   return (
     <IonPage className="sa-page">

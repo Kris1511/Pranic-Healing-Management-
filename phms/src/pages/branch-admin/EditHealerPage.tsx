@@ -446,7 +446,7 @@ export default function BAEditHealerPage() {
           <main className="db-corp-canvas">
             
             {/* Horizontal Header Navbar */}
-            <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <header className="db-corp-navbar ba-detail-header" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button 
                   className="db-corp-nav-icon-btn" 
@@ -482,12 +482,12 @@ export default function BAEditHealerPage() {
             </header>
 
             {/* Main Form Workspace */}
-            <div className="db-hc-layout" style={{ padding: '28px' }}>
+            <div className="db-hc-layout ba-detail-workspace" style={{ padding: '28px' }}>
               
               <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 
                 {/* 2-Column Grid Layout */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="ba-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
                   
                   {/* LEFT COLUMN: Basic Information, Professional Details */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>

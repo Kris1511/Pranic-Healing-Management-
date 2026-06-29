@@ -271,7 +271,7 @@ const UsersPage: React.FC = () => {
           </div>
 
           {/* Users Table */}
-          <div className="sa-section" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="sa-section" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             {loading ? (
               <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ion-color-medium)' }}>
                 Loading users...

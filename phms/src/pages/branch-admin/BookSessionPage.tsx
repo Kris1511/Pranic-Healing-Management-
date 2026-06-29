@@ -306,12 +306,31 @@ export default function CreateBookSession() {
     } else {
       const selected = registeredPatients.find(p => p.id === patId);
       if (selected) {
-        setFormData(prev => ({
-          ...prev,
-          selectedPatientId: patId,
-          patientName: selected.name,
-          type: selected.caseType || prev.type
-        }));
+        setFormData(prev => {
+          let nextHealer = prev.healer;
+          
+          const rawAssigned = selected.healer?.name || selected.assignedHealer || selected.healerId;
+          if (rawAssigned) {
+            const cleanName = typeof rawAssigned === 'string' ? rawAssigned.replace(/^Dr\.\s*/i, '') : rawAssigned;
+            const matchedHealer = activeHealers.find(h => 
+              h.name === cleanName || h.id === cleanName || h.name === rawAssigned
+            );
+            
+            if (matchedHealer) {
+              nextHealer = matchedHealer.name;
+            } else if (typeof cleanName === 'string') {
+              nextHealer = cleanName;
+            }
+          }
+
+          return {
+            ...prev,
+            selectedPatientId: patId,
+            patientName: selected.name,
+            type: selected.caseType || selected.treatmentType || prev.type,
+            healer: nextHealer
+          };
+        });
       }
     }
   };

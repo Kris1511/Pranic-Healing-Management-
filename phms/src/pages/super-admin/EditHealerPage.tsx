@@ -404,7 +404,7 @@ export default function SAEditHealerPage() {
           
           <main className="db-corp-canvas">
             
-            <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button 
                   className="db-corp-nav-icon-btn" 
@@ -443,7 +443,7 @@ export default function SAEditHealerPage() {
               
               <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="sa-edit-grid">
                   
                   {/* LEFT COLUMN */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonContent,
@@ -12,20 +12,56 @@ import {
 } from '@ionic/react';
 import { notificationsOutline } from 'ionicons/icons';
 import './super-admin.css';
+import { useAuthStore } from '../../store/auth.store';
 
 const SettingsPage: React.FC = () => {
+  const { user, updateUser } = useAuthStore();
+
   const [profile, setProfile] = useState({
-    fullName: 'Aria Seraphina',
-    email: 'aria@sanctuary.com',
-    phone: '+91 98 765 43210',
-    role: 'Super Admin',
-    region: 'North America',
+    fullName: '',
+    email: '',
+    phone: '',
+    role: '',
+    branch: '',
     language: 'English (US)',
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        fullName: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Super Admin',
+        email: user.email || '',
+        phone: user.phoneNumber || '',
+        role: user.role || 'Super Admin',
+        branch: user.branchName || user.branch || 'Headquarters',
+        language: 'English (US)',
+      });
+    }
+  }, [user]);
 
   const handleChange = (field: string, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleSave = () => {
+    if (user) {
+      updateUser({
+        name: profile.fullName,
+        email: profile.email,
+        phoneNumber: profile.phone,
+        // Since we combined firstName and lastName into fullName for display,
+        // you might want to split them back, or just use `name`.
+      });
+    }
+    // TODO: Integrate with backend API to persist changes
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'SA';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  const initials = getInitials(profile.fullName);
 
   return (
     <IonPage className="sa-page">
@@ -40,7 +76,7 @@ const SettingsPage: React.FC = () => {
               <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton>
-              <div className="sa-page__toolbar-avatar">AS</div>
+              <div className="sa-page__toolbar-avatar">{initials}</div>
             </div>
           </IonButtons>
         </IonToolbar>
@@ -57,9 +93,9 @@ const SettingsPage: React.FC = () => {
           {/* Profile Header Card */}
           <div className="sa-section">
             <div className="sa-settings__profile-header">
-              <div className="sa-settings__avatar">AS</div>
-              <h2 className="sa-settings__name">Aria Seraphina</h2>
-              <span className="sa-settings__role-badge">Super Admin</span>
+              <div className="sa-settings__avatar">{initials}</div>
+              <h2 className="sa-settings__name">{profile.fullName || 'User Name'}</h2>
+              <span className="sa-settings__role-badge">{profile.role || 'Super Admin'}</span>
               <div>
                 <span className="sa-settings__change-photo">Change Photo</span>
               </div>
@@ -106,11 +142,12 @@ const SettingsPage: React.FC = () => {
               </div>
 
               <div className="sa-settings__form-group">
-                <label className="sa-settings__label">Region</label>
+                <label className="sa-settings__label">Branch / Region</label>
                 <input
                   className="sa-settings__input"
-                  value={profile.region}
-                  onChange={e => handleChange('region', e.target.value)}
+                  value={profile.branch}
+                  readOnly
+                  style={{ opacity: 0.7 }}
                 />
               </div>
 
@@ -124,8 +161,20 @@ const SettingsPage: React.FC = () => {
               </div>
 
               <div className="sa-settings__actions">
-                <button className="sa-btn sa-btn--outline">Cancel</button>
-                <button className="sa-btn sa-btn--primary">Save Changes</button>
+                <button className="sa-btn sa-btn--outline" onClick={() => {
+                  // Reset form to user defaults
+                  if (user) {
+                     setProfile({
+                        fullName: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Super Admin',
+                        email: user.email || '',
+                        phone: user.phoneNumber || '',
+                        role: user.role || 'Super Admin',
+                        branch: user.branchName || user.branch || 'Headquarters',
+                        language: 'English (US)',
+                      });
+                  }
+                }}>Cancel</button>
+                <button className="sa-btn sa-btn--primary" onClick={handleSave}>Save Changes</button>
               </div>
             </div>
           </div>

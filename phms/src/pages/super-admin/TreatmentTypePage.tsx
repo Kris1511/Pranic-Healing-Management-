@@ -221,7 +221,7 @@ const TreatmentTypePage: React.FC = () => {
             </div> */}
           </div>
 
-          <div className="sa-section" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="sa-section" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <div className="sa-table-container">
               <table className="sa-table">
                 <thead>

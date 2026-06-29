@@ -39,6 +39,8 @@ import { getHealers } from '../../api/healer.api';
 import { getPatients } from '../../api/patient.api';
 import { getPayments } from '../../api/payment.api';
 import { getTreatmentTypes } from '../../api/treatmentType.api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './branch-admin.css';
 
 const formatToCustomStr = (dateString: string | Date) => {
@@ -186,7 +188,7 @@ const ReportsPage: React.FC = () => {
   };
 
   const getExportFilename = () => {
-    const ext = exportFormat === 'Excel' ? 'csv' : 'txt';
+    const ext = exportFormat === 'Excel' ? 'csv' : 'pdf';
     const slug = exportSubject
       ? exportSubject.replace(/[^a-zA-Z0-9]/g, '-')
       : `${selectedTab}-Logs-Branch-${branchName.replace(/\s+/g, '-')}`;
@@ -196,70 +198,68 @@ const ReportsPage: React.FC = () => {
   const handleDownloadFile = () => {
     // If download request is for a single record and format is text/PDF, generate a beautiful text report format
     if (exportRowData && exportFormat !== 'Excel') {
-      let content = '';
-      content += `==================================================\n`;
-      content += `          PRANIC HEALING MANAGEMENT SYSTEM\n`;
-      content += `            ${selectedTab.toUpperCase()} RECORD SUMMARY\n`;
-      content += `==================================================\n\n`;
-      content += `Branch:        ${branchName}\n`;
-      content += `Date Exported: ${new Date().toLocaleDateString('en-GB')}\n`;
-      content += `Subject:       ${exportSubject}\n`;
-      content += `--------------------------------------------------\n\n`;
-
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(16);
+      doc.text("PRANIC HEALING MANAGEMENT SYSTEM", 105, 15, { align: 'center' });
+      doc.setFontSize(14);
+      doc.text(`${selectedTab.toUpperCase()} RECORD SUMMARY`, 105, 25, { align: 'center' });
+      
+      doc.setFontSize(11);
+      doc.text(`Branch:        ${branchName}`, 15, 40);
+      doc.text(`Date Exported: ${new Date().toLocaleDateString('en-GB')}`, 15, 47);
+      doc.text(`Subject:       ${exportSubject}`, 15, 54);
+      
+      let y = 65;
+      
       if (selectedTab === 'Finance') {
-        content += `Transaction Date:   ${exportRowData.date}\n`;
-        content += `Transaction Type:   ${exportRowData.type}\n`;
-        content += `Category:           ${exportRowData.category}\n`;
-        content += `Amount:             ${exportRowData.amount}\n`;
-        content += `Payment Mode:       ${exportRowData.paymentMode}\n`;
-        content += `Recorded By:        ${exportRowData.recordedBy}\n`;
+        doc.text(`Transaction Date:   ${exportRowData.date}`, 15, y); y += 7;
+        doc.text(`Transaction Type:   ${exportRowData.type}`, 15, y); y += 7;
+        doc.text(`Category:           ${exportRowData.category}`, 15, y); y += 7;
+        doc.text(`Amount:             ${exportRowData.amount}`, 15, y); y += 7;
+        doc.text(`Payment Mode:       ${exportRowData.paymentMode}`, 15, y); y += 7;
+        doc.text(`Recorded By:        ${exportRowData.recordedBy}`, 15, y); y += 7;
       } else if (selectedTab === 'Visitors') {
-        content += `Visitor Name:       ${exportRowData.name}\n`;
-        content += `Visit Date:         ${exportRowData.date}\n`;
-        content += `Purpose of Visit:   ${exportRowData.purpose}\n`;
-        content += `Check-In Time:      ${exportRowData.checkIn}\n`;
-        content += `Check-Out Time:     ${exportRowData.checkOut}\n`;
-        content += `Current Status:     ${exportRowData.status}\n`;
+        doc.text(`Visitor Name:       ${exportRowData.name}`, 15, y); y += 7;
+        doc.text(`Visit Date:         ${exportRowData.date}`, 15, y); y += 7;
+        doc.text(`Purpose of Visit:   ${exportRowData.purpose}`, 15, y); y += 7;
+        doc.text(`Check-In Time:      ${exportRowData.checkIn}`, 15, y); y += 7;
+        doc.text(`Check-Out Time:     ${exportRowData.checkOut}`, 15, y); y += 7;
+        doc.text(`Current Status:     ${exportRowData.status}`, 15, y); y += 7;
       } else if (selectedTab === 'Sessions') {
-        content += `Session ID:         ${exportRowData.id}\n`;
-        content += `Session Date:       ${exportRowData.date}\n`;
-        content += `Patient Name:       ${exportRowData.patient}\n`;
-        content += `Healer Assigned:    ${exportRowData.healer}\n`;
-        content += `Treatment Type:     ${exportRowData.treatment}\n`;
-        content += `Scheduled Time:     ${exportRowData.time}\n`;
-        content += `Status:             ${exportRowData.status}\n`;
+        doc.text(`Session ID:         ${exportRowData.id}`, 15, y); y += 7;
+        doc.text(`Session Date:       ${exportRowData.date}`, 15, y); y += 7;
+        doc.text(`Patient Name:       ${exportRowData.patient}`, 15, y); y += 7;
+        doc.text(`Healer Assigned:    ${exportRowData.healer}`, 15, y); y += 7;
+        doc.text(`Treatment Type:     ${exportRowData.treatment}`, 15, y); y += 7;
+        doc.text(`Scheduled Time:     ${exportRowData.time}`, 15, y); y += 7;
+        doc.text(`Status:             ${exportRowData.status}`, 15, y); y += 7;
       } else if (selectedTab === 'Attendance') {
-        content += `Worker Name:        ${exportRowData.worker}\n`;
-        content += `Role:               ${exportRowData.role}\n`;
-        content += `Attendance Date:    ${exportRowData.date}\n`;
-        content += `Total Hours Worked: ${exportRowData.hours}\n`;
-        content += `Status:             ${exportRowData.status}\n`;
+        doc.text(`Worker Name:        ${exportRowData.worker}`, 15, y); y += 7;
+        doc.text(`Role:               ${exportRowData.role}`, 15, y); y += 7;
+        doc.text(`Attendance Date:    ${exportRowData.date}`, 15, y); y += 7;
+        doc.text(`Total Hours Worked: ${exportRowData.hours}`, 15, y); y += 7;
+        doc.text(`Status:             ${exportRowData.status}`, 15, y); y += 7;
       } else if (selectedTab === 'Healer') {
-        content += `Healer Name:        ${exportRowData.healer}\n`;
-        content += `Specialty:          ${exportRowData.specialty}\n`;
-        content += `Sessions Conducted: ${exportRowData.sessions}\n`;
-        content += `Current Status:     ${exportRowData.status}\n`;
+        doc.text(`Healer Name:        ${exportRowData.healer}`, 15, y); y += 7;
+        doc.text(`Specialty:          ${exportRowData.specialty}`, 15, y); y += 7;
+        doc.text(`Sessions Conducted: ${exportRowData.sessions}`, 15, y); y += 7;
+        doc.text(`Current Status:     ${exportRowData.status}`, 15, y); y += 7;
       } else if (selectedTab === 'Patients') {
-        content += `Patient Name:       ${exportRowData.name}\n`;
-        content += `Assigned Healer:    ${exportRowData.healer}\n`;
-        content += `Registration Date:  ${exportRowData.date}\n`;
-        content += `Treatment Type:     ${exportRowData.treatment}\n`;
-        content += `Status:             ${exportRowData.status}\n`;
+        doc.text(`Patient Name:       ${exportRowData.name}`, 15, y); y += 7;
+        doc.text(`Assigned Healer:    ${exportRowData.healer}`, 15, y); y += 7;
+        doc.text(`Registration Date:  ${exportRowData.date}`, 15, y); y += 7;
+        doc.text(`Treatment Type:     ${exportRowData.treatment}`, 15, y); y += 7;
+        doc.text(`Status:             ${exportRowData.status}`, 15, y); y += 7;
       }
 
-      content += `\n--------------------------------------------------\n`;
-      content += `Secure receipt verified by PHMS Operations.\n`;
-      content += `==================================================\n`;
+      y += 10;
+      doc.setFontSize(10);
+      doc.text("Secure receipt verified by PHMS Operations.", 15, y);
 
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
       const filename = getExportFilename();
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      doc.save(filename);
 
       setShowExportModal(false);
       triggerToast(`Downloaded ${filename} successfully!`);
@@ -268,84 +268,111 @@ const ReportsPage: React.FC = () => {
 
     let headers: string[] = [];
     let rows: any[] = [];
-    const delimiter = ',';
-
+    
     const listToProcess = exportRowData ? [exportRowData] : activeFilteredList;
 
     if (selectedTab === 'Finance') {
       headers = ['Date', 'Transaction Type', 'Category', 'Amount', 'Payment Mode', 'Recorded By'];
       rows = listToProcess.map((row: any) => [
-        `"${row.date}"`,
-        `"${row.type}"`,
-        `"${row.category}"`,
-        `"${row.amount.replace(/"/g, '""')}"`,
-        `"${row.paymentMode}"`,
-        `"${row.recordedBy}"`
+        row.date,
+        row.type,
+        row.category,
+        row.amount,
+        row.paymentMode,
+        row.recordedBy
       ]);
     } else if (selectedTab === 'Visitors') {
       headers = ['Date', 'Visitor Name', 'Purpose', 'Check-In', 'Check-Out', 'Status'];
       rows = listToProcess.map((row: any) => [
-        `"${row.date}"`,
-        `"${row.name}"`,
-        `"${row.purpose}"`,
-        `"${row.checkIn}"`,
-        `"${row.checkOut}"`,
-        `"${row.status}"`
+        row.date,
+        row.name,
+        row.purpose,
+        row.checkIn,
+        row.checkOut,
+        row.status
       ]);
     } else if (selectedTab === 'Sessions') {
       headers = ['Session ID', 'Patient', 'Healer', 'Treatment', 'Time', 'Status', 'Date'];
       rows = listToProcess.map((row: any) => [
-        `"${row.id}"`,
-        `"${row.patient}"`,
-        `"${row.healer}"`,
-        `"${row.treatment}"`,
-        `"${row.time}"`,
-        `"${row.status}"`,
-        `"${row.date}"`
+        row.id,
+        row.patient,
+        row.healer,
+        row.treatment,
+        row.time,
+        row.status,
+        row.date
       ]);
     } else if (selectedTab === 'Attendance') {
       headers = ['Worker', 'Role', 'Date', 'Total Hours', 'Status'];
       rows = listToProcess.map((row: any) => [
-        `"${row.worker}"`,
-        `"${row.role}"`,
-        `"${row.date}"`,
-        `"${row.hours}"`,
-        `"${row.status}"`
+        row.worker,
+        row.role,
+        row.date,
+        row.hours,
+        row.status
       ]);
     } else if (selectedTab === 'Healer') {
       headers = ['Healer', 'Specialty', 'Sessions Conducted', 'Status'];
       rows = listToProcess.map((row: any) => [
-        `"${row.healer}"`,
-        `"${row.specialty}"`,
-        `"${row.sessions}"`,
-        `"${row.status}"`
+        row.healer,
+        row.specialty,
+        row.sessions,
+        row.status
       ]);
     } else if (selectedTab === 'Patients') {
       headers = ['Patient Name', 'Assigned Healer', 'Status', 'Registration Date', 'Treatment Type'];
       rows = listToProcess.map((row: any) => [
-        `"${row.name}"`,
-        `"${row.healer}"`,
-        `"${row.status}"`,
-        `"${row.date}"`,
-        `"${row.treatment}"`
+        row.name,
+        row.healer,
+        row.status,
+        row.date,
+        row.treatment
       ]);
     }
 
-    const fileContent = [headers.join(delimiter), ...rows.map(r => r.join(delimiter))].join('\n');
-    const mimeType = exportFormat === 'Excel' ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;';
-    const blob = new Blob([fileContent], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    
-    const filename = getExportFilename();
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (exportFormat === 'Excel') {
+      const delimiter = ',';
+      const escapeCsv = (str: string) => `"${String(str).replace(/"/g, '""')}"`;
+      const csvRows = [headers.join(delimiter), ...rows.map(r => r.map(escapeCsv).join(delimiter))];
+      const fileContent = csvRows.join('\n');
+      const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      
+      const filename = getExportFilename();
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    setShowExportModal(false);
-    triggerToast(`Downloaded ${filename} successfully!`);
+      setShowExportModal(false);
+      triggerToast(`Downloaded ${filename} successfully!`);
+    } else {
+      // PDF export
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("PRANIC HEALING MANAGEMENT SYSTEM", 105, 15, { align: 'center' });
+      doc.setFontSize(14);
+      doc.text(`${selectedTab.toUpperCase()} REPORT`, 105, 23, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.text(`Branch: ${branchName}`, 14, 33);
+      doc.text(`Date Exported: ${new Date().toLocaleDateString('en-GB')}`, 14, 38);
+      
+      autoTable(doc, {
+        head: [headers],
+        body: rows,
+        startY: 45,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [13, 92, 70] },
+      });
+      
+      const filename = getExportFilename();
+      doc.save(filename);
+      setShowExportModal(false);
+      triggerToast(`Downloaded ${filename} successfully!`);
+    }
   };
 
   // Live Data States
