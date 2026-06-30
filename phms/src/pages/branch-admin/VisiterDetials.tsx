@@ -178,8 +178,8 @@ export default function BAVisiterDetailsPage() {
             
             {/* Navbar Header */}
             <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div className="vl-details-header-content">
+                <div className="vl-details-title-group">
                   <button 
                     onClick={() => history.push(ROUTES.BRANCH_ADMIN.VISITOR_LOG)} 
                     title="Back"
@@ -198,7 +198,7 @@ export default function BAVisiterDetailsPage() {
                   >
                     <IonIcon icon={arrowBackOutline} style={{ color: '#0D5C46', fontSize: '20px' }} />
                   </button>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div className="vl-details-title-text">
                     <h1 style={{ margin: 0, color: '#0d5c46', fontSize: '20px', fontWeight: 800 }}>Visitor Gate Pass</h1>
                     <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>Pranic Healing Management System • Record Auditing</p>
                   </div>
@@ -207,7 +207,7 @@ export default function BAVisiterDetailsPage() {
                 {/* Status Badge */}
                 <span 
                   className={`vl-badge-status vl-badge-status--${isInside ? 'inside' : 'exited'}`}
-                  style={{ fontSize: '12px', padding: '6px 16px', borderRadius: '20px', fontWeight: 700 }}
+                  style={{ fontSize: '12px', padding: '6px 16px', borderRadius: '20px', fontWeight: 700, marginLeft: 'auto' }}
                 >
                   {isInside && <span className="vl-now-inside-dot" />}
                   {isInside ? 'Currently Inside' : 'Exited Center'}
@@ -218,7 +218,7 @@ export default function BAVisiterDetailsPage() {
             {/* Main Content Details Grid */}
             <div className="db-hc-layout" style={{ padding: '28px' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+              <div className="sa-edit-grid">
                 
                 {/* Left Column: Visitor Details & Identity */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -236,7 +236,7 @@ export default function BAVisiterDetailsPage() {
                         <span style={{ ...customStyles.value, fontSize: '20px', color: '#0D5C46' }}>{visitor.name}</span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="ba-form-grid-2">
                         <div>
                           <label style={customStyles.label}>Contact Number</label>
                           <span style={customStyles.value}>{visitor.phone}</span>
@@ -279,7 +279,7 @@ export default function BAVisiterDetailsPage() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="ba-form-grid-2">
                         <div>
                           <label style={customStyles.label}>Gate Pass ID</label>
                           <span style={{ ...customStyles.value, fontFamily: 'monospace', color: '#7c2d12' }}>{visitor.visitorId || '—'}</span>

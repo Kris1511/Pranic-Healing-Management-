@@ -664,11 +664,11 @@ export default function EditSessionsPages() {
             </header>
 
             {/* Layout Canvas */}
-            <div className="db-hc-layout" style={{ padding: '28px' }}>
+            <div className="ba-edit-layout db-hc-layout" style={{ padding: '28px' }}>
               <form onSubmit={handleSaveSession} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 
                 {/* Two Column Form Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="ba-edit-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
                   
                   {/* LEFT COLUMN: Core Session Details */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>

@@ -12,7 +12,7 @@ class PatientRepository {
         'healer',
         {
           association: 'sessions',
-          include: ['healer', 'treatments']
+          include: ['healer', 'treatments', 'payment']
         },
         'feedbacks',
         'documents'
@@ -36,7 +36,7 @@ class PatientRepository {
         'healer',
         {
           association: 'sessions',
-          include: ['healer', 'treatments']
+          include: ['healer', 'treatments', 'payment']
         },
         'feedbacks',
         'documents'

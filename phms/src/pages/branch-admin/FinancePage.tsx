@@ -1093,7 +1093,7 @@ const FinancePage: React.FC = () => {
                 </div>
 
                 {/* Custom From-To Picker Block */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '12px', borderTop: '1px dashed #e2e8f0', paddingTop: '12px' }}>
+                <div className="bf-date-filter-row">
                   <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>CUSTOM FROM:</span>
                   <input
                     type="date"
@@ -1126,7 +1126,7 @@ const FinancePage: React.FC = () => {
                     Reset Filters
                   </button>
 
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                  <div className="bf-export-btns">
                     <button className="bf-btn-export" style={{ margin: 0 }} onClick={() => handleExportReport('PDF')}>
                       <IonIcon icon={downloadOutline} style={{ marginRight: '4px' }} /> Export PDF
                     </button>
@@ -1275,7 +1275,7 @@ const FinancePage: React.FC = () => {
                   <p className="bf-card-subtitle">Real-time payment mode cash balances</p>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="bf-audit-grid">
 
                   {/* Column 1: Cash Balance */}
                   <div className="bf-card" style={{ margin: 0 }}>
@@ -1308,7 +1308,7 @@ const FinancePage: React.FC = () => {
                 </div>
 
                 {/* Total summary row below */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingRight: '40px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                <div className="bf-audit-total">
                   Total: ₹{totalBalance.toLocaleString()}
                 </div>
               </div>
@@ -1412,7 +1412,7 @@ const FinancePage: React.FC = () => {
                 </div>
 
                 {/* Custom From-To Date Picker */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '12px', borderTop: '1px dashed #e2e8f0', paddingTop: '12px' }}>
+                <div className="bf-date-filter-row">
                   <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>TRANSACTION FROM:</span>
                   <input
                     type="date"

@@ -345,71 +345,81 @@ const DocumentManagementPage: React.FC = () => {
           {/* Dashboard Summary Cards */}
           <div className="dm-stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--teal">
                     <IonIcon icon={documentTextOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Total Documents</span>
-                    <span className="dm-stat-card__value">{totalDocsCount}</span>
                   </div>
+                </div>
+                <div className="dm-stat-card__right">
+                  <span className="dm-stat-card__value">{totalDocsCount}</span>
                 </div>
               </div>
             </div>
 
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--blue">
                     <IonIcon icon={folderOpenOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Medical Reports</span>
-                    <span className="dm-stat-card__value">{medicalReportsCount}</span>
                   </div>
+                </div>
+                <div className="dm-stat-card__right">
+                  <span className="dm-stat-card__value">{medicalReportsCount}</span>
                 </div>
               </div>
             </div>
 
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--red">
                     <IonIcon icon={pieChartOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Lab Reports</span>
-                    <span className="dm-stat-card__value">{labReportsCount}</span>
                   </div>
+                </div>
+                <div className="dm-stat-card__right">
+                  <span className="dm-stat-card__value">{labReportsCount}</span>
                 </div>
               </div>
             </div>
 
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--purple">
                     <IonIcon icon={documentOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Prescriptions</span>
-                    <span className="dm-stat-card__value">{prescriptionsCount}</span>
                   </div>
+                </div>
+                <div className="dm-stat-card__right">
+                  <span className="dm-stat-card__value">{prescriptionsCount}</span>
                 </div>
               </div>
             </div>
 
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--teal">
                     <IonIcon icon={cloudUploadOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">ID Proofs</span>
-                    <span className="dm-stat-card__value">{idProofsCount}</span>
                   </div>
+                </div>
+                <div className="dm-stat-card__right">
+                  <span className="dm-stat-card__value">{idProofsCount}</span>
                 </div>
               </div>
             </div>

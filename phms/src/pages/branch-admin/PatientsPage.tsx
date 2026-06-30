@@ -345,17 +345,24 @@ const PatientsPage: React.FC = () => {
           }));
 
           // Dynamic Invoices & financials
-          const invoices = sessionsList.map((s: any) => ({
-            id: s.id,
-            date: s.sessionDate ? s.sessionDate.split('T')[0] : 'N/A',
-            amount: Number(s.totalAmount || 0),
-            status: s.paymentStatus === 'paid' ? 'Paid' as const : s.paymentStatus === 'partial' ? 'Partial' as const : 'Unpaid' as const,
-            method: s.paymentMethod === 'cash' ? 'Cash' as const : s.paymentMethod === 'upi' ? 'UPI' as const : s.paymentMethod === 'card' ? 'Card' as const : s.paymentMethod === 'bank_transfer' ? 'Bank Transfer' as const : undefined,
-          }));
+          const invoices = sessionsList.map((s: any) => {
+            const amount = Number(s.totalAmount || 0);
+            const status = s.paymentStatus === 'paid' ? 'Paid' as const : s.paymentStatus === 'partial' ? 'Partial' as const : 'Unpaid' as const;
+            const paid = s.payment ? Number(s.payment.amount || 0) : 0;
+            const outstanding = status === 'Paid' ? 0 : status === 'Partial' ? Math.max(0, amount - paid) : amount;
+            
+            return {
+              id: s.id,
+              date: s.sessionDate ? s.sessionDate.split('T')[0] : 'N/A',
+              amount: amount,
+              paid: paid,
+              outstanding: outstanding,
+              status: status,
+              method: s.paymentMethod === 'cash' ? 'Cash' as const : s.paymentMethod === 'upi' ? 'UPI' as const : s.paymentMethod === 'card' ? 'Card' as const : s.paymentMethod === 'bank_transfer' ? 'Bank Transfer' as const : undefined,
+            };
+          });
 
-          const balanceDue = invoices
-            .filter((inv: any) => inv.status !== 'Paid')
-            .reduce((sum: number, inv: any) => sum + inv.amount, 0);
+          const balanceDue = invoices.reduce((sum: number, inv: any) => sum + inv.outstanding, 0);
 
           // Feedbacks
           const feedbacks = p.feedbacks || [];
@@ -748,6 +755,7 @@ const PatientsPage: React.FC = () => {
   // Global Analytics metrics calculated dynamically
   const activeCount = patients.filter((p) => p.status === 'Active').length;
   const mtdRegistered = patients.length;
+  const pendingBalanceSum = patients.reduce((sum, p) => sum + (p.financials?.balanceDue || 0), 0);
 
   return (
     <IonPage className="sa-page">
@@ -771,7 +779,7 @@ const PatientsPage: React.FC = () => {
 
       <IonContent className="sa-page__content" fullscreen>
         <div className="sa-page__body">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div className="ba-patients-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <p className="sa-page__subtitle" style={{ margin: 0 }}>
               Patient Records, Medical Workflows and Session Tracking
             </p>
@@ -788,32 +796,32 @@ const PatientsPage: React.FC = () => {
                   SECTION 1: CLINICAL STATS PREVIEW PRE-CHECKS RIBBON
                  ======================================================= */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #10b981', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Active Cases</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{stats.activeCases}</span>
+                <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #10b981', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Active Cases</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{activeCount}</span>
                 </div>
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #1e3a8a', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Total Registered</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{stats.totalRegistered}</span>
+                <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #1e3a8a', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Total Registered</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{mtdRegistered}</span>
                 </div>
-                {/* <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Daily Appts Queue</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>18</span>
+                {/* <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Daily Appts Queue</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>18</span>
                 </div>
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #8b5cf6', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Documents Vaulted</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>24</span>
+                <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #8b5cf6', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Documents Vaulted</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>24</span>
                 </div> */}
-                <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #ef4444', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Pending Balance</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>₹{stats.pendingBalance}</span>
+                <div className="ba-widget-card" style={{ background: '#ffffff', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', borderLeft: '4px solid #ef4444', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span className="ba-widget-title" style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Pending Balance</span>
+                  <span className="ba-widget-count" style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>₹{pendingBalanceSum.toFixed(2)}</span>
                 </div>
               </div>
 
               {/* ==========================================
                   SECTION 2: ADVANCED FILTERING & SORTING BAR
                  ========================================== */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+              <div className="ba-patients-filters" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                 {/* Search Bar Input */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '300px' }}>
                   <div className="sa-search" style={{ margin: 0, width: '100%', maxWidth: '550px' }}>

@@ -11,6 +11,27 @@
   margin-top: 8px;
 }
 
+.vl-details-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.vl-details-title-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.vl-details-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .st-form {
   display: flex;
   flex-direction: column;
@@ -19,6 +40,13 @@
 .st-form-row {
   display: flex;
   gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .st-form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
 }
 
 .st-form-row > .st-form-group {
@@ -104,6 +132,11 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+@media (max-width: 480px) {
+  .vl-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 .vl-stat-card {
   background: white;
@@ -149,7 +182,7 @@
 }
 
 .vl-main-grid {
-  display: grid;
+  /* display: grid; */
   gap: 24px;
 }
 
@@ -159,6 +192,8 @@
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   margin-bottom: 24px;
+  overflow: hidden; /* Prevent horizontal stretch from table */
+  max-width: 100%;
 }
 
 .vl-card-header {
@@ -205,6 +240,7 @@
 .vl-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 900px; /* Ensure table scrolls on mobile instead of stretching screen */
 }
 
 .vl-table th, .vl-table td {
@@ -717,4 +753,31 @@
   background: #eff6ff;
   padding: 2px 8px;
   border-radius: 12px;
+}
+
+.vl-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* =========================================================================
+   Mobile Responsiveness
+   ========================================================================= */
+
+@media (max-width: 768px) {
+  .vl-header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .vl-btn-action, 
+  .vl-btn-add {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vl-filter-grid {
+    grid-template-columns: 1fr;
+  }
 }

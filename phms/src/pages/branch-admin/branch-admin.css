@@ -258,6 +258,33 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
+@media (max-width: 768px) {
+  .bf-stat-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .bf-stat-card > div:nth-child(3) {
+    width: 100%;
+    text-align: left;
+    margin-top: 10px !important;
+    justify-content: flex-start !important;
+  }
+  .bf-stat-label {
+    margin-bottom: 0 !important;
+  }
+  .bf-stat-value {
+    margin-bottom: 0 !important;
+  }
+  .bf-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
+
 .bf-stat-card--revenue {
   border-top: 4px solid #10b981;
 }
@@ -633,6 +660,20 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .dm-action-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dm-action-row__right,
+  .dm-action-row__right .dm-action-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .dm-action-row__title {
@@ -1149,6 +1190,88 @@
 /* =========================================================================
    Report Page Styles (.rp-)
    ========================================================================= */
+
+.bf-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.bf-date-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 12px;
+}
+
+.bf-export-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .bf-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .bf-date-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .bf-date-filter-row input[type="date"],
+  .bf-date-filter-row button {
+    width: 100% !important;
+  }
+  .bf-export-btns {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+  }
+  .bf-export-btns button {
+    width: 100% !important;
+  }
+  .bf-card-header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .bf-card-header-actions button {
+    width: 100% !important;
+    justify-content: center;
+  }
+  .bf-audit-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .bf-audit-total {
+    justify-content: flex-start !important;
+    padding-right: 0 !important;
+  }
+}
+
+.bf-audit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.bf-audit-total {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-right: 40px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+
 
 .rp-header-row {
   display: flex;
@@ -2472,10 +2595,35 @@
 }
 
 /* =========================================================================
-   Healers Page Mobile Responsive Alignment
+   Patients & Healers Page Mobile Responsive Alignment
    ========================================================================= */
 
 @media (max-width: 768px) {
+  .ba-patients-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+
+  .ba-patients-filters {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  
+  .ba-patients-filters > div {
+    width: 100% !important;
+  }
+  
+  .ba-patients-filters .sa-search {
+    max-width: 100% !important;
+  }
+
+  .ba-patients-filters select {
+    flex: 1;
+    min-width: calc(33.333% - 8px);
+  }
+
   .ba-healers-header {
     flex-direction: column;
     align-items: flex-start !important;
@@ -2547,9 +2695,201 @@
   .ba-detail-workspace {
     padding: 16px !important;
   }
+
+  .ba-ledger-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px;
+  }
+
+  .ba-ledger-header .sa-btn {
+    width: 100% !important;
+    justify-content: center;
+  }
+
+  .ba-edit-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .ba-edit-layout {
+    padding: 16px !important;
+  }
 }
 
 .sa-table-container {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* =========================================================================
+   Record Payment Modal Mobile Responsive & Height Adjustments
+   ========================================================================= */
+
+.ba-payment-modal .st-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ba-payment-modal .st-input {
+  height: 44px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.ba-payment-modal select.st-input {
+  height: 44px;
+}
+
+.ba-payment-modal .sa-modal__body {
+  padding: 20px;
+}
+
+@media (max-width: 576px) {
+  .ba-payment-modal::part(content) {
+    width: 92% !important;
+    max-height: 85vh !important;
+  }
+
+  .ba-payment-modal .sa-modal__footer {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 16px !important;
+  }
+
+  .ba-payment-modal .sa-modal__footer .sa-btn {
+    width: 100% !important;
+    margin: 0 !important;
+    height: 42px;
+    justify-content: center;
+  }
+}
+
+/* =========================================================================
+   Sessions Page — Mobile Responsive
+   Only mobile (≤768px). Desktop/web layout is intentionally untouched.
+   ========================================================================= */
+
+@media (max-width: 768px) {
+
+  /* ── Filter bar: stack search + filter group vertically ── */
+  .sa-section-header {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* Search bar: full width on mobile */
+  .sa-section-header .sa-search {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Filter group: full width, wrap selects vertically */
+  .sa-section-header .sa-filter-group {
+    flex: 1 1 100% !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  /* Each select inside the filter group: full width */
+  .sa-section-header .sa-filter-group .sa-input {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Date picker input inside filter group */
+  .sa-section-header .sa-filter-group input[type="date"] {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Clear button: full width */
+  .sa-section-header .sa-filter-group .sa-btn--outline {
+    width: 100% !important;
+    justify-content: center;
+  }
+
+  /* ── Page header: title + Book Session button ── */
+  .sa-page__header-actions {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .sa-page__header-actions .sa-btn {
+    width: 100% !important;
+    justify-content: center;
+  }
+
+  /* ── Table: ensure horizontal scroll is enabled ── */
+  .sa-table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sa-table-responsive .sa-table {
+    min-width: 600px;
+  }
+
+  /* ── Table footer pagination: stack info + controls ── */
+  .sa-table__footer {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .sa-pagination__info {
+    font-size: 12px;
+  }
+
+  /* ── Stat cards: 2 columns on tablet-mobile ── */
+  .sa-stats--4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  /* ── Stat cards: single column on small phones ── */
+  .sa-stats--4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Stat card compact padding ── */
+  .sa-stat-card {
+    padding: 16px 14px;
+  }
+
+  /* ── Page title font size tweak ── */
+  .sa-page__title {
+    font-size: 20px !important;
+  }
+
+  .sa-page__subtitle {
+    font-size: 13px !important;
+  }
+
+  /* ── Table cells: tighter padding ── */
+  .sa-table-responsive .sa-table th,
+  .sa-table-responsive .sa-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  /* ── Pagination buttons: compact ── */
+  .sa-pagination__btn {
+    min-width: 32px !important;
+    height: 32px !important;
+    font-size: 12px !important;
+  }
+}
+}
+

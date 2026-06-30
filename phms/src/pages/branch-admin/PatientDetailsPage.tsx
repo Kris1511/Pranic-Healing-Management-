@@ -164,17 +164,24 @@ export default function PatientDetailsPage() {
         }));
 
         // Dynamic Invoices & financials
-        const invoices = sessionsList.map((s: any) => ({
-          id: s.id,
-          date: s.sessionDate ? s.sessionDate.split('T')[0] : 'N/A',
-          amount: Number(s.totalAmount || 0),
-          status: s.paymentStatus === 'paid' ? 'Paid' as const : s.paymentStatus === 'partial' ? 'Partial' as const : 'Unpaid' as const,
-          method: s.paymentMethod === 'cash' ? 'Cash' as const : s.paymentMethod === 'upi' ? 'UPI' as const : s.paymentMethod === 'card' ? 'Card' as const : s.paymentMethod === 'bank_transfer' ? 'Bank Transfer' as const : undefined,
-        }));
+        const invoices = sessionsList.map((s: any) => {
+          const amount = Number(s.totalAmount || 0);
+          const status = s.paymentStatus === 'paid' ? 'Paid' as const : s.paymentStatus === 'partial' ? 'Partial' as const : 'Unpaid' as const;
+          const paid = s.payment ? Number(s.payment.amount || 0) : 0;
+          const outstanding = status === 'Paid' ? 0 : status === 'Partial' ? Math.max(0, amount - paid) : amount;
+          
+          return {
+            id: s.id,
+            date: s.sessionDate ? s.sessionDate.split('T')[0] : 'N/A',
+            amount: amount,
+            paid: paid,
+            outstanding: outstanding,
+            status: status,
+            method: s.paymentMethod === 'cash' ? 'Cash' as const : s.paymentMethod === 'upi' ? 'UPI' as const : s.paymentMethod === 'card' ? 'Card' as const : s.paymentMethod === 'bank_transfer' ? 'Bank Transfer' as const : undefined,
+          };
+        });
 
-        const balanceDue = invoices
-          .filter((inv: any) => inv.status !== 'Paid')
-          .reduce((sum: number, inv: any) => sum + inv.amount, 0);
+        const balanceDue = invoices.reduce((sum: number, inv: any) => sum + inv.outstanding, 0);
 
         // Feedbacks
         const feedbacks = p.feedbacks || [];
@@ -770,7 +777,7 @@ export default function PatientDetailsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
                 {/* Healing Sessions Table */}
                 <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e6f4f1', paddingBottom: '12px', marginBottom: '16px' }}>
+                  <div className="ba-ledger-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e6f4f1', paddingBottom: '12px', marginBottom: '16px' }}>
                     <h4 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--ba-color-primary)', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
                       <IonIcon icon={timeOutline} style={{ color: 'var(--ba-color-primary)', fontSize: '18px' }} />
                       Clinical Sessions History Ledger
@@ -887,7 +894,7 @@ export default function PatientDetailsPage() {
                   </div>
 
                   {/* Ledger Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid #e6f4f1', paddingBottom: '12px' }}>
+                  <div className="ba-ledger-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid #e6f4f1', paddingBottom: '12px' }}>
                     <div>
                       <h4 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--ba-color-primary)', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
                         Patient Payment Ledger
@@ -1022,7 +1029,7 @@ export default function PatientDetailsPage() {
           </div>
 
           {/* Modal: Record Payment */}
-          <IonModal isOpen={showRecordPaymentModal} onDidDismiss={() => setShowRecordPaymentModal(false)} className="sa-modal sa-modal--sm">
+          <IonModal isOpen={showRecordPaymentModal} onDidDismiss={() => setShowRecordPaymentModal(false)} className="sa-modal sa-modal--sm ba-payment-modal">
             <div className="sa-modal__content">
               <div className="sa-modal__header">
                 <h2>Record Bill Payment: {selectedInvoice?.id}</h2>
@@ -1060,9 +1067,9 @@ export default function PatientDetailsPage() {
                         value={paymentRecord.method}
                         onChange={(e) => setPaymentRecord({ ...paymentRecord, method: e.target.value as any })}
                       >
-                        <option value="UPI">UPI Payment Channel</option>
+                        <option value="UPI">UPI Payment</option>
                         <option value="Cash">Cash Handover Ledger</option>
-                        <option value="Bank Transfer">Bank Wire Transfer</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
                       </select>
                     </div>
 

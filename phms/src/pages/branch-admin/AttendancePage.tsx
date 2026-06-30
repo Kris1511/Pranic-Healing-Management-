@@ -905,12 +905,12 @@ const AttendancePage: React.FC = () => {
               </div> */}
             </div>
 
-            <div className="sa-filters">
+            <div className="sa-filters" style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
               <input
                 type="text"
                 placeholder="Search Worker Name..."
                 className="sa-input"
-                style={{ width: '200px' }}
+                style={{ width: '100%' }}
                 value={filterWorkerName}
                 onChange={(e) => {
                   setFilterWorkerName(e.target.value);
@@ -921,7 +921,7 @@ const AttendancePage: React.FC = () => {
               <input
                 type="date"
                 className="sa-input"
-                style={{ width: '160px' }}
+                style={{ width: '100%' }}
                 value={filterDate}
                 onChange={(e) => {
                   setFilterDate(e.target.value);
@@ -931,7 +931,7 @@ const AttendancePage: React.FC = () => {
 
               <select
                 className="sa-input"
-                style={{ width: '150px' }}
+                style={{ width: '100%' }}
                 value={filterRole}
                 onChange={(e) => {
                   setFilterRole(e.target.value);
@@ -946,14 +946,14 @@ const AttendancePage: React.FC = () => {
 
               <select
                 className="sa-input"
-                style={{ width: '150px' }}
+                style={{ width: '100%' }}
                 value={filterStatus}
                 onChange={(e) => {
                   setFilterStatus(e.target.value);
                   setCurrentPage(1);
                 }}
               >
-                <option value="All">All Statuses</option>
+                <option value="All">All Status</option>
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Half Day">Half Day</option>
@@ -961,6 +961,7 @@ const AttendancePage: React.FC = () => {
 
               <button
                 className="sa-btn sa-btn--outline"
+                style={{ width: '100%', justifyContent: 'center' }}
                 onClick={() => {
                   setFilterDate('');
                   setFilterRole('All');

@@ -240,7 +240,7 @@ export default function BAVisitorEditPage() {
             
             {/* Horizontal Header Navbar */}
             <header className="db-corp-navbar" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div className="vl-details-title-group">
                 <button 
                   type="button"
                   onClick={() => history.push(ROUTES.BRANCH_ADMIN.VISITOR_LOG)} 
@@ -260,7 +260,7 @@ export default function BAVisitorEditPage() {
                 >
                   <IonIcon icon={arrowBackOutline} style={{ color: '#0D5C46', fontSize: '20px' }} />
                 </button>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div className="vl-details-title-text">
                   <h1 style={{ margin: 0, color: '#0d5c46', fontSize: '20px', fontWeight: 800 }}>Edit Visitor Details</h1>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>Pranic Healing Management System • {formattedDate}</p>
                 </div>
@@ -290,7 +290,7 @@ export default function BAVisitorEditPage() {
                 <form onSubmit={handleSaveRecord} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                   
                   {/* 2-Column Grid Layout matching patient page styling */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+                  <div className="sa-edit-grid">
                     
                     {/* LEFT COLUMN: Basic Information, Visit & Identity */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>

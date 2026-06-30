@@ -679,7 +679,7 @@ export default function CreateBookSession() {
               <form onSubmit={handleBookSession} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 
                 {/* Two Column Form Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'start' }}>
+                <div className="sa-edit-grid">
                   
                   {/* LEFT COLUMN: Core Session Details */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -766,7 +766,7 @@ export default function CreateBookSession() {
                           </div>
 
                           {/* Session Type & Date Grid */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="ba-form-grid-2">
                             <div className="st-form-group">
                               <label style={customStyles.label}>Treatment Type</label>
                               <select 
@@ -795,7 +795,7 @@ export default function CreateBookSession() {
                           </div>
 
                           {/* Time Slots Grid */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="ba-form-grid-2">
                             <CustomTimeSelect
                               label="Start Time"
                               value={formData.startTime}
@@ -828,7 +828,7 @@ export default function CreateBookSession() {
                             </div>
 
                             {formData.followUpRequired && (
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                              <div className="ba-form-grid-2">
                                 <div className="st-form-group">
                                   <label style={customStyles.label}>Urgency Priority</label>
                                   <select 
@@ -893,7 +893,7 @@ export default function CreateBookSession() {
                             />
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="ba-form-grid-2">
                             <div className="st-form-group">
                               <label style={customStyles.label}>Payment Status</label>
                               <select 

@@ -712,7 +712,7 @@ const VisitorLogPage: React.FC = () => {
 
                 {/* Advanced Search & Filtering Controls */}
                 <div className="sa-section" style={{ margin: '0 0 20px 0', padding: '16px', borderRadius: '12px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                  <div className="vl-filter-grid">
                     {/* Visitor Search Textbox */}
                     <div className="sa-search" style={{ margin: 0, width: '100%' }}>
                       <IonIcon icon={searchOutline} style={{ fontSize: '16px' }} />
