@@ -82,6 +82,16 @@
   gap: var(--space-lg);
 }
 
+.healer-profile-stats-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+@media (max-width: 900px) {
+  .healer-profile-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  }
+}
+
 .healer-stat-card {
   display: flex;
   align-items: center;
@@ -351,7 +361,6 @@
   border-radius: var(--radius-lg);
   padding: var(--space-md);
   box-shadow: var(--shadow-sm);
-  overflow-x: auto;
   margin-top: var(--space-lg);
 }
 
@@ -1335,31 +1344,62 @@
 .healer-filter-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
+  gap: 12px;
   margin-bottom: var(--space-lg);
   margin-top: var(--space-md);
+  align-items: center;
 }
 
 .healer-filter-tab-btn {
-  background: transparent;
-  border: none;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
   font-size: 13px;
   font-weight: 500;
   color: #64748b;
-  padding: var(--space-xs) 0;
-  margin-right: var(--space-md);
+  padding: 6px 16px;
   cursor: pointer;
   position: relative;
-  transition: color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
-.healer-filter-tab-btn:hover {
+.healer-filter-tab-btn:not(.healer-filter-tab-btn--active):hover {
+  background: rgba(var(--color-primary-rgb), 0.05);
   color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .healer-filter-tab-btn--active {
-  color: var(--color-primary);
+  color: #ffffff !important;
   font-weight: 600;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Custom Colors for specific tabs */
+.healer-filter-tab-btn--medical.healer-filter-tab-btn--active {
+  background: #3b82f6 !important; 
+  border-color: #3b82f6 !important;
+}
+
+.healer-filter-tab-btn--lab.healer-filter-tab-btn--active {
+  background: #ec4899 !important; 
+  border-color: #ec4899 !important;
+}
+
+.healer-filter-tab-btn--prescription.healer-filter-tab-btn--active {
+  background: #8b5cf6 !important; 
+  border-color: #8b5cf6 !important;
+}
+
+.healer-filter-tab-btn--id.healer-filter-tab-btn--active {
+  background: #f59e0b !important; 
+  border-color: #f59e0b !important;
+}
+
+.healer-filter-tab-btn--other.healer-filter-tab-btn--active {
+  background: #64748b !important; 
+  border-color: #64748b !important;
 }
 
 /* Healer Document Viewer styles */
@@ -1625,6 +1665,27 @@
   .info-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+  .healer-container {
+    padding: var(--space-lg) var(--space-sm);
+  }
+  .healer-stats-grid {
+    gap: var(--space-md);
+  }
+  .healer-actions-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+  .healer-stat-card {
+    padding: var(--space-md);
+    justify-content: space-between;
+  }
+  .healer-stat-card__icon-wrap {
+    flex-shrink: 0;
+  }
+  .healer-stat-card__info {
+    align-items: flex-end;
+    text-align: right;
   }
 }
 

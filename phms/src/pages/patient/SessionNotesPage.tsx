@@ -101,9 +101,10 @@ const PatientSessionNotesPage: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonButtons slot="start">
-            <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
+            <IonMenuButton />
+            {/* <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
               <IonIcon icon={arrowBackOutline} />
-            </button>
+            </button> */}
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Healing Session Notes</IonTitle>
           <IonButtons slot="end">
@@ -115,7 +116,6 @@ const PatientSessionNotesPage: React.FC = () => {
             >
               <IonIcon icon={refreshOutline} />
             </button>
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

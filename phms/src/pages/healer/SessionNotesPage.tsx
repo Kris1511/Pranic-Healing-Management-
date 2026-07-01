@@ -272,7 +272,7 @@ const SessionNotesPage: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonTitle className="sa-page__toolbar-title">Session Notes</IonTitle>
-          <IonButtons slot="end">
+          <IonButtons slot="start">
             <IonMenuButton />
           </IonButtons>
         </IonToolbar>

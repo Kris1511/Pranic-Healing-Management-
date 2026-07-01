@@ -23,6 +23,7 @@ import {
   refreshOutline,
   calendarOutline,
   personOutline,
+  walkOutline,
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
@@ -125,12 +126,13 @@ const PaymentHistoryPage: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonButtons slot="start">
-            <button
+            <IonMenuButton />
+            {/* <button
               className="healer-back-btn"
               onClick={() => history.push('/patient/dashboard')}
             >
               <IonIcon icon={arrowBackOutline} />
-            </button>
+            </button> */}
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Payments &amp; Ledger</IonTitle>
           <IonButtons slot="end">
@@ -142,7 +144,6 @@ const PaymentHistoryPage: React.FC = () => {
             >
               <IonIcon icon={refreshOutline} />
             </button>
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -160,11 +161,11 @@ const PaymentHistoryPage: React.FC = () => {
           {/* ── Summary Cards ─────────────────────────────────── */}
           <div
             className="healer-stats-grid"
-            style={{ marginBottom: '24px', gridTemplateColumns: 'repeat(3, 1fr)' }}
+            style={{ marginBottom: '24px' }}
           >
             <div className="healer-stat-card">
-              <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--purple">
-                <IonIcon icon={trendingUpOutline} />
+              <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--teal">
+                <IonIcon icon={cashOutline} />
               </div>
               <div className="healer-stat-card__info">
                 <span className="healer-stat-card__label">Total Billed</span>

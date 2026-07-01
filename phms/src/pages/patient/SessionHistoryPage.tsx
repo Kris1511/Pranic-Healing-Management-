@@ -135,9 +135,10 @@ const SessionHistoryPage: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonButtons slot="start">
-            <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
+            <IonMenuButton />
+            {/* <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
               <IonIcon icon={arrowBackOutline} />
-            </button>
+            </button> */}
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Healing Sessions History</IonTitle>
           <IonButtons slot="end">
@@ -149,7 +150,6 @@ const SessionHistoryPage: React.FC = () => {
             >
               <IonIcon icon={refreshOutline} />
             </button>
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -206,44 +206,33 @@ const SessionHistoryPage: React.FC = () => {
               <div className="pat-vertical-list-16">
                 {sessions.map((session) => (
                   <div key={session.id} className="pat-session-card">
-                    <div className="pat-card-header-flex">
-                      <div>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ paddingRight: '90px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div className="pat-flex-align-center-gap8">
                           <strong className="pat-session-no-text">{session.sessionNo}</strong>
                           <span className="pat-session-badge-teal">{session.type}</span>
                         </div>
 
-                        <p className="pat-card-line-p6">
-                          <IonIcon icon={personOutline} /> Healer: <strong>{session.healer}</strong>
-                        </p>
+                        <div className="pat-card-line-p6" style={{ margin: 0 }}>
+                          <IonIcon icon={personOutline} style={{ minWidth: '16px' }} />
+                          <span>Healer: <strong>{session.healer}</strong></span>
+                        </div>
 
-                        <p className="pat-card-line-p4">
-                          <IonIcon icon={calendarOutline} /> Conducted:{' '}
-                          <strong>{session.date} • {session.startTime} – {session.endTime}</strong>
-                        </p>
+                        <div className="pat-card-line-p4" style={{ margin: 0, whiteSpace: 'nowrap' }}>
+                          <IonIcon icon={calendarOutline} style={{ minWidth: '16px' }} />
+                          <span>Conducted: <strong>{session.date} • {session.startTime} – {session.endTime}</strong></span>
+                        </div>
 
-                        <p className="pat-card-line-p4" style={{ marginTop: '4px' }}>
-                          Payment:{' '}
-                          <span style={{
-                            fontWeight: 700,
-                            color: session.paymentStatus === 'Paid' ? '#0d9488' : '#f59e0b',
-                          }}>
-                            {session.paymentStatus}
-                          </span>
-                        </p>
+                        <div className="pat-card-line-p4" style={{ margin: 0 }}>
+                          <span style={{ minWidth: '16px', display: 'inline-block', textAlign: 'center', fontWeight: 'bold' }}>₹</span>
+                          <span>Payment: <strong style={{ color: session.paymentStatus === 'Paid' ? '#0d9488' : '#f59e0b' }}>{session.paymentStatus}</strong></span>
+                        </div>
                       </div>
 
-                      <div className="pat-card-right-flex">
+                      <div style={{ position: 'absolute', top: '0px', right: '0px' }}>
                         <span className={statusClass(session.status)}>
                           {session.status}
                         </span>
-
-                        {/* <button
-                          className="pat-btn-notes-outline"
-                          onClick={() => setSelectedSession(session)}
-                        >
-                          View Details
-                        </button> */}
                       </div>
                     </div>
                   </div>

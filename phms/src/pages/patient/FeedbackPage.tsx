@@ -176,13 +176,13 @@ const FeedbackPage: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonButtons slot="start">
-            <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
+            <IonMenuButton />
+            {/* <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
               <IonIcon icon={arrowBackOutline} />
-            </button>
+            </button> */}
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Session Feedback</IonTitle>
           <IonButtons slot="end">
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -245,28 +245,42 @@ const FeedbackPage: React.FC = () => {
                             key={session.id} 
                             className={isSelected ? 'pat-feedback-card-selected' : 'pat-feedback-card-normal'}
                           >
-                            <div className="pat-card-header-flex">
-                              <div>
-                                <div className="pat-flex-align-center-gap8">
+                            <div className="pat-feedback-card-inner" style={{ position: 'relative' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: '10px', alignItems: 'center' }}>
+                                
+                                {/* Row 1: Treatment Type & Submit Button / Tag */}
+                                <div className="pat-flex-align-center-gap8" style={{ minWidth: 0 }}>
                                   <strong className="pat-session-no-text">{session.sessionNo}</strong>
                                   <span className="pat-session-badge-teal">
                                     {session.type}
                                   </span>
                                 </div>
-                                <p className="pat-card-line-p6">
-                                  <IonIcon icon={personOutline} /> Healer: {session.healer}
-                                </p>
-                                <p className="pat-card-line-p4">
-                                  <IonIcon icon={calendarOutline} /> Conducted: {session.date} • {session.startTime}
-                                </p>
-                              </div>
-
-                              <div>
-                                {submittedFeedback ? (
-                                  <div className="pat-flex-col-align-end">
+                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                  {submittedFeedback ? (
                                     <span className="pat-status-submitted-label">
                                       <IonIcon icon={checkmarkCircleOutline} /> Submitted
                                     </span>
+                                  ) : (
+                                    <button 
+                                      className={isSelected ? 'pat-action-btn-selected' : 'pat-action-btn-normal'}
+                                      onClick={() => {
+                                        setSelectedSession(session);
+                                        setComments('');
+                                        setRating(5);
+                                      }}
+                                    >
+                                      Submit Review
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Row 2: Healer & Stars */}
+                                <div className="pat-card-line-p6" style={{ margin: 0, minWidth: 0 }}>
+                                  <IonIcon icon={personOutline} style={{ minWidth: '16px' }} />
+                                  <span>Healer: <strong>{session.healer}</strong></span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                  {submittedFeedback && (
                                     <div className="pat-flex-gap2">
                                       {[1, 2, 3, 4, 5].map((s) => (
                                         <IonIcon 
@@ -276,19 +290,15 @@ const FeedbackPage: React.FC = () => {
                                         />
                                       ))}
                                     </div>
-                                  </div>
-                                ) : (
-                                  <button 
-                                    className={isSelected ? 'pat-action-btn-selected' : 'pat-action-btn-normal'}
-                                    onClick={() => {
-                                      setSelectedSession(session);
-                                      setComments('');
-                                      setRating(5);
-                                    }}
-                                  >
-                                    Submit Review
-                                  </button>
-                                )}
+                                  )}
+                                </div>
+
+                                {/* Row 3: Conducted (Spans both columns) */}
+                                <div className="pat-card-line-p4" style={{ margin: 0, minWidth: 0, gridColumn: '1 / -1', whiteSpace: 'nowrap' }}>
+                                  <IonIcon icon={calendarOutline} style={{ minWidth: '16px' }} />
+                                  <span>Conducted: <strong>{session.date} • {session.startTime}</strong></span>
+                                </div>
+
                               </div>
                             </div>
 

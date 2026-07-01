@@ -229,13 +229,13 @@ const DocumentsPage: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonButtons slot="start">
-            <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
+            <IonMenuButton />
+            {/* <button className="healer-back-btn" onClick={() => history.push('/patient/dashboard')}>
               <IonIcon icon={arrowBackOutline} />
-            </button>
+            </button> */}
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Health Records Workspace</IonTitle>
           <IonButtons slot="end">
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -265,58 +265,58 @@ const DocumentsPage: React.FC = () => {
           {/* Stats Horizontal Row (restricted to this patient only) */}
           <div className="dm-stats-row">
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--teal">
                     <IonIcon icon={documentTextOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Total Files</span>
-                    <span className="dm-stat-card__value">{patientTotalDocs}</span>
                   </div>
                 </div>
+                <span className="dm-stat-card__value" style={{ marginLeft: 'auto' }}>{patientTotalDocs}</span>
               </div>
             </div>
 
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--blue">
                     <IonIcon icon={folderOpenOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Medical Reports</span>
-                    <span className="dm-stat-card__value">{patientDocReports}</span>
                   </div>
                 </div>
+                <span className="dm-stat-card__value" style={{ marginLeft: 'auto' }}>{patientDocReports}</span>
               </div>
             </div>
 
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--red">
                     <IonIcon icon={pieChartOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Lab Reports</span>
-                    <span className="dm-stat-card__value">{patientLabReports}</span>
                   </div>
                 </div>
+                <span className="dm-stat-card__value" style={{ marginLeft: 'auto' }}>{patientLabReports}</span>
               </div>
             </div>
 
             <div className="dm-stat-card">
-              <div className="dm-stat-card__main">
+              <div className="dm-stat-card__main" style={{ alignItems: 'center' }}>
                 <div className="dm-stat-card__left">
                   <div className="dm-stat-card__icon dm-stat-card__icon--purple">
                     <IonIcon icon={documentOutline} />
                   </div>
                   <div className="dm-stat-card__meta">
                     <span className="dm-stat-card__label">Prescriptions</span>
-                    <span className="dm-stat-card__value">{patientConsultNotes}</span>
                   </div>
                 </div>
+                <span className="dm-stat-card__value" style={{ marginLeft: 'auto' }}>{patientConsultNotes}</span>
               </div>
             </div>
           </div>

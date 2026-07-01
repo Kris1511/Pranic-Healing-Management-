@@ -25,6 +25,7 @@ import {
   cameraOutline,
   callOutline,
   alertCircleOutline,
+  briefcaseOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
@@ -197,13 +198,13 @@ const ProfilePage: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonButtons slot="start">
-            <button className="healer-back-btn" onClick={() => history.push('/healer/dashboard')}>
+            <IonMenuButton />
+            {/* <button className="healer-back-btn" onClick={() => history.push('/healer/dashboard')}>
               <IonIcon icon={arrowBackOutline} />
-            </button>
+            </button> */}
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">My Profile</IonTitle>
           <IonButtons slot="end">
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -262,7 +263,7 @@ const ProfilePage: React.FC = () => {
                       >
                         Available
                       </button>
-                      <button
+                      {/* <button
                         className={`healer-status-pill healer-status-pill--busy ${
                           (currentHealer?.availabilityStatus || 'Available') === 'Busy' ? 'active' : ''
                         }`}
@@ -277,7 +278,7 @@ const ProfilePage: React.FC = () => {
                         onClick={() => saveHealerUpdates({ availabilityStatus: 'On Leave' })}
                       >
                         On Leave
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 </div>
@@ -355,11 +356,14 @@ const ProfilePage: React.FC = () => {
             <div className="healer-profile-right-col">
               
               {/* Top Highlight Metrics Row (Top 3 Recommendations) */}
-              <div className="healer-stats-grid" style={{ marginBottom: '0', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              <div className="healer-stats-grid healer-profile-stats-grid" style={{ marginBottom: '0' }}>
                 {/* Professional Experience */}
                 <div className="healer-stat-card">
-                  <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--purple">
+                  {/* <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--purple">
                     <IonIcon icon={calendarOutline} />
+                  </div> */}
+                  <div className="healer-stat-card__icon-wrap healer-stat-card__icon-wrap--teal">
+                    <IonIcon icon={briefcaseOutline} />
                   </div>
                   <div className="healer-stat-card__info">
                     <span className="healer-stat-card__label">Experience</span>

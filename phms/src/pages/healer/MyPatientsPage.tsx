@@ -194,7 +194,8 @@ const MyPatientsPage: React.FC = () => {
           </div>
 
           <div className="healer-table-card" style={{ padding: 0 }}>
-            <table className="healer-table">
+            <div style={{ overflowX: 'auto' }}>
+              <table className="healer-table">
               <thead>
                 <tr>
                   <th>Patient Info</th>
@@ -284,6 +285,7 @@ const MyPatientsPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+            </div>
 
             {/* Pagination controls */}
             <div className="sa-table__footer">

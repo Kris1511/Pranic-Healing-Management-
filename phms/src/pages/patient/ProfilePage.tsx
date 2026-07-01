@@ -110,6 +110,7 @@ const ProfilePage: React.FC = () => {
             },
             profilePhoto: user?.avatar || ''
           };
+          console.log('Fetched patient from backend:', res);
         }
       } catch (err) {
         console.warn('Backend patient details fetch failed, using offline patient profile:', err);
@@ -199,9 +200,11 @@ const ProfilePage: React.FC = () => {
     <IonPage className="sa-page">
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
+          <IonButtons slot="start">
+            <IonMenuButton />
+          </IonButtons>
           <IonTitle className="sa-page__toolbar-title">My Profile</IonTitle>
           <IonButtons slot="end">
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -284,7 +287,7 @@ const ProfilePage: React.FC = () => {
                     <div>
                       <span className="healer-credential-card__label" style={{ fontSize: '10px', color: '#ef4444' }}>CONTACT PERSON</span>
                       <strong style={{ fontSize: '13px', color: '#1e293b' }}>
-                        {patient.emergencyContact?.name || 'Not Assigned'} ({patient.emergencyContact?.relation || 'Spouse'})
+                        {patient.emergencyContact?.name || 'Not Assigned'} ({patient.emergencyContact?.mobile || 'Spouse'})
                       </strong>
                     </div>
                   </div>
@@ -292,7 +295,7 @@ const ProfilePage: React.FC = () => {
                     <IonIcon icon={callOutline} style={{ color: '#ef4444', fontSize: '18px' }} />
                     <div>
                       <span className="healer-credential-card__label" style={{ fontSize: '10px', color: '#ef4444' }}>PHONE NUMBER</span>
-                      <strong style={{ fontSize: '13px', color: '#1e293b' }}>{patient.emergencyContact?.mobile || 'N/A'}</strong>
+                      <strong style={{ fontSize: '13px', color: '#1e293b' }}>{patient.mobile || 'N/A'}</strong>
                     </div>
                   </div>
                 </div>
@@ -380,7 +383,7 @@ const ProfilePage: React.FC = () => {
                   Assigned Treatment Modality & Healing Team
                 </h3>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                   <div className="healer-cert-display" style={{ background: '#e2f5f1', borderColor: '#ccfbf1' }}>
                     <div className="healer-cert-title-row">
                       <div className="healer-cert-icon-container" style={{ color: '#0f766e' }}>

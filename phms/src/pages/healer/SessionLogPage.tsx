@@ -182,7 +182,8 @@ const SessionLogPage: React.FC = () => {
           </div>
 
           <div className="healer-table-card">
-            <table className="healer-table">
+            <div style={{ overflowX: 'auto' }}>
+              <table className="healer-table">
               <thead>
                 <tr>
                   <th>Session ID</th>
@@ -264,6 +265,7 @@ const SessionLogPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </IonContent>

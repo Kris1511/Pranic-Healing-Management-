@@ -184,13 +184,13 @@ const DocumentsPages: React.FC = () => {
       <IonHeader className="ion-no-border">
         <IonToolbar className="sa-page__toolbar">
           <IonButtons slot="start">
-            <button className="healer-back-btn" onClick={() => history.push('/healer/dashboard')}>
+            <IonMenuButton />
+            {/* <button className="healer-back-btn" onClick={() => history.push('/healer/dashboard')}>
               <IonIcon icon={arrowBackOutline} />
-            </button>
+            </button> */}
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Documents</IonTitle>
           <IonButtons slot="end">
-            <IonMenuButton />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -214,15 +214,24 @@ const DocumentsPages: React.FC = () => {
           </div>
 
           <div className="healer-filter-tabs">
-            {(['All', 'Medical Report', 'Lab Report', 'Prescription', 'ID Proof', 'Other Document'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setTypeFilter(tab)}
-                className={`healer-filter-tab-btn ${typeFilter === tab ? 'healer-filter-tab-btn--active' : ''}`}
-              >
-                {tab === 'All' ? 'All Files' : `${tab}s`}
-              </button>
-            ))}
+            {(['All', 'Medical Report', 'Lab Report', 'Prescription', 'ID Proof', 'Other Document'] as const).map(tab => {
+              let colorClass = '';
+              if (tab === 'Medical Report') colorClass = 'healer-filter-tab-btn--medical';
+              else if (tab === 'Lab Report') colorClass = 'healer-filter-tab-btn--lab';
+              else if (tab === 'Prescription') colorClass = 'healer-filter-tab-btn--prescription';
+              else if (tab === 'ID Proof') colorClass = 'healer-filter-tab-btn--id';
+              else if (tab === 'Other Document') colorClass = 'healer-filter-tab-btn--other';
+
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setTypeFilter(tab)}
+                  className={`healer-filter-tab-btn ${colorClass} ${typeFilter === tab ? 'healer-filter-tab-btn--active' : ''}`}
+                >
+                  {tab === 'All' ? 'All Files' : `${tab}s`}
+                </button>
+              );
+            })}
           </div>
 
           <div className="healer-documents-list">

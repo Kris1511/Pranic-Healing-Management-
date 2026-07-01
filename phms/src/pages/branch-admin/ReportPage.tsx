@@ -780,14 +780,14 @@ const ReportsPage: React.FC = () => {
             <div>
               <div className="rp-title-area">
                 <h1 className="rp-title">Operational Reports</h1>
-                <div className="rp-isolation-badge">
-                  <IonIcon icon={lockClosedOutline} className="rp-lock-icon" />
-                  <span>Branch Isolation: {branchName}</span>
-                </div>
               </div>
               <p className="rp-subtitle">
                 Analyze branch performance, financial health, and workforce productivity across all departments.
               </p>
+            </div>
+            <div className="rp-isolation-badge" style={{ alignSelf: 'center' }}>
+              <IonIcon icon={lockClosedOutline} className="rp-lock-icon" />
+              <span>Branch Isolation: {branchName}</span>
             </div>
             {/* <div className="rp-header-actions">
               <button className="rp-btn rp-btn--outline" onClick={() => handleExportReport('PDF')}>
