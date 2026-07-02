@@ -189,10 +189,10 @@ const SessionLogPage: React.FC = () => {
                   <th>Session ID</th>
                   <th>Patient</th>
                   <th>Date & Time</th>
-                  <th>Protocol / Treatment</th>
+                  {/* <th>Protocol / Treatment</th> */}
                   <th>Status</th>
                   <th>Notes Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  {/* <th style={{ textAlign: 'right' }}>Actions</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -228,7 +228,7 @@ const SessionLogPage: React.FC = () => {
                           {session.time}
                         </div>
                       </td>
-                      <td>{session.protocol}</td>
+                      {/* <td>{session.protocol}</td> */}
                       <td>
                         <span className={getStatusClass(session.status)}>{session.status}</span>
                       </td>
@@ -243,7 +243,7 @@ const SessionLogPage: React.FC = () => {
                           </div>
                         )}
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      {/* <td style={{ textAlign: 'right' }}>
                         <button
                           className={`healer-btn ${session.notesAdded ? 'healer-btn--secondary' : ''}`}
                           onClick={() => history.push(`/healer/session-notes?sessionId=${session.id}`)}
@@ -252,7 +252,7 @@ const SessionLogPage: React.FC = () => {
                           <IonIcon icon={documentTextOutline} />
                           {session.notesAdded ? 'Edit Notes' : 'Add Notes'}
                         </button>
-                      </td>
+                      </td> */}
                     </tr>
                   ))
                 ) : (

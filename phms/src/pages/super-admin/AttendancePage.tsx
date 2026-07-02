@@ -79,11 +79,8 @@ const AttendancePage: React.FC = () => {
 
     fetchAttendanceRecords(false);
 
-    const intervalId = setInterval(() => {
-      fetchAttendanceRecords(true);
-    }, 10000); // 10 seconds auto-refresh
+    // removed setInterval // 10 seconds auto-refresh
 
-    return () => clearInterval(intervalId);
   }, [selectedDate, isPageVisible]);
 
   // Merge healers with their attendance record for the selected date

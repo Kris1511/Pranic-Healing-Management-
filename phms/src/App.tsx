@@ -19,6 +19,7 @@ import SAHealerDetailsPage from './pages/super-admin/HealerDetailsPage';
 import SAEditHealerPage from './pages/super-admin/EditHealerPage';
 import SABranchesPage from './pages/super-admin/BranchesPage';
 import SABranchDetailsPage from './pages/super-admin/BranchDetailsPage';
+import SABranchRevenueDetailsPage from './pages/super-admin/BranchRevenueDetailsPage';
 import SACreateBranchPage from './pages/super-admin/CreateBranchPage';
 import SAUsersPage from './pages/super-admin/UsersPage';
 import SAReportsPage from './pages/super-admin/ReportsPage';
@@ -159,6 +160,9 @@ const AppContent: React.FC = () => {
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.BRANCH_DETAILS} exact={true}>
           <SABranchDetailsPage />
+        </Route>
+        <Route path={ROUTES.SUPER_ADMIN.BRANCH_REVENUE_DETAILS} exact={true}>
+          <SABranchRevenueDetailsPage />
         </Route>
         <Route path={ROUTES.SUPER_ADMIN.CREATE_BRANCH} exact={true}>
           <SACreateBranchPage />

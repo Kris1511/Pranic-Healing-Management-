@@ -64,13 +64,11 @@ const AdminDetailsPage: React.FC = () => {
 
     fetchAdminDetails(true);
 
-    const interval = setInterval(() => {
-      fetchAdminDetails(false);
-    }, 3000);
+    // removed setInterval
 
     return () => {
       active = false;
-      clearInterval(interval);
+      // removed clearInterval
     };
   }, [id]);
 

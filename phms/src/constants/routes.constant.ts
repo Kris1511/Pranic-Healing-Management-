@@ -28,6 +28,7 @@ export const ROUTES = {
     EDIT_PATIENT: '/super-admin/patients/edit/:patientId',
     BRANCHES: '/super-admin/branches',
     BRANCH_DETAILS: '/super-admin/branches/details/:id',
+    BRANCH_REVENUE_DETAILS: '/super-admin/branches/details/:id/revenue',
     CREATE_BRANCH: '/super-admin/branches/create',
     TREATMENT_TYPE_LIST: '/super-admin/treatment-types',
     CREATE_TREATMENT_TYPE: '/super-admin/treatment-types/create',

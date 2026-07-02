@@ -469,7 +469,7 @@ const MyPatientsPage: React.FC = () => {
                         <div key={idx} className="healer-modal-session-item">
                           <div className="healer-modal-session-header">
                             <span className="healer-modal-session-date">{session.date}</span>
-                            <span className="healer-modal-session-proto">{session.protocol}</span>
+                            {/* <span className="healer-modal-session-proto">{session.protocol}</span> */}
                           </div>
                           <p className="healer-modal-session-notes">{session.notes}</p>
                         </div>

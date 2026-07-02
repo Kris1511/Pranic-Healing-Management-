@@ -123,10 +123,6 @@ const DocumentsPages: React.FC = () => {
   useEffect(() => {
     if (!isPageActive) return;
     fetchDocuments(documents.length === 0);
-    const interval = setInterval(() => {
-      fetchDocuments(false);
-    }, 5000);
-    return () => clearInterval(interval);
   }, [isPageActive, documents.length]);
 
   const filteredDocs = documents.filter(doc => {

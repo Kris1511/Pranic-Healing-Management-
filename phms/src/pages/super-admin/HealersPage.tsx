@@ -85,11 +85,8 @@ const HealersPage: React.FC = () => {
     };
 
     fetchAllData();
-    intervalId = setInterval(fetchAllData, 4000);
+    // removed single-line setInterval
 
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
   }, [selectedSpecialty, selectedBranch, selectedStatus]);
 
   const [newHealer, setNewHealer] = useState({

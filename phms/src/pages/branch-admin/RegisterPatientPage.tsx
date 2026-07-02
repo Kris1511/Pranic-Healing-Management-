@@ -462,20 +462,8 @@ export default function BARegisterPatientPage() {
         <div className="db-corp-layout" style={{ background: "#f8fafc" }}>
           <main className="db-corp-canvas">
             {/* Horizontal Header Navbar */}
-            <header
-              className="db-corp-navbar"
-              style={{
-                background: "#ffffff",
-                borderBottom: "1px solid #e2e8f0",
-                padding: "16px 24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "16px" }}
-              >
+            <header className="db-corp-navbar">
+              <div className="db-corp-navbar-left-container">
                 <button
                   className="db-corp-nav-icon-btn"
                   onClick={() => history.push(ROUTES.BRANCH_ADMIN.DASHBOARD)}
@@ -534,7 +522,7 @@ export default function BARegisterPatientPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center" }}>
+              <div className="db-corp-navbar-right">
                 <div
                   style={{
                     width: "8px",
@@ -568,14 +556,7 @@ export default function BARegisterPatientPage() {
                 }}
               >
                 {/* 2-Column Grid Layout matching user images */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1.2fr 1fr",
-                    gap: "28px",
-                    alignItems: "start",
-                  }}
-                >
+                <div className="ba-register-grid">
                   {/* LEFT COLUMN: Identity, Contact, Address, Status */}
                   <div
                     style={{

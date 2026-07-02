@@ -167,7 +167,7 @@ const BranchDetailsPage: React.FC = () => {
 
   const stats = [
     { label: 'Total Sessions', value: totalSessionsCount, icon: flashOutline, onClick: undefined },
-    { label: 'Monthly Revenue', value: monthlyRevenue, icon: barChartOutline, onClick: undefined },
+    { label: 'Monthly Revenue', value: monthlyRevenue, icon: barChartOutline, onClick: () => history.push(`/super-admin/branches/details/${id}/revenue`) },
     { label: 'Staff Count', value: activeStaffCount, icon: peopleOutline, onClick: () => setShowStaffModal(true) },
     { label: 'Active Patients', value: activePatientsCount, icon: peopleOutline, onClick: () => setShowPatientsModal(true) }
   ];

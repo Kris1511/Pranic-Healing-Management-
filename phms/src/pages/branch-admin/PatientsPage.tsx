@@ -447,15 +447,9 @@ const PatientsPage: React.FC = () => {
     fetchPatients();
     fetchHealers();
 
-    // Poll stats every 3 seconds for immediate summary updates
-    const statsInterval = setInterval(fetchStats, 3000);
-
-    // Poll patient list every 10 seconds for general updates
-    const patientsInterval = setInterval(fetchPatients, 10000);
-
+    // Removed aggressive polling to fix Too Many Requests (429) rate limits.
+    // Data is still fetched initially and via useIonViewWillEnter.
     return () => {
-      clearInterval(statsInterval);
-      clearInterval(patientsInterval);
     };
   }, [fetchPatients, fetchStats]);
 

@@ -65,13 +65,11 @@ const HealerDetailsPage: React.FC = () => {
 
     fetchHealerDetails(true);
 
-    const interval = setInterval(() => {
-      fetchHealerDetails(false);
-    }, 3000);
+    // removed setInterval
 
     return () => {
       active = false;
-      clearInterval(interval);
+      // removed clearInterval
     };
   }, [healerId]);
 

@@ -167,11 +167,8 @@ const DocumentManagementPage: React.FC = () => {
     fetchAllData(documents.length === 0);
 
     // Setup live update polling interval
-    const interval = setInterval(() => {
-      fetchAllData(false);
-    }, 3000);
+    // removed setInterval
 
-    return () => clearInterval(interval);
   }, [isPageActive, documents.length]);
 
   // Filter & Search Logic

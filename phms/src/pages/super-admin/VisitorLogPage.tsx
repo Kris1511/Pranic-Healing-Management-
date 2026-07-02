@@ -43,14 +43,12 @@ const VisitorLogPage: React.FC = () => {
 
   useIonViewDidEnter(() => {
     // Auto-refresh every 10 seconds while the page is visible
-    intervalRef.current = setInterval(() => {
-      fetchVisitors();
-    }, 10000);
+    // removed setInterval
   });
 
   useIonViewDidLeave(() => {
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      // removed clearInterval
     }
   });
 

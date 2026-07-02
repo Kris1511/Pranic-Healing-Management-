@@ -79,12 +79,10 @@ const PatientsDetailsPage: React.FC = () => {
   useEffect(() => {
     fetchPatientDetails(true);
 
-    const interval = setInterval(() => {
-      fetchPatientDetails(false);
-    }, 3000);
+    // removed setInterval
 
     return () => {
-      clearInterval(interval);
+      // removed clearInterval
     };
   }, [patientId]);
 

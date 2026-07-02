@@ -49,9 +49,9 @@ const DashboardPage: React.FC = () => {
     };
     fetchDashboardData();
 
-    // Polling interval for live real-time updates
-    const interval = setInterval(fetchDashboardData, 3000);
-    return () => clearInterval(interval);
+    // Removed polling interval to prevent 429 Too Many Requests errors
+    // const interval = setInterval(fetchDashboardData, 3000);
+    // return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -67,9 +67,9 @@ const DashboardPage: React.FC = () => {
     };
     fetchWeeklyData();
 
-    // Polling interval for live real-time updates of the selected week
-    const interval = setInterval(fetchWeeklyData, 3000);
-    return () => clearInterval(interval);
+    // Removed polling interval to prevent 429 Too Many Requests errors
+    // const interval = setInterval(fetchWeeklyData, 3000);
+    // return () => clearInterval(interval);
   }, [weekOffset]);
 
   const stats = [
@@ -155,29 +155,27 @@ const DashboardPage: React.FC = () => {
           <div className="sa-grid-2">
             {/* Finance Section */}
             <div className="sa-section">
-              <div className="sa-section__header">
+              <div className="sa-section__header sa-dashboard-finance-header">
                 <div>
                   <h2 className="sa-section__title">Consolidated Daily Finance</h2>
                   <p className="sa-section__subtitle">Income vs Expenses across all branches</p>
                 </div>
-                <button className="sa-btn sa-btn--outline sa-btn--sm" onClick={() => history.push(ROUTES.SUPER_ADMIN.DAILY_FINANCE)}>View Detailed Report</button>
+                <button className="sa-btn sa-btn--outline sa-btn--sm sa-view-report-btn" onClick={() => history.push(ROUTES.SUPER_ADMIN.DAILY_FINANCE)}>View Detailed Report</button>
               </div>
 
               {/* Weekly Navigation Controls */}
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', margin: '16px 0', background: 'rgba(var(--color-primary-rgb), 0.05)', padding: '10px', borderRadius: '8px' }}>
+              <div className="sa-weekly-controls">
                 <button 
-                  className="sa-btn sa-btn--outline" 
-                  style={{ margin: 0, padding: '4px 12px', minHeight: '36px' }}
+                  className="sa-btn sa-btn--outline sa-weekly-btn" 
                   onClick={() => setWeekOffset(prev => prev - 1)}
                 >
                   &lt; Previous Week
                 </button>
-                <span style={{ fontWeight: 600, fontSize: '15px', color: '#374151' }}>
+                <span className="sa-weekly-text">
                   Week: {weeklyFinance?.weekRange || 'Loading...'}
                 </span>
                 <button 
-                  className="sa-btn sa-btn--outline" 
-                  style={{ margin: 0, padding: '4px 12px', minHeight: '36px' }}
+                  className="sa-btn sa-btn--outline sa-weekly-btn" 
                   onClick={() => setWeekOffset(prev => prev + 1)}
                 >
                   Next Week &gt;

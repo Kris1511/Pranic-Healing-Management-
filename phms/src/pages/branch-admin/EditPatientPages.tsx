@@ -110,11 +110,11 @@ export default function EditPatientPages() {
     fetchHealers();
     fetchTreatmentTypes();
 
-    const intervalId = setInterval(fetchHealers, 3000);
+    // removed single-line setInterval
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
+      // removed clearInterval
     };
   }, []);
 

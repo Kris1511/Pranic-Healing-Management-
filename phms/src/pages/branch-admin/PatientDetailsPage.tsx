@@ -774,7 +774,7 @@ export default function PatientDetailsPage() {
             )}
 
             {profileTab === 'sessions' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+              <div style={{ gridTemplateColumns: '1fr', gap: '24px' }}>
                 {/* Healing Sessions Table */}
                 <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
                   <div className="ba-ledger-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e6f4f1', paddingBottom: '12px', marginBottom: '16px' }}>

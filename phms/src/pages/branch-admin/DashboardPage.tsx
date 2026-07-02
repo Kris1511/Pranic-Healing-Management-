@@ -332,9 +332,9 @@ const DashboardPage: React.FC = () => {
                   <div>
                     <div className="sa-stat-card__label">Daily Income</div>
                     <div className="sa-stat-card__value">₹{totalIncomeToday}</div>
-                    <div className="sa-stat-card__detail">
+                    {/* <div className="sa-stat-card__detail">
                       <IonIcon icon={trendingUpOutline} /> +12.4%
-                    </div>
+                    </div> */}
                   </div>
                   <div className="sa-stat-card__icon">
                     <IonIcon icon={cashOutline} style={{ color: '#10b981' }} />
@@ -346,9 +346,9 @@ const DashboardPage: React.FC = () => {
                   <div>
                     <div className="sa-stat-card__label">Daily Expense</div>
                     <div className="sa-stat-card__value">₹{totalExpenseToday}</div>
-                    <div className="sa-stat-card__detail" style={{ color: '#ef4444' }}>
+                    {/* <div className="sa-stat-card__detail" style={{ color: '#ef4444' }}>
                       Outflow
-                    </div>
+                    </div> */}
                   </div>
                   <div className="sa-stat-card__icon">
                     <IonIcon icon={cashOutline} style={{ color: '#ef4444' }} />
@@ -362,9 +362,9 @@ const DashboardPage: React.FC = () => {
                     <div className="sa-stat-card__value" style={{ color: netBalanceToday >= 0 ? '#10b981' : '#ef4444' }}>
                       ₹{netBalanceToday}
                     </div>
-                    <div className="sa-stat-card__detail">
+                    {/* <div className="sa-stat-card__detail">
                       Optimal
-                    </div>
+                    </div> */}
                   </div>
                   <div className="sa-stat-card__icon">
                     <IonIcon icon={shieldCheckmarkOutline} style={{ color: '#0d5c46' }} />
@@ -376,9 +376,9 @@ const DashboardPage: React.FC = () => {
                   <div>
                     <div className="sa-stat-card__label">Today Visitors</div>
                     <div className="sa-stat-card__value">{stats.visitorsTodayCount}</div>
-                    <div className="sa-stat-card__detail">
+                    {/* <div className="sa-stat-card__detail">
                       {stats.visitorsInsideCount} Inside
-                    </div>
+                    </div> */}
                   </div>
                   <div className="sa-stat-card__icon">
                     <IonIcon icon={peopleOutline} style={{ color: '#3b82f6' }} />
@@ -393,9 +393,9 @@ const DashboardPage: React.FC = () => {
                   <div>
                     <div className="sa-stat-card__label">Active Patients</div>
                     <div className="sa-stat-card__value">{activeCasesCount}</div>
-                    <div className="sa-stat-card__detail">
+                    {/* <div className="sa-stat-card__detail">
                       {newPatientsCount} New today
-                    </div>
+                    </div> */}
                   </div>
                   <div className="sa-stat-card__icon">
                     <IonIcon icon={medkitOutline} style={{ color: '#8b5cf6' }} />
@@ -407,9 +407,9 @@ const DashboardPage: React.FC = () => {
                   <div>
                     <div className="sa-stat-card__label">Pending Payments</div>
                     <div className="sa-stat-card__value" style={{ color: '#f59e0b' }}>{pendingPaymentsCount}</div>
-                    <div className="sa-stat-card__detail">
+                    {/* <div className="sa-stat-card__detail">
                       {stats.pendingPaymentsCount} Pending • {stats.partialPaymentsCount} Partial
-                    </div>
+                    </div> */}
                   </div>
                   <div className="sa-stat-card__icon">
                     <IonIcon icon={cashOutline} style={{ color: '#f59e0b' }} />
@@ -421,9 +421,9 @@ const DashboardPage: React.FC = () => {
                   <div>
                     <div className="sa-stat-card__label">Active Healers</div>
                     <div className="sa-stat-card__value">{activeHealersCount}</div>
-                    <div className="sa-stat-card__detail">
+                    {/* <div className="sa-stat-card__detail">
                       On Duty
-                    </div>
+                    </div> */}
                   </div>
                   <div className="sa-stat-card__icon">
                     <IonIcon icon={personOutline} style={{ color: '#06b6d4' }} />
