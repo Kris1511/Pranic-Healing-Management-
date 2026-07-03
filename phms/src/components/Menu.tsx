@@ -164,57 +164,72 @@ const Menu: React.FC = () => {
       </IonHeader>
 
       <IonContent className="app-menu__content">
-        <div className="app-menu__scroll-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-          {/* Navigation Items */}
-          <nav className="app-menu__nav">
-            {navItems.map((item, index) => {
-              const isActive = item.url ? location.pathname === item.url : false;
-              const hasSubItems = !!item.subItems;
-              const isExpanded = expandedItems.includes(item.title);
-              const isSubItemActive = hasSubItems && item.subItems?.some(sub => location.pathname === sub.url);
-              
-              return (
-                <React.Fragment key={(item.url || item.title) + index}>
-                  {item.section && <div className="app-menu__section-title">{item.section}</div>}
-                  <button
-                    className={`app-menu__nav-item ${(isActive || (isSubItemActive && !isExpanded)) ? 'app-menu__nav-item--active' : ''}`}
-                    onClick={() => handleNavClick(item)}
-                  >
-                    <IonIcon icon={item.icon} className="app-menu__nav-icon" />
-                    <span className="app-menu__nav-label">{item.title}</span>
-                    {hasSubItems && (
-                      <IonIcon 
-                        icon={isExpanded ? chevronDownOutline : chevronForwardOutline} 
-                        className="app-menu__nav-chevron" 
-                        style={{ marginLeft: 'auto', opacity: 0.7 }}
-                      />
-                    )}
-                  </button>
-                  
-                  {hasSubItems && isExpanded && (
-                    <div className="app-menu__sub-items" style={{ background: 'rgba(0,0,0,0.03)' }}>
-                      {item.subItems!.map((subItem, subIndex) => {
-                        const isSubActive = location.pathname === subItem.url;
-                        return (
-                          <button
-                            key={subItem.url + subIndex}
-                            className={`app-menu__nav-item app-menu__sub-nav-item ${isSubActive ? 'app-menu__nav-item--active' : ''}`}
-                            onClick={() => handleSubNavClick(subItem.url)}
-                            style={{ paddingLeft: '3rem', fontSize: '0.9em', minHeight: '40px' }}
-                          >
-                            <IonIcon icon={subItem.icon} className="app-menu__nav-icon" style={{ fontSize: '1.2em' }} />
-                            <span className="app-menu__nav-label">{subItem.title}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+        {/* Navigation Items */}
+        <nav className="app-menu__nav" style={{ overflowY: 'visible', flex: 'none', paddingBottom: '20px' }}>
+          {navItems.map((item, index) => {
+            const isActive = item.url ? location.pathname === item.url : false;
+            const hasSubItems = !!item.subItems;
+            const isExpanded = expandedItems.includes(item.title);
+            const isSubItemActive = hasSubItems && item.subItems?.some(sub => location.pathname === sub.url);
+            
+            return (
+              <React.Fragment key={(item.url || item.title) + index}>
+                {item.section && <div className="app-menu__section-title">{item.section}</div>}
+                <button
+                  className={`app-menu__nav-item ${(isActive || (isSubItemActive && !isExpanded)) ? 'app-menu__nav-item--active' : ''}`}
+                  onClick={() => handleNavClick(item)}
+                >
+                  <IonIcon icon={item.icon} className="app-menu__nav-icon" />
+                  <span className="app-menu__nav-label">{item.title}</span>
+                  {hasSubItems && (
+                    <IonIcon 
+                      icon={isExpanded ? chevronDownOutline : chevronForwardOutline} 
+                      className="app-menu__nav-chevron" 
+                      style={{ marginLeft: 'auto', opacity: 0.7 }}
+                    />
                   )}
-                </React.Fragment>
-              );
-            })}
-          </nav>
-        </div>
+                </button>
+                
+                {hasSubItems && isExpanded && (
+                  <div className="app-menu__sub-items" style={{ background: 'rgba(0,0,0,0.03)' }}>
+                    {item.subItems!.map((subItem, subIndex) => {
+                      const isSubActive = location.pathname === subItem.url;
+                      return (
+                        <button
+                          key={subItem.url + subIndex}
+                          className={`app-menu__nav-item app-menu__sub-nav-item ${isSubActive ? 'app-menu__nav-item--active' : ''}`}
+                          onClick={() => handleSubNavClick(subItem.url)}
+                          style={{ paddingLeft: '3rem', fontSize: '0.9em', minHeight: '40px' }}
+                        >
+                          <IonIcon icon={subItem.icon} className="app-menu__nav-icon" style={{ fontSize: '1.2em' }} />
+                          <span className="app-menu__nav-label">{subItem.title}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </nav>
       </IonContent>
+
+      <IonFooter className="ion-no-border">
+        <div className="app-menu__footer">
+          <div className="app-menu__user">
+            <div className="app-menu__user-avatar">
+              {userInitials}
+            </div>
+            <div className="app-menu__user-info">
+              <span className="app-menu__user-name">{userName}</span>
+              <span className="app-menu__user-role">{userRole}</span>
+            </div>
+          </div>
+          <button className="app-menu__logout-btn" onClick={handleLogout} title="Logout">
+            <IonIcon icon={logOutOutline} />
+          </button>
+        </div>
+      </IonFooter>
     </IonMenu>
   );
 };
