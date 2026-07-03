@@ -213,22 +213,24 @@ const Menu: React.FC = () => {
               );
             })}
           </nav>
-
-          {/* User Profile at Bottom */}
-          <div className="app-menu__footer">
-            <div className="app-menu__user">
-              <div className="app-menu__user-avatar">{userInitials}</div>
-              <div className="app-menu__user-info">
-                <span className="app-menu__user-name">{userName}</span>
-                <span className="app-menu__user-role">{userRole}</span>
-              </div>
-            </div>
-            <button className="app-menu__logout-btn" onClick={handleLogout} title="Logout">
-              <IonIcon icon={logOutOutline} />
-            </button>
-          </div>
         </div>
       </IonContent>
+
+      <IonFooter className="ion-no-border">
+        {/* User Profile at Bottom */}
+        <div className="app-menu__footer">
+          <div className="app-menu__user">
+            <div className="app-menu__user-avatar">{userInitials}</div>
+            <div className="app-menu__user-info">
+              <span className="app-menu__user-name">{userName}</span>
+              <span className="app-menu__user-role">{userRole}</span>
+            </div>
+          </div>
+          <button className="app-menu__logout-btn" onClick={handleLogout} title="Logout">
+            <IonIcon icon={logOutOutline} />
+          </button>
+        </div>
+      </IonFooter>
     </IonMenu>
   );
 };
