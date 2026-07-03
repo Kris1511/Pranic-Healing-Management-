@@ -29,6 +29,8 @@ import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 import './Patient.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 /* ─── Types ──────────────────────────────────────────────────────── */
 interface SessionRecord {
   id: string;
@@ -116,7 +118,9 @@ const PatientSessionNotesPage: React.FC = () => {
             >
               <IonIcon icon={refreshOutline} />
             </button>
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 

@@ -58,6 +58,8 @@ import { getPatients, deletePatient, getPatientStats } from '../../api/patient.a
 import { getHealers } from '../../api/healer.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 // Highly comprehensive Patient structure matching all requirements
 export interface Patient {
@@ -765,7 +767,7 @@ const PatientsPage: React.FC = () => {
               <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton>
-              <div className="sa-page__toolbar-avatar">{userInitials}</div>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

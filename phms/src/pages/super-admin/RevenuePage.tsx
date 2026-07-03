@@ -24,6 +24,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getSuperAdminRevenueFinance } from '../../api/finance.api';
 import { getBranches } from '../../api/branch.api';
 import './super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const RevenuePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +98,7 @@ const RevenuePage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Financial Overview</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">SA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

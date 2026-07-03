@@ -42,6 +42,8 @@ import { getTreatmentTypes } from '../../api/treatmentType.api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const formatToCustomStr = (dateString: string | Date) => {
   const d = new Date(dateString);
@@ -768,7 +770,7 @@ const ReportsPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Reports Center</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">BA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

@@ -26,6 +26,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getPatientById } from '../../api/patient.api';
 import './Healers.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 interface SessionHistoryItem {
   id: string;
   date: string;
@@ -168,6 +170,10 @@ const PatientsDetialsPages: React.FC = () => {
           <IonTitle className="sa-page__toolbar-title" style={{ color: '#0d9488', fontWeight: 700 }}>
             {patient ? `${patient.name} - Case File` : 'Patient Details'}
           </IonTitle>
+        
+          <IonButtons slot="end">
+            <ProfileDropdown />
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 

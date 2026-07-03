@@ -28,6 +28,8 @@ import { useHistory } from "react-router-dom";
 import { ROUTES } from "../../constants/routes.constant";
 import { getBranches, updateBranch, deleteBranch } from "../../api/branch.api";
 import "./super-admin.css";
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const BranchesPage: React.FC = () => {
   const history = useHistory();
@@ -158,7 +160,7 @@ const BranchesPage: React.FC = () => {
               <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton>
-              <div className="sa-page__toolbar-avatar">AS</div>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

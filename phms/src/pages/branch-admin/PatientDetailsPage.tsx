@@ -35,6 +35,8 @@ import { getPatientById, updatePatient } from '../../api/patient.api';
 import { getPatientPaymentLedger, processPayment, deletePayment } from '../../api/payment.api';
 import { updateSession, deleteSession } from '../../api/session.api';
 import { Patient } from './PatientsPage';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const mapLedgerToDrawerPayment = (item: any) => {
   return {
@@ -425,7 +427,7 @@ export default function PatientDetailsPage() {
               <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton>
-              <div className="sa-page__toolbar-avatar">{userInitials}</div>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

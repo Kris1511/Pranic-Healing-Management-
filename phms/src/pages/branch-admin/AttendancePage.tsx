@@ -78,7 +78,7 @@
 //           </IonButtons>
 //           <IonTitle className="sa-page__toolbar-title">Branch Attendance</IonTitle>
 //           <IonButtons slot="end">
-//             <button className="sa-page__toolbar-avatar">BA</button>
+//             <ProfileDropdown />
 //           </IonButtons>
 //         </IonToolbar>
 //       </IonHeader>
@@ -317,6 +317,8 @@ import { getAttendanceHistory, saveAttendanceRecord } from '../../api/attendence
 import { getUsers } from '../../api/user.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 interface WorkerDailyAttendance {
   id: number | string;
@@ -639,7 +641,7 @@ const AttendancePage: React.FC = () => {
           <IonTitle className="sa-page__toolbar-title">Worker Attendance</IonTitle>
           <IonButtons slot="end">
             <div className="sa-page__toolbar-actions">
-              <button className="sa-page__toolbar-avatar">BA</button>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

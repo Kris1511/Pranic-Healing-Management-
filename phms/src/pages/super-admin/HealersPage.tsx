@@ -27,6 +27,8 @@ import { getHealers, updateHealer, deleteHealer, createHealer } from '../../api/
 import { getBranches } from '../../api/branch.api';
 import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const HealersPage: React.FC = () => {
   const history = useHistory();
@@ -241,7 +243,7 @@ const HealersPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Healers Directory</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">SA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

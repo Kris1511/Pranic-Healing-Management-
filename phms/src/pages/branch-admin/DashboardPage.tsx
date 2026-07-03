@@ -33,6 +33,8 @@ import { getHealers } from '../../api/healer.api';
 import { getBranchDashboardStats } from '../../api/finance.api';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 interface Transaction {
   id: string;
@@ -306,7 +308,7 @@ const DashboardPage: React.FC = () => {
               {/* <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton> */}
-              <div className="sa-page__toolbar-avatar">{userInitials}</div>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

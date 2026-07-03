@@ -39,6 +39,8 @@ import { useAuthStore } from '../../store/auth.store';
 import { ROUTES } from '../../constants/routes.constant';
 import { getSessions, deleteSession, getSessionsSummary } from '../../api/session.api';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 export interface HealingSession {
   id: string | number;
@@ -346,7 +348,7 @@ const SessionsPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Branch Healing Sessions</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">{rawRole === 'HEALER' ? 'H' : rawRole === 'PATIENT' ? 'P' : 'BA'}</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

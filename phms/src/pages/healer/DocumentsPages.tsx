@@ -30,6 +30,8 @@ import { getAllDocuments, getDocumentBlob } from '../../api/document.api';
 import '../branch-admin/branch-admin.css';
 import './Healers.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 interface UploadedDocument {
   id: string;
   documentName: string;
@@ -187,7 +189,9 @@ const DocumentsPages: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Documents</IonTitle>
           <IonButtons slot="end">
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 

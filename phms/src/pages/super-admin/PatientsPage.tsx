@@ -34,6 +34,8 @@ import { getBranches } from '../../api/branch.api';
 import { getHealers } from '../../api/healer.api';
 import '../branch-admin/branch-admin.css';
 import './super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const PatientsPage: React.FC = () => {
   const history = useHistory();
@@ -241,7 +243,7 @@ const PatientsPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Patient Directory</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">SA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

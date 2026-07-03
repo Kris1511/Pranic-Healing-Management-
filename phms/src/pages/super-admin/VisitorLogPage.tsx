@@ -24,6 +24,8 @@ import {
 } from 'ionicons/icons';
 import { getVisitorLog } from '../../api/visitor.api';
 import './super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const VisitorLogPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,7 +132,7 @@ const VisitorLogPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Daily Visitor Log</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">SA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

@@ -28,6 +28,8 @@ import { ROUTES } from '../../constants/routes.constant';
 import { getBranches } from '../../api/branch.api';
 import { deleteBranchAdmin, getBranchAdmins, updateBranchAdmin } from '../../api/branchAdmin.api';
 import './super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const BranchAdminsPage: React.FC = () => {
   const history = useHistory();
@@ -167,7 +169,7 @@ const BranchAdminsPage: React.FC = () => {
           <IonTitle className="sa-page__toolbar-title">Branch Administrators</IonTitle>
           <IonButtons slot="end">
             <div className="sa-page__toolbar-actions">
-              <button className="sa-page__toolbar-avatar" style={{ border: 'none' }}>SA</button>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

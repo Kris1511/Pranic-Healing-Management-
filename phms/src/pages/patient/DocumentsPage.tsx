@@ -33,6 +33,8 @@ import { getPatientDocuments, uploadDocument, getDocumentBlob } from '../../api/
 import '../branch-admin/branch-admin.css';
 import './Patient.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 interface UploadedDocument {
   id: string;
   documentName: string;
@@ -236,7 +238,9 @@ const DocumentsPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Health Records Workspace</IonTitle>
           <IonButtons slot="end">
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 

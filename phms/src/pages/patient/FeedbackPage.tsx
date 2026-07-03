@@ -29,6 +29,8 @@ import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 import './Patient.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 interface SessionRecord {
   id: string;
   sessionNo: string;
@@ -183,7 +185,9 @@ const FeedbackPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Session Feedback</IonTitle>
           <IonButtons slot="end">
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 

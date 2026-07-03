@@ -81,7 +81,7 @@
 //           </IonButtons>
 //           <IonTitle className="sa-page__toolbar-title">Branch Visitor Log</IonTitle>
 //           <IonButtons slot="end">
-//             <button className="sa-page__toolbar-avatar">BA</button>
+//             <ProfileDropdown />
 //           </IonButtons>
 //         </IonToolbar>
 //       </IonHeader>
@@ -347,6 +347,8 @@ import { useAuthStore } from '../../store/auth.store';
 import { useHistory } from 'react-router-dom';
 import './branch-admin.css';
 import './visitor-log.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 interface Visitor {
   id: string | number;
@@ -567,7 +569,7 @@ const VisitorLogPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Visitors Log</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">BA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

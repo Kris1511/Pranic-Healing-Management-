@@ -31,6 +31,8 @@ import { getPayments } from '../../api/payment.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 const PatientDashboardPage: React.FC = () => {
   const { user } = useAuthStore();
   const history = useHistory();
@@ -236,7 +238,9 @@ const PatientDashboardPage: React.FC = () => {
                 )}
               </button>
             </div>
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -467,14 +471,14 @@ const PatientDashboardPage: React.FC = () => {
                 <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Your Notifications</h2>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {unreadCount > 0 && (
+                {/* {unreadCount > 0 && (
                   <button 
                     onClick={markAllAsRead} 
                     style={{ background: 'none', border: 'none', color: '#0D5C46', fontSize: '12px', fontWeight: 700, cursor: 'pointer', outline: 'none' }}
                   >
                     Mark all as read
                   </button>
-                )}
+                )} */}
                 <button 
                   onClick={() => setShowNotificationsModal(false)}
                   style={{ background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer', lineHeight: 1, padding: '0 4px', outline: 'none' }}

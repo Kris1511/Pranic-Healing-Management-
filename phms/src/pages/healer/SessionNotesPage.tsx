@@ -30,6 +30,8 @@ import { getTreatmentTypes } from '../../api/treatmentType.api';
 import '../branch-admin/branch-admin.css';
 import './Healers.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 interface AssignedPatient {
   id: string;
   patientId: string;
@@ -274,6 +276,10 @@ const SessionNotesPage: React.FC = () => {
           <IonTitle className="sa-page__toolbar-title">Session Notes</IonTitle>
           <IonButtons slot="start">
             <IonMenuButton />
+          </IonButtons>
+        
+          <IonButtons slot="end">
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

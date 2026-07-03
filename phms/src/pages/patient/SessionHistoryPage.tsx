@@ -31,6 +31,8 @@ import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 import './Patient.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 /* ─── Types ──────────────────────────────────────────────────────── */
 interface SessionRecord {
   id: string;
@@ -150,7 +152,9 @@ const SessionHistoryPage: React.FC = () => {
             >
               <IonIcon icon={refreshOutline} />
             </button>
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -256,7 +260,9 @@ const SessionHistoryPage: React.FC = () => {
                   <button className="healer-modal-close-btn" onClick={() => setSelectedSession(null)}>
                     <IonIcon icon={closeOutline} style={{ fontSize: '24px' }} />
                   </button>
-                </IonButtons>
+                
+              <ProfileDropdown />
+</IonButtons>
               </IonToolbar>
             </IonHeader>
 

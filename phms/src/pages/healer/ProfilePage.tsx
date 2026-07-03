@@ -36,6 +36,8 @@ import { getSessions } from '../../api/session.api';
 import '../branch-admin/branch-admin.css';
 import './Healers.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 const ProfilePage: React.FC = () => {
   const history = useHistory();
   const { user, updateUser } = useAuthStore();
@@ -205,7 +207,9 @@ const ProfilePage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">My Profile</IonTitle>
           <IonButtons slot="end">
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 

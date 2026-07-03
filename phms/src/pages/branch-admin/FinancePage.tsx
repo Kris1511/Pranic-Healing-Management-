@@ -52,6 +52,8 @@ import {
   deleteFinanceTransaction,
 } from '../../api/finance.api';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 interface Transaction {
   id: string | number;
@@ -855,7 +857,7 @@ const FinancePage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Finance &amp; Ledger Control</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">BA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

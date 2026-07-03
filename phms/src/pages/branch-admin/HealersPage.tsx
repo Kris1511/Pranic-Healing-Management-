@@ -48,6 +48,8 @@ import { getHealers, deleteHealer } from '../../api/healer.api';
 import { getTreatmentTypes } from '../../api/treatmentType.api';
 import './branch-admin.css';
 import '../super-admin/super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 // ─── Interfaces & Structures ───────────────────────────────────────────────
 
@@ -779,7 +781,7 @@ const HealersPage: React.FC = () => {
               <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton>
-              <div className="sa-page__toolbar-avatar">{userInitials}</div>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

@@ -27,6 +27,8 @@ import { useHistory } from 'react-router-dom';
 import { getSessions } from '../../api/session.api';
 import './Healers.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 interface Session {
   id: string;
   sessionId: string;
@@ -142,6 +144,10 @@ const SessionLogPage: React.FC = () => {
             <IonMenuButton />
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Sessions Log</IonTitle>
+        
+          <IonButtons slot="end">
+            <ProfileDropdown />
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 

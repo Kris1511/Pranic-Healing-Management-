@@ -28,6 +28,8 @@ import {
 import { getAttendanceHistory } from '../../api/attendence.api';
 import { getUsers } from '../../api/user.api';
 import './super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const AttendancePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,7 +129,7 @@ const AttendancePage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Worker Attendance</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">SA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

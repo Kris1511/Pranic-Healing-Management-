@@ -13,6 +13,8 @@ import {
 import { notificationsOutline } from 'ionicons/icons';
 import './super-admin.css';
 import { useAuthStore } from '../../store/auth.store';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const SettingsPage: React.FC = () => {
   const { user, updateUser } = useAuthStore();
@@ -76,7 +78,7 @@ const SettingsPage: React.FC = () => {
               <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton>
-              <div className="sa-page__toolbar-avatar">{initials}</div>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

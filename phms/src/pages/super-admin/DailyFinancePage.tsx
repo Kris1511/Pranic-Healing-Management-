@@ -29,6 +29,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getBranches } from '../../api/branch.api';
 import { getSuperAdminDailyFinance, addFinanceTransaction } from '../../api/finance.api';
 import './super-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const DailyFinancePage: React.FC = () => {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -136,7 +138,7 @@ const DailyFinancePage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Daily Finance Log</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">SA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

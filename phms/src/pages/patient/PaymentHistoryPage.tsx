@@ -33,6 +33,8 @@ import { getPayments } from '../../api/payment.api';
 import '../branch-admin/branch-admin.css';
 import '../healer/Healers.css';
 
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 /* ─── Types ──────────────────────────────────────────────────────── */
 interface LedgerEntry {
   id: string;
@@ -144,7 +146,9 @@ const PaymentHistoryPage: React.FC = () => {
             >
               <IonIcon icon={refreshOutline} />
             </button>
-          </IonButtons>
+          
+              <ProfileDropdown />
+</IonButtons>
         </IonToolbar>
       </IonHeader>
 

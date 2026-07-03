@@ -36,6 +36,8 @@ import {
   getDocumentBlob,
 } from '../../api/document.api';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 interface UploadedDocument {
   id: string;
@@ -312,7 +314,7 @@ const DocumentManagementPage: React.FC = () => {
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Document Workspace</IonTitle>
           <IonButtons slot="end">
-            <button className="sa-page__toolbar-avatar">BA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>

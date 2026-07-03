@@ -26,6 +26,8 @@ import {
 } from 'ionicons/icons';
 import './super-admin.css';
 import { getReportsSummary, getReportsGrowth } from '../../api/report.api';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const ReportsPage: React.FC = () => {
   const [activeToggle, setActiveToggle] = useState('All');
@@ -150,7 +152,7 @@ const ReportsPage: React.FC = () => {
               <IonButton fill="clear">
                 <IonIcon icon={notificationsOutline} />
               </IonButton>
-              <div className="sa-page__toolbar-avatar">AS</div>
+              <ProfileDropdown />
             </div>
           </IonButtons>
         </IonToolbar>

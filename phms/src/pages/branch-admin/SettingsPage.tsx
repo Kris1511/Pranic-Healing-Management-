@@ -17,6 +17,8 @@ import {
 import { useAuthStore } from '../../store/auth.store';
 import '../super-admin/super-admin.css';
 import './branch-admin.css';
+import ProfileDropdown from '../../components/common/ProfileDropdown';
+
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -79,7 +81,7 @@ const SettingsPage: React.FC = () => {
             <button className="st-header-bell" title="Notifications">
               <IonIcon icon={notificationsOutline} />
             </button>
-            <button className="sa-page__toolbar-avatar">BA</button>
+            <ProfileDropdown />
           </IonButtons>
         </IonToolbar>
       </IonHeader>
