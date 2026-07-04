@@ -76,7 +76,7 @@ const HealersPage: React.FC = () => {
             branch: h.branch?.name || 'Unassigned',
             branchId: h.branchId || '',
             experience: h.experience || 0,
-            load: h.completedSessions || 0,
+            load: h.patientsCount || 0,
             status: h.status?.toLowerCase() || 'active',
           }));
           setHealers(formattedHealers);
@@ -403,8 +403,8 @@ const HealersPage: React.FC = () => {
                     <td>{healer.branch}</td>
                     <td>{healer.experience} Years</td>
                     <td>
-                      <div className="sa-table__load">
                         <span className="sa-table__load-count">{healer.load} Patients</span>
+                      {/* <div className="sa-table__load">
                         <div className="sa-table__load-bar">
                           <div 
                             className="sa-table__load-fill" 
@@ -414,7 +414,7 @@ const HealersPage: React.FC = () => {
                             }} 
                           />
                         </div>
-                      </div>
+                      </div> */}
                     </td>
                     <td>
                       <span 

@@ -37,7 +37,15 @@ class HealerService {
   }
 
   async getAllHealers(filter = {}) {
-    return await healerRepository.findAll(filter);
+    const healers = await healerRepository.findAll(filter);
+    const { Patient } = require('../models');
+    
+    const healersWithCounts = await Promise.all(healers.map(async (h) => {
+      const healerData = h.toJSON ? h.toJSON() : { ...h };
+      healerData.patientsCount = await Patient.count({ where: { healerId: h.id } });
+      return healerData;
+    }));
+    return healersWithCounts;
   }
 
   async getHealerById(id, branchId) {

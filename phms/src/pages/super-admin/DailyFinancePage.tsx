@@ -237,7 +237,7 @@ const DailyFinancePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sa-section-header" style={{ display: 'flex', gap: '16px', alignItems: 'center', marginTop: '24px' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginTop: '24px' }}>
             <div className="sa-search">
               <IonIcon icon={searchOutline} />
               <input 
