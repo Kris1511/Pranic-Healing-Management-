@@ -181,14 +181,14 @@ const BranchRevenueDetailsPage: React.FC = () => {
               <div className="sa-settings__form-group" style={{ margin: 0 }}>
                 <label className="sa-settings__label" style={{ fontSize: '11px' }}>Search Description / Payer</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <IonIcon icon={searchOutline} style={{ position: 'absolute', left: '12px', color: '#94a3b8', zIndex: 1 }} />
                   <input 
                     className="sa-settings__input" 
                     placeholder="Search..." 
                     value={searchQuery}
-                    style={{ paddingLeft: '70px', height: '40px', margin: 0 }}
+                    style={{ paddingLeft: '36px', height: '40px', margin: 0, width: '100%' }}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
-                  <IonIcon icon={searchOutline} style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
                 </div>
               </div>
 
@@ -197,7 +197,7 @@ const BranchRevenueDetailsPage: React.FC = () => {
                 <select 
                   className="sa-settings__input" 
                   value={period}
-                  style={{ height: '40px', padding: '0 12px', margin: 0 }}
+                  style={{ height: '40px', padding: '0 12px', margin: 0, width: '100%' }}
                   onChange={(e) => {
                     setPeriod(e.target.value);
                     if (e.target.value !== 'All Time') {
@@ -220,7 +220,7 @@ const BranchRevenueDetailsPage: React.FC = () => {
                   type="date"
                   className="sa-settings__input" 
                   value={fromDate}
-                  style={{ height: '40px', margin: 0 }}
+                  style={{ height: '40px', margin: 0, width: '100%' }}
                   onChange={(e) => {
                     setFromDate(e.target.value);
                     setPeriod('All Time');
@@ -234,7 +234,7 @@ const BranchRevenueDetailsPage: React.FC = () => {
                   type="date"
                   className="sa-settings__input" 
                   value={toDate}
-                  style={{ height: '40px', margin: 0 }}
+                  style={{ height: '40px', margin: 0, width: '100%' }}
                   onChange={(e) => {
                     setToDate(e.target.value);
                     setPeriod('All Time');
@@ -247,7 +247,7 @@ const BranchRevenueDetailsPage: React.FC = () => {
                 <select 
                   className="sa-settings__input" 
                   value={status}
-                  style={{ height: '40px', padding: '0 12px', margin: 0 }}
+                  style={{ height: '40px', padding: '0 12px', margin: 0, width: '100%' }}
                   onChange={(e) => setStatus(e.target.value)}
                 >
                   <option value="All Status">All Status</option>
@@ -262,7 +262,7 @@ const BranchRevenueDetailsPage: React.FC = () => {
                 <select 
                   className="sa-settings__input" 
                   value={financeType}
-                  style={{ height: '40px', padding: '0 12px', margin: 0 }}
+                  style={{ height: '40px', padding: '0 12px', margin: 0, width: '100%' }}
                   onChange={(e) => setFinanceType(e.target.value)}
                 >
                   <option value="All Types">All Types</option>
@@ -276,7 +276,7 @@ const BranchRevenueDetailsPage: React.FC = () => {
                 <select 
                   className="sa-settings__input" 
                   value={category}
-                  style={{ height: '40px', padding: '0 12px', margin: 0 }}
+                  style={{ height: '40px', padding: '0 12px', margin: 0, width: '100%' }}
                   onChange={(e) => setCategory(e.target.value)}
                 >
                   <option value="All Categories">All Categories</option>

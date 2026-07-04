@@ -1667,7 +1667,7 @@
     gap: 1rem;
   }
   .healer-container {
-    padding: var(--space-lg) var(--space-sm);
+    padding: var(--space-lg) var(--space-sm) 80px var(--space-sm);
   }
   .healer-stats-grid {
     gap: var(--space-md);
