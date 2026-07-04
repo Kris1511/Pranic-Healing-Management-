@@ -1666,7 +1666,8 @@
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  .healer-container {
+  .healer-container,
+  .healer-page-container {
     padding: var(--space-lg) var(--space-sm) 80px var(--space-sm);
   }
   .healer-stats-grid {
