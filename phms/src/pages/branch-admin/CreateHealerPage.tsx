@@ -422,19 +422,8 @@ export default function BACreateHealerPage() {
         <div className="db-corp-layout" style={{ background: "#f8fafc" }}>
           <main className="db-corp-canvas">
             {/* Horizontal Header Navbar */}
-            <header
-              style={{
-                background: "#ffffff",
-                borderBottom: "1px solid #e2e8f0",
-                padding: "16px 24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "16px" }}
-              >
+            <header className="db-corp-navbar">
+              <div className="db-corp-navbar-left-container">
                 <button
                   onClick={() => history.push(ROUTES.BRANCH_ADMIN.DASHBOARD)}
                   title="Back to Dashboard"
@@ -489,7 +478,7 @@ export default function BACreateHealerPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center" }}>
+              <div className="db-corp-navbar-right">
                 <div
                   style={{
                     width: "8px",
@@ -523,14 +512,7 @@ export default function BACreateHealerPage() {
                 }}
               >
                 {/* 2-Column Grid Layout matching visual screenshots style */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1.2fr 1fr",
-                    gap: "28px",
-                    alignItems: "start",
-                  }}
-                >
+                <div className="ba-register-grid">
                   {/* LEFT COLUMN: Basic Information, Professional Details */}
                   <div
                     style={{
@@ -1139,46 +1121,19 @@ export default function BACreateHealerPage() {
                 </div>
 
                 {/* Footer Buttons Block */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: "16px",
-                    marginTop: "12px",
-                    marginBottom: "28px",
-                  }}
-                >
+                <div className="st-form-row" style={{ marginTop: "12px", marginBottom: "28px", justifyContent: "flex-end" }}>
                   <button
                     type="button"
                     onClick={() => history.push(ROUTES.BRANCH_ADMIN.DASHBOARD)}
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "8px",
-                      padding: "10px 24px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#475569",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                    }}
+                    className="sa-btn sa-btn--outline"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    style={{
-                      background: "#0D5C46",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "10px 28px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "#ffffff",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                    }}
+                    className="sa-btn"
+                    style={{ background: "#0D5C46", color: "#ffffff", border: "none" }}
                   >
                     Save Profile
                   </button>
