@@ -347,7 +347,7 @@ const BranchDetailsPage: React.FC = () => {
             <h2>Branch Staff ({staffList.length})</h2>
             <button className="sa-modal__close-btn" onClick={() => setShowStaffModal(false)}>×</button>
           </div>
-          <div className="sa-modal__body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+          <div className="sa-modal__body">
             {staffList.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {staffList.map((staff, idx) => (
@@ -377,7 +377,7 @@ const BranchDetailsPage: React.FC = () => {
             <h2>Active Patients ({patientsList.length})</h2>
             <button className="sa-modal__close-btn" onClick={() => setShowPatientsModal(false)}>×</button>
           </div>
-          <div className="sa-modal__body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+          <div className="sa-modal__body">
             {patientsList.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {patientsList.map((patient, idx) => (

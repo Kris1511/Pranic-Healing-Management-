@@ -72,8 +72,8 @@ const superAdminNav: NavItem[] = [
 ];
 
 const branchAdminNav: NavItem[] = [
-  { title: 'Dashboard Page', url: ROUTES.BRANCH_ADMIN.DASHBOARD, icon: gridOutline, section: 'Main' },
-  { title: 'Healers Page', url: ROUTES.BRANCH_ADMIN.HEALERS, icon: medkitOutline },
+  { title: 'Dashboard', url: ROUTES.BRANCH_ADMIN.DASHBOARD, icon: gridOutline, section: 'Main' },
+  { title: 'Healers', url: ROUTES.BRANCH_ADMIN.HEALERS, icon: medkitOutline },
   { title: 'Patients', url: ROUTES.BRANCH_ADMIN.PATIENTS, icon: peopleOutline },
   { title: 'Sessions', url: ROUTES.BRANCH_ADMIN.SESSIONS, icon: timeOutline },
   { title: 'Attendance', url: ROUTES.BRANCH_ADMIN.ATTENDANCE, icon: timeOutline, section: 'Operations' },
