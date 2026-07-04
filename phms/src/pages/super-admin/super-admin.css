@@ -1819,9 +1819,6 @@
   .sa-stats--2 {
     grid-template-columns: 1fr;
   }
-  .sa-page__body {
-    padding: 16px;
-  }
 }
 
 @media (max-width: 640px) {
