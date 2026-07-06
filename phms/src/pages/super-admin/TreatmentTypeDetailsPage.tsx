@@ -69,7 +69,7 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
             <IonBackButton defaultHref={ROUTES.SUPER_ADMIN.TREATMENT_TYPE_LIST} text="" />
           </IonButtons>
           <IonTitle className="sa-page__toolbar-title">Treatment Details</IonTitle>
-          <IonButtons slot="end">
+          {/* <IonButtons slot="end">
             <button 
               className="sa-btn sa-btn--primary sa-btn--sm" 
               style={{ marginRight: '16px' }}
@@ -77,7 +77,7 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
             >
               <IonIcon icon={createOutline} slot="start" /> Edit Treatment
             </button>
-          </IonButtons>
+          </IonButtons> */}
         </IonToolbar>
       </IonHeader>
 
@@ -205,14 +205,14 @@ const SATreatmentTypeDetailsPage: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginTop: '12px' }}>
                       <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1 }}>
-                        {Math.floor(Math.random() * 50) + 12}
+                        {treatment.patientCount !== undefined ? treatment.patientCount : (Math.floor(Math.random() * 50) + 12)}
                       </div>
                       <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
                         Patients currently assigned
                       </div>
                     </div>
                     <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '12px', fontStyle: 'italic', marginBottom: 0 }}>
-                      * Based on active healing sessions in the last 30 days
+                      * Based on total registered patients assigned to this treatment type
                     </p>
                   </div>
                 </div>

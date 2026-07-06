@@ -1,4 +1,5 @@
 const treatmentTypeRepository = require('../repositories/treatmentType.repository');
+const patientRepository = require('../repositories/patient.repository');
 const ApiError = require('../helpers/error.helper');
 
 class TreatmentTypeService {
@@ -31,7 +32,9 @@ class TreatmentTypeService {
     if (!treatmentType) {
       throw new ApiError(404, 'Treatment Type not found.');
     }
-    return treatmentType;
+    const patients = await patientRepository.findAll({ treatmentType: treatmentType.name });
+    const result = treatmentType.toJSON ? treatmentType.toJSON() : treatmentType;
+    return { ...result, patientCount: patients.length };
   }
 
   async updateTreatmentType(id, data) {

@@ -1,12 +1,13 @@
 import { IonApp, IonRouterOutlet, IonSplitPane, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { Redirect, Route, useLocation } from 'react-router-dom';
+import { Redirect, Route, Switch, useLocation, matchPath } from 'react-router-dom';
 import Menu from './components/Menu';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import SessionExpiredPage from './pages/auth/SessionExpiredPage';
 import { ROUTES } from './constants/routes.constant';
+import { useAuthStore } from './store/auth.store';
 
 /* Super Admin Pages */
 import SADashboardPage from './pages/super-admin/DashboardPage';
@@ -75,6 +76,7 @@ import PaymentHistoryPage from './pages/patient/PaymentHistoryPage';
 import PatientProfilePage from './pages/patient/ProfilePage';
 import FeedbackPage from './pages/patient/FeedbackPage';
 import DocumentsPage from './pages/patient/DocumentsPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -106,7 +108,9 @@ import '@ionic/react/css/palettes/dark.system.css';
 /* Theme variables */
 import './theme/index.css';
 
-setupIonicReact();
+setupIonicReact({
+  animated: false,
+});
 
 // Routes that should not show the Menu
 const AUTH_ROUTES = [
@@ -117,9 +121,36 @@ const AUTH_ROUTES = [
   ROUTES.AUTH.SESSION_EXPIRED,
 ];
 
+// All valid app route patterns (used to detect unknown/404 routes)
+const ALL_VALID_ROUTES = [
+  '/',
+  ...AUTH_ROUTES,
+  ...Object.values(ROUTES.SUPER_ADMIN),
+  ...Object.values(ROUTES.BRANCH_ADMIN),
+  ...Object.values(ROUTES.HEALER),
+  ...Object.values(ROUTES.PATIENT),
+];
+
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const shouldShowMenu = !AUTH_ROUTES.includes(location.pathname);
+  const { token, user } = useAuthStore();
+  const isAuthenticated = !!token && !!user;
+  const isAuthRoute = AUTH_ROUTES.includes(location.pathname);
+  const isKnownRoute = ALL_VALID_ROUTES.some((route) =>
+    matchPath(location.pathname, { path: route, exact: true })
+  );
+  const shouldShowMenu = !isAuthRoute && isKnownRoute && isAuthenticated;
+
+  // If not authenticated and trying to access a protected route, redirect to login
+  if (!isAuthenticated && !isAuthRoute && location.pathname !== '/') {
+    return (
+      <IonSplitPane contentId="main">
+        <IonRouterOutlet id="main">
+          <Redirect to={ROUTES.AUTH.SESSION_EXPIRED} />
+        </IonRouterOutlet>
+      </IonSplitPane>
+    );
+  }
 
   return (
     <IonSplitPane contentId="main">
@@ -344,6 +375,11 @@ const AppContent: React.FC = () => {
 
         <Route path="/" exact={true}>
           <Redirect to={ROUTES.AUTH.LOGIN} />
+        </Route>
+
+        {/* Catch-all route for unknown/invalid URLs */}
+        <Route>
+          <NotFoundPage />
         </Route>
       </IonRouterOutlet>
     </IonSplitPane>

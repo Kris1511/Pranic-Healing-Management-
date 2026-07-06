@@ -76,6 +76,7 @@ export interface Healer {
   avatarBg: string;
   initials: string;
   bio?: string;
+  patientsCount: number;
 }
 
 export interface Patient {
@@ -218,6 +219,7 @@ const HealersPage: React.FC = () => {
           avatarBg: ['#0f5b4b', '#1e40af', '#7c3aed', '#db2777', '#b45309'][Math.floor(Math.random() * 5)],
           initials: h.name ? h.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase() : 'HE',
           bio: h.bio || `Certified healer specializing in ${h.specialization || 'general healing'}.`,
+          patientsCount: h.patientsCount || 0,
         }));
         setHealers(formattedHealers);
       } else {
@@ -436,7 +438,7 @@ const HealersPage: React.FC = () => {
     const matchesSpec = specFilter === 'All' || h.specialization.includes(specFilter);
 
     let matchesPatientCount = true;
-    const activePatientCount = patients.filter(p => p.assignedHealerId === h.id && p.status === 'Active').length;
+    const activePatientCount = h.patientsCount || 0;
     if (patientCountFilter === 'None') {
       matchesPatientCount = activePatientCount === 0;
     } else if (patientCountFilter === '1-3') {
@@ -1040,7 +1042,6 @@ const HealersPage: React.FC = () => {
                     <tbody>
                       {paginatedHealers.length > 0 ? (
                         paginatedHealers.map(healer => {
-                          const healerPatients = patients.filter(p => p.assignedHealerId === healer.id && p.status === 'Active');
                           return (
                             <tr
                               key={healer.id}
@@ -1072,8 +1073,8 @@ const HealersPage: React.FC = () => {
                               <td style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>{healer.branch}</td>
                               <td style={{ fontSize: '13px', fontWeight: 700 }}>{healer.experience}</td>
                               <td>
-                                <span style={{ fontWeight: 700, color: healerPatients.length > 0 ? 'var(--ba-color-primary)' : '#94a3b8', fontSize: '13px' }}>
-                                  {healerPatients.length} Patient{healerPatients.length !== 1 ? 's' : ''}
+                                <span style={{ fontWeight: 700, color: healer.patientsCount > 0 ? 'var(--ba-color-primary)' : '#94a3b8', fontSize: '13px' }}>
+                                  {healer.patientsCount} Patient{healer.patientsCount !== 1 ? 's' : ''}
                                 </span>
                               </td>
                               <td>
