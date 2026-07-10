@@ -145,7 +145,7 @@ const AdminDetailsPage: React.FC = () => {
           </div>
 
           {/* Performance Stats Summary Cards */}
-          <div className="sa-stats sa-stats--4" style={{ marginBottom: '24px' }}>
+          <div className="sa-stats sa-stats--3" style={{ marginBottom: '24px' }}>
             <div className="sa-stat-card">
               <div>
                 <div className="sa-stat-card__label">Total Healers</div>

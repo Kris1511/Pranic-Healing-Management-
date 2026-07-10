@@ -196,6 +196,8 @@ class SessionController {
     if (req.query.patient_id) filter.patientId = req.query.patient_id;
     if (req.query.healer_id) filter.healerId = req.query.healer_id;
     if (req.branchId) filter.branchId = req.branchId;
+    if (req.query.branchId) filter.branchId = req.query.branchId;
+    if (req.query.branch_id) filter.branchId = req.query.branch_id;
     if (req.query.treatment_type) filter.treatmentType = req.query.treatment_type;
 
     if (req.query.startDate && req.query.endDate) {
@@ -275,6 +277,8 @@ class SessionController {
   getDashboardSummary = async (req, res) => {
     const filter = {};
     if (req.branchId) filter.branchId = req.branchId;
+    if (req.query.branchId) filter.branchId = req.query.branchId;
+    if (req.query.branch_id) filter.branchId = req.query.branch_id;
 
     // Restrict sessions to only those assigned to the logged-in healer
     if (req.user && String(req.user.role).toUpperCase() === 'HEALER') {

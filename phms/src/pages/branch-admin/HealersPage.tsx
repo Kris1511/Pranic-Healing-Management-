@@ -524,6 +524,7 @@ const HealersPage: React.FC = () => {
       avatarBg: ['#0f5b4b', '#1e40af', '#7c3aed', '#db2777', '#b45309'][Math.floor(Math.random() * 5)],
       initials: addForm.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase(),
       bio: addForm.bio || `Certified healer specializing in ${addForm.specialization.join(', ')}.`,
+      patientsCount: 0,
     };
 
     setHealers(prev => [...prev, newHealer]);
@@ -1001,29 +1002,6 @@ const HealersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Actions Header Bar */}
-              {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#475569' }}>
-                  Showing <strong style={{ color: 'var(--ba-color-primary)' }}>{filteredHealers.length}</strong> Healers in {assignedBranch} Branch
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => handleExport('Healer Performance Report', 'PDF')}
-                    className="sa-btn sa-btn--outline"
-                    style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <IonIcon icon={downloadOutline} /> PDF Report
-                  </button>
-                  <button
-                    onClick={() => handleExport('Healer Performance Report', 'Excel')}
-                    className="sa-btn sa-btn--outline"
-                    style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <IonIcon icon={downloadOutline} /> Excel Report
-                  </button>
-                </div>
-              </div> */}
-
               {/* Healers Table */}
               <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0' }}>
                 <div className="sa-table-container">
@@ -1046,7 +1024,6 @@ const HealersPage: React.FC = () => {
                             <tr
                               key={healer.id}
                               className="sa-table-row"
-                              style={{ cursor: 'pointer' }}
                               onClick={() => setSelectedHealer(healer)}
                             >
                               <td>
@@ -1142,147 +1119,6 @@ const HealersPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Selected Healer Detail Panel */}
-              {selectedHealer && (
-                <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '32px' }}>
-                  {/* Header with close */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                      <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: selectedHealer.avatarBg, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800 }}>
-                        {selectedHealer.initials}
-                      </div>
-                      <div>
-                        <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{selectedHealer.name}</h2>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                          ID: {selectedHealer.id} • {selectedHealer.certificationLevel} • {selectedHealer.branch}
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                          {selectedHealer.specialization.map((spec, i) => (
-                            <span key={i} style={{ padding: '2px 10px', background: '#d1fae5', color: '#065f46', borderRadius: '20px', fontSize: '10px', fontWeight: 700 }}>{spec}</span>
-                          ))}
-                          <span className={`sa-badge ${selectedHealer.status === 'ACTIVE' ? 'sa-badge--active' : 'sa-badge--inactive'}`}>{selectedHealer.status}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button onClick={() => setSelectedHealer(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#94a3b8', padding: 0 }}>
-                      <IonIcon icon={closeOutline} />
-                    </button>
-                  </div>
-
-                  {/* Bio */}
-                  {selectedHealer.bio && (
-                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', marginBottom: '24px', borderLeft: '4px solid var(--ba-color-primary)' }}>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>{selectedHealer.bio}</p>
-                    </div>
-                  )}
-
-                  {/* Quick Stats */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--ba-color-primary)' }}>{selectedHealer.experience} yrs</div>
-                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>Experience</div>
-                    </div>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--ba-color-primary)' }}>{patients.filter(p => p.assignedHealerId === selectedHealer.id && p.status === 'Active').length}</div>
-                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>Active Patients</div>
-                    </div>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--ba-color-primary)' }}>{selectedHealer.completedSessions}</div>
-                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>Completed Sessions</div>
-                    </div>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#ef4444' }}>{selectedHealer.urgentFollowUps}</div>
-                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>Urgent Follow-ups</div>
-                    </div>
-                  </div>
-
-                  {/* Contact Details */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-                    <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Email</span>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{selectedHealer.email}</div>
-                    </div>
-                    <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Phone</span>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{selectedHealer.phone}</div>
-                    </div>
-                    <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Address</span>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{selectedHealer.address}</div>
-                    </div>
-                    <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Date of Birth</span>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{selectedHealer.dob}</div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button className="sa-btn sa-btn--outline" onClick={() => history.push(`/branch-admin/healers/edit/${selectedHealer.id}`)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-                      <IonIcon icon={pencilOutline} /> Edit Profile
-                    </button>
-                    <button className="sa-btn sa-btn--outline" onClick={() => setShowAssignModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-                      <IonIcon icon={peopleOutline} /> Assign Patient
-                    </button>
-                    {selectedHealer.status === 'ACTIVE' && (
-                      <button className="sa-btn sa-btn--outline" onClick={() => setShowDeactivateModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#ef4444', borderColor: '#fecaca' }}>
-                        <IonIcon icon={banOutline} /> Deactivate
-                      </button>
-                    )}
-                    <button className="sa-btn sa-btn--outline" onClick={() => setShowResetPasswordModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-                      <IonIcon icon={keyOutline} /> Reset Password
-                    </button>
-                  </div>
-
-                  {/* Patient Caseload for Selected Healer */}
-                  <div style={{ marginTop: '24px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>Assigned Patient Caseload</h3>
-                    <div className="sa-table-container">
-                      <table className="sa-table">
-                        <thead>
-                          <tr>
-                            <th>Patient ID</th>
-                            <th>Name</th>
-                            <th>Condition</th>
-                            <th>Sessions</th>
-                            <th>Last Visit</th>
-                            <th>Status</th>
-                            <th style={{ textAlign: 'center' }}>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {patients.filter(p => p.assignedHealerId === selectedHealer.id).length > 0 ? (
-                            patients.filter(p => p.assignedHealerId === selectedHealer.id).map(p => (
-                              <tr key={p.id}>
-                                <td style={{ fontWeight: 700, color: 'var(--ba-color-primary)' }}>{p.id}</td>
-                                <td style={{ fontWeight: 700 }}>{p.name}</td>
-                                <td>{p.caseType}</td>
-                                <td>{p.sessionCount}</td>
-                                <td>{p.lastSessionDate}</td>
-                                <td><span className="sa-badge sa-badge--active">{p.status}</span></td>
-                                <td style={{ textAlign: 'center' }}>
-                                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                                    <button title="Reassign" onClick={() => { setSelectedPatientToReassign(p); setShowReassignModal(true); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b', padding: 0 }}>
-                                      <IonIcon icon={refreshOutline} />
-                                    </button>
-                                    <button title="Remove" onClick={() => handleRemovePatientAssignment(p.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#ef4444', padding: 0 }}>
-                                      <IonIcon icon={trashOutline} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={7} className="sa-table-empty">No patients assigned to this healer.</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>

@@ -927,7 +927,7 @@ const FinancePage: React.FC = () => {
           {activeTab === 'transactions' && (
             <>
               {/* Stats Analytics Cards Panel with dynamic balances */}
-              <div className="bf-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginTop: '20px' }}>
+              <div className="bf-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '20px' }}>
                 
                 {/* Revenue card */}
                 <div className="bf-stat-card bf-stat-card--revenue">
@@ -979,7 +979,7 @@ const FinancePage: React.FC = () => {
               </div>
 
               {/* Daily Finance Summary Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginTop: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '16px' }}>
 
                 {/* Today Income */}
                 <div className="bf-stat-card" style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', border: '1px solid #a7f3d0' }}>
@@ -1320,7 +1320,7 @@ const FinancePage: React.FC = () => {
           {activeTab === 'payments' && (
             <>
               {/* New Patient Payments Analytics Cards Panel */}
-              <div className="bf-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginTop: '20px' }}>
+              <div className="bf-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '20px' }}>
                 
                 {/* Total Billed card */}
                 <div className="bf-stat-card" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>

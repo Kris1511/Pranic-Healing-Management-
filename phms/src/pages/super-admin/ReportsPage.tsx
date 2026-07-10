@@ -31,7 +31,7 @@ import ProfileDropdown from '../../components/common/ProfileDropdown';
 
 const ReportsPage: React.FC = () => {
   const [activeToggle, setActiveToggle] = useState('All');
-  const [timeRange, setTimeRange] = useState('Last 7 Days');
+  const [timeRange, setTimeRange] = useState('All Time');
 
   const [summaryData, setSummaryData] = useState<any>(null);
   const [growthData, setGrowthData] = useState<any>([]);

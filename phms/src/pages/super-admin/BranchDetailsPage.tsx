@@ -152,7 +152,7 @@ const BranchDetailsPage: React.FC = () => {
           </IonToolbar>
         </IonHeader>
         <IonContent className="sa-page__content">
-          <div style={{ padding: '20px', textAlign: 'center' }}>Branch not found.</div>
+          <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Branch not found.</div>
         </IonContent>
       </IonPage>
     );

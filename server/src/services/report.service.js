@@ -12,6 +12,10 @@ class ReportService {
   async getBranchSummary(branchId, timeRange) {
     const filter = branchId ? { branchId } : {};
 
+    const patientFilter = { ...filter };
+    const sessionFilter = { ...filter };
+    const financeFilter = { ...filter };
+
     if (timeRange && timeRange !== 'All Time') {
       let startDate = new Date();
       let endDate = new Date();
@@ -43,35 +47,41 @@ class ReportService {
       }
 
       if (startDate) {
-        filter.createdAt = {
+        patientFilter.createdAt = {
+          [Op.between]: [startDate, endDate]
+        };
+        sessionFilter.sessionDate = {
+          [Op.between]: [startDate, endDate]
+        };
+        financeFilter.date = {
           [Op.between]: [startDate, endDate]
         };
       }
     }
 
-    const totalPatients = await patientRepository.findAll(filter);
-    const totalSessions = await sessionRepository.findAll(filter);
-    
-    // For finance, if we used createdAt in filter, we can use it.
-    const financialRecords = await financeRepository.findAll(filter);
+    const totalPatients = await patientRepository.findAll(patientFilter);
+    const totalSessions = await sessionRepository.findAll(sessionFilter);
+    const financialRecords = await financeRepository.findAll(financeFilter);
 
     const revenue = financialRecords
-      .filter(r => r.type === 'income')
+      .filter(r => r.type === 'income' || r.type === 'Income')
       .reduce((sum, r) => sum + parseFloat(r.amount), 0);
 
     const expenses = financialRecords
-      .filter(r => r.type === 'expense')
+      .filter(r => r.type === 'expense' || r.type === 'Expense')
       .reduce((sum, r) => sum + parseFloat(r.amount), 0);
 
     const daysMap = { 'Mon': {h1:0, h2:0}, 'Tue': {h1:0, h2:0}, 'Wed': {h1:0, h2:0}, 'Thu': {h1:0, h2:0}, 'Fri': {h1:0, h2:0}, 'Sat': {h1:0, h2:0}, 'Sun': {h1:0, h2:0} };
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     financialRecords.forEach(r => {
+      let rType = r.type ? r.type.toLowerCase() : '';
       const date = new Date(r.date || r.createdAt);
+      if (isNaN(date.getTime())) return; // skip invalid dates
       const dayName = dayNames[date.getDay()];
-      if (r.type === 'income') {
+      if (rType === 'income') {
         daysMap[dayName].h1 += parseFloat(r.amount);
-      } else if (r.type === 'expense') {
+      } else if (rType === 'expense') {
         daysMap[dayName].h2 += parseFloat(r.amount);
       }
     });

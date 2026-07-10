@@ -152,6 +152,47 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Role-based route guarding
+  if (isAuthenticated && !isAuthRoute) {
+    const role = user?.role?.toUpperCase();
+    let targetDashboard = ROUTES.AUTH.LOGIN;
+    let isAuthorized = true;
+
+    if (role === 'SUPER_ADMIN' || role === 'SUPER ADMIN') {
+      targetDashboard = ROUTES.SUPER_ADMIN.DASHBOARD;
+      if (location.pathname.startsWith('/branch-admin') || location.pathname.startsWith('/healer') || location.pathname.startsWith('/patient')) {
+        isAuthorized = false;
+      }
+    } else if (role === 'BRANCH_ADMIN' || role === 'BRANCH ADMIN') {
+      targetDashboard = ROUTES.BRANCH_ADMIN.DASHBOARD;
+      if (location.pathname.startsWith('/super-admin') || location.pathname.startsWith('/healer') || location.pathname.startsWith('/patient')) {
+        isAuthorized = false;
+      }
+    } else if (role === 'HEALER') {
+      targetDashboard = ROUTES.HEALER.DASHBOARD;
+      if (location.pathname.startsWith('/super-admin') || location.pathname.startsWith('/branch-admin') || location.pathname.startsWith('/patient')) {
+        isAuthorized = false;
+      }
+    } else if (role === 'PATIENT') {
+      targetDashboard = ROUTES.PATIENT.DASHBOARD;
+      if (location.pathname.startsWith('/super-admin') || location.pathname.startsWith('/branch-admin') || location.pathname.startsWith('/healer')) {
+        isAuthorized = false;
+      }
+    } else {
+      isAuthorized = false;
+    }
+
+    if (!isAuthorized || location.pathname === '/') {
+      return (
+        <IonSplitPane contentId="main">
+          <IonRouterOutlet id="main">
+            <Redirect to={targetDashboard} />
+          </IonRouterOutlet>
+        </IonSplitPane>
+      );
+    }
+  }
+
   return (
     <IonSplitPane contentId="main">
       {shouldShowMenu && <Menu />}

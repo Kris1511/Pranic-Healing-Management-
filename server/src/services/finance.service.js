@@ -141,6 +141,8 @@ class FinanceService {
       )
     ];
 
+    financeWhere.category = { [Op.ne]: 'Session Fee' };
+
     // 2. Fetch manual finance records for target date
     const financeRecords = await Finance.findAll({
       where: financeWhere,
@@ -352,6 +354,9 @@ class FinanceService {
     let incomeRecords = [];
     if (fetchIncomes) {
       const incomeWhere = { ...financeWhere, type: { [Op.in]: ['income', 'INCOME'] } };
+      if (!incomeWhere.category) {
+        incomeWhere.category = { [Op.ne]: 'Session Fee' };
+      }
       incomeRecords = await Finance.findAll({
         where: incomeWhere,
         include: [{ model: Branch, as: 'branch' }]
@@ -507,6 +512,7 @@ class FinanceService {
     const manualIncomeToday = parseFloat(await Finance.sum('amount', {
       where: {
         type: 'Income',
+        category: { [Op.ne]: 'Session Fee' },
         branchId,
         [Op.and]: [
           sequelize.where(sequelize.fn('DATE', sequelize.col('date')), todayStr)
@@ -766,6 +772,7 @@ class FinanceService {
         type: {
           [Op.in]: ['income', 'Income', 'INCOME']
         },
+        category: { [Op.ne]: 'Session Fee' },
         [Op.and]: [
           sequelize.where(sequelize.fn('DATE', sequelize.col('date')), todayStr)
         ]
