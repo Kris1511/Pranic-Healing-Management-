@@ -3,6 +3,7 @@ import { IonReactRouter } from '@ionic/react-router';
 import { Redirect, Route, Switch, useLocation, matchPath } from 'react-router-dom';
 import Menu from './components/Menu';
 import LoginPage from './pages/auth/LoginPage';
+import EmailLoginPage from './pages/auth/EmailLoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import SessionExpiredPage from './pages/auth/SessionExpiredPage';
@@ -115,6 +116,7 @@ setupIonicReact({
 // Routes that should not show the Menu
 const AUTH_ROUTES = [
   ROUTES.AUTH.LOGIN,
+  ROUTES.AUTH.EMAIL_LOGIN,
   ROUTES.AUTH.SIGNUP,
   ROUTES.AUTH.FORGOT_PASSWORD,
   ROUTES.AUTH.RESET_PASSWORD,
@@ -200,6 +202,9 @@ const AppContent: React.FC = () => {
         {/* Auth Routes - No Menu */}
         <Route path={ROUTES.AUTH.LOGIN} exact={true}>
           <LoginPage />
+        </Route>
+        <Route path={ROUTES.AUTH.EMAIL_LOGIN} exact={true}>
+          <EmailLoginPage />
         </Route>
         <Route path={ROUTES.AUTH.SIGNUP} exact={true}>
           <SignupPage />

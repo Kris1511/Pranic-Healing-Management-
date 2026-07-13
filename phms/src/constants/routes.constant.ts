@@ -6,6 +6,7 @@ export const ROUTES = {
   // Auth Routes
   AUTH: {
     LOGIN: '/auth/signin',
+    EMAIL_LOGIN: '/auth/email-signin',
     SIGNUP: '/auth/signup',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',

@@ -17,7 +17,7 @@ class CredentialService {
           name: user.name,
           email: user.email,
           password: password,
-          loginUrl: process.env.CLIENT_URL ? `${process.env.CLIENT_URL}/auth/signin` : 'http://localhost:5173/auth/signin',
+          loginUrl: process.env.CLIENT_URL ? `${process.env.CLIENT_URL}/auth/email-signin` : 'http://localhost:5173/auth/email-signin',
         },
       };
 
@@ -41,7 +41,7 @@ class CredentialService {
       }
       
       const phone = user.phoneNumber || user.phone || user.mobile;
-      const message = `Hello ${user.name},\nWelcome to PHMS! Your account has been created.\nEmail: ${user.email}\nPassword: ${password}\nLogin at: http://localhost:5173/auth/signin`;
+      const message = `Hello ${user.name},\nWelcome to PHMS! Your account has been created.\nEmail: ${user.email}\nPassword: ${password}\nLogin at: http://localhost:5173/auth/email-signin`;
       
       // TODO: Integrate actual SMS gateway like Twilio, MSG91, or AWS SNS here
       logger.info(`[MOCK SMS] Sent to ${phone}: ${message}`);
